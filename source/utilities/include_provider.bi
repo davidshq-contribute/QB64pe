@@ -180,3 +180,50 @@ END SUB
 FUNCTION IncludeProvider_ShouldSkipIncludes&
     IncludeProvider_ShouldSkipIncludes& = skipIncludes
 END FUNCTION
+
+' ============================================
+' Test Provider Extended Functions
+' ============================================
+
+' Test provider call tracking type
+TYPE TestProviderCall
+    callType AS STRING * 20
+    fileName AS STRING
+    timestamp AS LONG
+END TYPE
+
+' Clear test provider state
+SUB IncludeProvider_Test_Clear
+
+' Track a provider call (internal use)
+SUB IncludeProvider_Test_TrackCall (callType$, fileName$)
+
+' Get call history count
+FUNCTION IncludeProvider_Test_GetCallCount&
+
+' Get a specific call from history
+FUNCTION IncludeProvider_Test_GetCall$ (index AS LONG, callType AS TestProviderCall)
+
+' Set error injection for testing error handling
+SUB IncludeProvider_Test_SetError (fileName$, errorType AS LONG)
+
+' Clear error injection
+SUB IncludeProvider_Test_ClearError
+
+' Add path mapping for testing include resolution
+SUB IncludeProvider_Test_AddPathMap (fromPath$, toPath$)
+
+' Resolve path using mappings
+FUNCTION IncludeProvider_Test_ResolveMappedPath$ (fileName$)
+
+' Runtime function stub registration
+SUB IncludeProvider_Test_RegisterStub (functionName$, returnValue$)
+
+' Get stub return value
+FUNCTION IncludeProvider_Test_GetStubValue$ (functionName$)
+
+' Get stub call count
+FUNCTION IncludeProvider_Test_GetStubCallCount& (functionName$)
+
+' Clear all stubs
+SUB IncludeProvider_Test_ClearStubs

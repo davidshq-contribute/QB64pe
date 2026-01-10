@@ -141,6 +141,185 @@ FUNCTION Test_AssertInRange& (value AS LONG, minVal AS LONG, maxVal AS LONG, mes
     Test_AssertInRange& = Test_Assert&(result, message$)
 END FUNCTION
 
+' Assert that a floating point value is approximately equal (within tolerance)
+' expected: Expected value
+' actual: Actual value
+' tolerance: Maximum allowed difference
+' message$: Optional message
+FUNCTION Test_AssertApproxEqual& (expected AS DOUBLE, actual AS DOUBLE, tolerance AS DOUBLE, message$)
+    DIM diff AS DOUBLE
+    diff = ABS(expected - actual)
+    DIM result AS LONG
+    result = (diff <= tolerance)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected approximately " + _TOSTR$(expected) + " but got " + _TOSTR$(actual) + " (difference: " + _TOSTR$(diff) + ")"
+    END IF
+    
+    Test_AssertApproxEqual& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a string contains a substring
+' haystack$: String to search in
+' needle$: Substring to find
+' message$: Optional message
+FUNCTION Test_AssertContains& (haystack$, needle$, message$)
+    DIM result AS LONG
+    result = (INSTR(haystack$, needle$) > 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected string to contain """ + needle$ + """ but it doesn't"
+    END IF
+    
+    Test_AssertContains& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a string does not contain a substring
+' haystack$: String to search in
+' needle$: Substring that should not be found
+' message$: Optional message
+FUNCTION Test_AssertNotContains& (haystack$, needle$, message$)
+    DIM result AS LONG
+    result = (INSTR(haystack$, needle$) = 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected string to not contain """ + needle$ + """ but it does"
+    END IF
+    
+    Test_AssertNotContains& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is greater than another
+' actual: Value to check
+' expected: Value to compare against
+' message$: Optional message
+FUNCTION Test_AssertGreaterThan& (actual AS LONG, expected AS LONG, message$)
+    DIM result AS LONG
+    result = (actual > expected)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected " + _TOSTR$(actual) + " to be greater than " + _TOSTR$(expected)
+    END IF
+    
+    Test_AssertGreaterThan& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is less than another
+' actual: Value to check
+' expected: Value to compare against
+' message$: Optional message
+FUNCTION Test_AssertLessThan& (actual AS LONG, expected AS LONG, message$)
+    DIM result AS LONG
+    result = (actual < expected)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected " + _TOSTR$(actual) + " to be less than " + _TOSTR$(expected)
+    END IF
+    
+    Test_AssertLessThan& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is greater than or equal to another
+' actual: Value to check
+' expected: Value to compare against
+' message$: Optional message
+FUNCTION Test_AssertGreaterThanOrEqual& (actual AS LONG, expected AS LONG, message$)
+    DIM result AS LONG
+    result = (actual >= expected)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected " + _TOSTR$(actual) + " to be greater than or equal to " + _TOSTR$(expected)
+    END IF
+    
+    Test_AssertGreaterThanOrEqual& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is less than or equal to another
+' actual: Value to check
+' expected: Value to compare against
+' message$: Optional message
+FUNCTION Test_AssertLessThanOrEqual& (actual AS LONG, expected AS LONG, message$)
+    DIM result AS LONG
+    result = (actual <= expected)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected " + _TOSTR$(actual) + " to be less than or equal to " + _TOSTR$(expected)
+    END IF
+    
+    Test_AssertLessThanOrEqual& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a string is empty
+' str$: String to check
+' message$: Optional message
+FUNCTION Test_AssertEmpty& (str$, message$)
+    DIM result AS LONG
+    result = (LEN(str$) = 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected empty string but got """ + str$ + """"
+    END IF
+    
+    Test_AssertEmpty& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a string is not empty
+' str$: String to check
+' message$: Optional message
+FUNCTION Test_AssertNotEmpty& (str$, message$)
+    DIM result AS LONG
+    result = (LEN(str$) > 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected non-empty string but got empty string"
+    END IF
+    
+    Test_AssertNotEmpty& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is null/zero
+' value: Value to check
+' message$: Optional message
+FUNCTION Test_AssertNull& (value AS LONG, message$)
+    DIM result AS LONG
+    result = (value = 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected null/zero but got " + _TOSTR$(value)
+    END IF
+    
+    Test_AssertNull& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that a value is not null/non-zero
+' value: Value to check
+' message$: Optional message
+FUNCTION Test_AssertNotNull& (value AS LONG, message$)
+    DIM result AS LONG
+    result = (value <> 0)
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected non-null/non-zero value but got zero"
+    END IF
+    
+    Test_AssertNotNull& = Test_Assert&(result, message$)
+END FUNCTION
+
+' Assert that two strings are equal (case-insensitive)
+' expected$: Expected string
+' actual$: Actual string
+' message$: Optional message
+FUNCTION Test_AssertEqualStringIgnoreCase& (expected$, actual$, message$)
+    DIM result AS LONG
+    result = (UCASE$(expected$) = UCASE$(actual$))
+    
+    IF NOT result AND message$ = "" THEN
+        message$ = "Expected (case-insensitive) """ + expected$ + """ but got """ + actual$ + """"
+    END IF
+    
+    Test_AssertEqualStringIgnoreCase& = Test_Assert&(result, message$)
+END FUNCTION
+
 ' Skip a test
 SUB Test_Skip (reason$)
     IF reason$ <> "" THEN

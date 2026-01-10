@@ -293,18 +293,139 @@ END FUNCTION
 ' Test Provider Implementation (for unit testing)
 ' ============================================
 
-' Test provider uses same implementation as memory provider
-' but can be extended with additional test-specific functionality
+' Test provider extends memory provider with additional test-specific functionality
+' including call tracking, error injection, and path mapping
+
+' Call tracking for test verification
+TYPE TestProviderCall
+    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
+    fileName AS STRING
+    timestamp AS LONG
+END TYPE
+
+DIM SHARED testProviderCalls(1000) AS TestProviderCall
+DIM SHARED testProviderCallCount AS LONG
+
+' Error injection support
+DIM SHARED testProviderErrorFile$ AS STRING
+DIM SHARED testProviderErrorType AS LONG  ' 0 = none, 1 = file not found, 2 = read error
+
+' Path mapping for test scenarios
+TYPE TestProviderPathMap
+    fromPath AS STRING
+    toPath AS STRING
+END TYPE
+
+DIM SHARED testProviderPathMaps(100) AS TestProviderPathMap
+DIM SHARED testProviderPathMapCount AS LONG
+
+' Clear test provider state
+SUB IncludeProvider_Test_Clear
+    IncludeProvider_Memory_Clear
+    testProviderCallCount = 0
+    testProviderErrorFile$ = ""
+    testProviderErrorType = 0
+    testProviderPathMapCount = 0
+    DIM i AS LONG
+    FOR i = 0 TO 100
+        testProviderPathMaps(i).fromPath = ""
+        testProviderPathMaps(i).toPath = ""
+    NEXT
+END SUB
+
+' Track a provider call
+SUB IncludeProvider_Test_TrackCall (callType$, fileName$)
+    IF testProviderCallCount < 1000 THEN
+        testProviderCalls(testProviderCallCount).callType = callType$
+        testProviderCalls(testProviderCallCount).fileName = fileName$
+        testProviderCalls(testProviderCallCount).timestamp = TIMER
+        testProviderCallCount = testProviderCallCount + 1
+    END IF
+END SUB
+
+' Get call history
+FUNCTION IncludeProvider_Test_GetCallCount&
+    IncludeProvider_Test_GetCallCount& = testProviderCallCount
+END FUNCTION
+
+' Get a specific call
+FUNCTION IncludeProvider_Test_GetCall$ (index AS LONG, callType AS TestProviderCall)
+    IF index >= 0 AND index < testProviderCallCount THEN
+        callType.callType = testProviderCalls(index).callType
+        callType.fileName = testProviderCalls(index).fileName
+        callType.timestamp = testProviderCalls(index).timestamp
+        IncludeProvider_Test_GetCall$ = "OK"
+    ELSE
+        IncludeProvider_Test_GetCall$ = "ERROR"
+    END IF
+END FUNCTION
+
+' Set error injection for a specific file
+SUB IncludeProvider_Test_SetError (fileName$, errorType AS LONG)
+    testProviderErrorFile$ = fileName$
+    testProviderErrorType = errorType
+END SUB
+
+' Clear error injection
+SUB IncludeProvider_Test_ClearError
+    testProviderErrorFile$ = ""
+    testProviderErrorType = 0
+END SUB
+
+' Add path mapping (useful for testing include resolution)
+SUB IncludeProvider_Test_AddPathMap (fromPath$, toPath$)
+    IF testProviderPathMapCount < 100 THEN
+        testProviderPathMaps(testProviderPathMapCount).fromPath = fromPath$
+        testProviderPathMaps(testProviderPathMapCount).toPath = toPath$
+        testProviderPathMapCount = testProviderPathMapCount + 1
+    END IF
+END SUB
+
+' Resolve path using mappings
+FUNCTION IncludeProvider_Test_ResolveMappedPath$ (fileName$)
+    DIM i AS LONG
+    FOR i = 0 TO testProviderPathMapCount - 1
+        IF testProviderPathMaps(i).fromPath = fileName$ THEN
+            IncludeProvider_Test_ResolveMappedPath$ = testProviderPathMaps(i).toPath
+            EXIT FUNCTION
+        END IF
+    NEXT
+    IncludeProvider_Test_ResolveMappedPath$ = fileName$
+END FUNCTION
 
 FUNCTION IncludeProvider_Test_FileExists& (fileName$)
+    IncludeProvider_Test_TrackCall "FileExists", fileName$
+    
+    ' Check for error injection
+    IF testProviderErrorType = 1 AND testProviderErrorFile$ = fileName$ THEN
+        IncludeProvider_Test_FileExists& = 0
+        EXIT FUNCTION
+    END IF
+    
     IncludeProvider_Test_FileExists& = IncludeProvider_Memory_FileExists&(fileName$)
 END FUNCTION
 
 FUNCTION IncludeProvider_Test_Open& (fileName$, level AS LONG)
+    IncludeProvider_Test_TrackCall "Open", fileName$
+    
+    ' Check for error injection
+    IF testProviderErrorType > 0 AND testProviderErrorFile$ = fileName$ THEN
+        IncludeProvider_Test_Open& = 0
+        EXIT FUNCTION
+    END IF
+    
     IncludeProvider_Test_Open& = IncludeProvider_Memory_Open&(fileName$, level)
 END FUNCTION
 
 FUNCTION IncludeProvider_Test_ReadLine$ (level AS LONG)
+    IncludeProvider_Test_TrackCall "ReadLine", includeProviderStates(level).fileName
+    
+    ' Check for error injection
+    IF testProviderErrorType = 2 AND testProviderErrorFile$ = includeProviderStates(level).fileName THEN
+        IncludeProvider_Test_ReadLine$ = ""
+        EXIT FUNCTION
+    END IF
+    
     IncludeProvider_Test_ReadLine$ = IncludeProvider_Memory_ReadLine$(level)
 END FUNCTION
 
@@ -313,13 +434,89 @@ FUNCTION IncludeProvider_Test_EOF& (level AS LONG)
 END FUNCTION
 
 SUB IncludeProvider_Test_Close (level AS LONG)
+    IncludeProvider_Test_TrackCall "Close", includeProviderStates(level).fileName
     IncludeProvider_Memory_Close level
 END SUB
 
 FUNCTION IncludeProvider_Test_ResolvePath$ (fileName$, basePath$)
-    IncludeProvider_Test_ResolvePath$ = IncludeProvider_Memory_ResolvePath$(fileName$, basePath$)
+    ' Apply path mappings first
+    DIM mappedPath$
+    mappedPath$ = IncludeProvider_Test_ResolveMappedPath$(fileName$)
+    
+    ' Then use memory provider resolution
+    IncludeProvider_Test_ResolvePath$ = IncludeProvider_Memory_ResolvePath$(mappedPath$, basePath$)
 END FUNCTION
 
 FUNCTION IncludeProvider_Test_ReadAll$ (fileName$)
+    IncludeProvider_Test_TrackCall "ReadAll", fileName$
     IncludeProvider_Test_ReadAll$ = IncludeProvider_Memory_ReadAll$(fileName$)
 END FUNCTION
+
+' Stub utilities for runtime functions
+' These can be used to mock runtime behavior in tests
+
+' Runtime function stub registry
+TYPE RuntimeStub
+    functionName AS STRING * 50
+    returnValue AS STRING
+    callCount AS LONG
+END TYPE
+
+DIM SHARED runtimeStubs(100) AS RuntimeStub
+DIM SHARED runtimeStubCount AS LONG
+
+' Register a runtime function stub
+SUB IncludeProvider_Test_RegisterStub (functionName$, returnValue$)
+    DIM i AS LONG
+    ' Check if stub already exists
+    FOR i = 0 TO runtimeStubCount - 1
+        IF runtimeStubs(i).functionName = functionName$ THEN
+            runtimeStubs(i).returnValue = returnValue$
+            EXIT SUB
+        END IF
+    NEXT
+    
+    ' Add new stub
+    IF runtimeStubCount < 100 THEN
+        runtimeStubs(runtimeStubCount).functionName = functionName$
+        runtimeStubs(runtimeStubCount).returnValue = returnValue$
+        runtimeStubs(runtimeStubCount).callCount = 0
+        runtimeStubCount = runtimeStubCount + 1
+    END IF
+END SUB
+
+' Get stub return value
+FUNCTION IncludeProvider_Test_GetStubValue$ (functionName$)
+    DIM i AS LONG
+    FOR i = 0 TO runtimeStubCount - 1
+        IF runtimeStubs(i).functionName = functionName$ THEN
+            runtimeStubs(i).callCount = runtimeStubs(i).callCount + 1
+            IncludeProvider_Test_GetStubValue$ = runtimeStubs(i).returnValue
+            EXIT FUNCTION
+        END IF
+    NEXT
+    IncludeProvider_Test_GetStubValue$ = ""
+END FUNCTION
+
+' Get stub call count
+FUNCTION IncludeProvider_Test_GetStubCallCount& (functionName$)
+    DIM i AS LONG
+    FOR i = 0 TO runtimeStubCount - 1
+        IF runtimeStubs(i).functionName = functionName$ THEN
+            IncludeProvider_Test_GetStubCallCount& = runtimeStubs(i).callCount
+            EXIT FUNCTION
+        END IF
+    NEXT
+    IncludeProvider_Test_GetStubCallCount& = 0
+END FUNCTION
+
+' Clear all stubs
+SUB IncludeProvider_Test_ClearStubs
+    DIM i AS LONG
+    FOR i = 0 TO runtimeStubCount - 1
+        runtimeStubs(i).functionName = ""
+        runtimeStubs(i).returnValue = ""
+        runtimeStubs(i).callCount = 0
+    NEXT
+    runtimeStubCount = 0
+END SUB

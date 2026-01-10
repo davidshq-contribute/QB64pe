@@ -1,0 +1,162 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up environment
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          OS_VALUE="win"
+          echo "OS=win" >> $GITHUB_ENV
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          OS_VALUE="osx"
+          echo "OS=osx" >> $GITHUB_ENV
+        else
+          OS_VALUE="lnx"
+          echo "OS=lnx" >> $GITHUB_ENV
+        fi
+        echo "CI_OS=$OS_VALUE" >> $GITHUB_ENV
+        echo "CI_TESTING=y" >> $GITHUB_ENV
+    
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb pulseaudio
+    
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install xvfb || true
+    
+    - name: Build QB64-PE
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ./setup_mingw.cmd
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          ./setup_osx.command
+        else
+          ./setup_lnx.sh
+        fi
+    
+    - name: Run tests
+      run: |
+        ./tests/run_tests.sh
+    
+    - name: Generate test report
+      if: always()
+      run: |
+        mkdir -p test-reports
+        ./tests/test_report.sh ./tests/results ./test-reports/report.html html
+        ./tests/test_report.sh ./tests/results ./test-reports/report.txt text
+    
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-reports-${{ matrix.os }}
+        path: |
+          test-reports/
+          tests/results/
+        retention-days: 30
+    
+    - name: Publish test results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: |
+          test-reports/report.txt
+        check_name: Test Results (${{ matrix.os }})
+        comment_mode: create new
+        report_individual_runs: true
+
+  coverage:
+    name: Test Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up environment
+      run: |
+        echo "OS=lnx" >> $GITHUB_ENV
+        echo "CI_OS=lnx" >> $GITHUB_ENV
+        echo "CI_TESTING=y" >> $GITHUB_ENV
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb pulseaudio
+    
+    - name: Build QB64-PE
+      run: ./setup_lnx.sh
+    
+    - name: Run tests with coverage
+      run: |
+        export CI_OS=lnx
+        export CI_TESTING=y
+        ./tests/run_tests.sh
+    
+    - name: Generate coverage report
+      if: always()
+      run: |
+        mkdir -p coverage-reports
+        ./tests/test_report.sh ./tests/results ./coverage-reports/coverage.html html
+    
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-reports/
+        retention-days: 30
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    
+    steps:
+    - name: Download all test reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: test-reports-*
+        merge-multiple: true
+        path: all-reports
+    
+    - name: Generate summary
+      run: |
+        echo "# Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Test execution completed across all platforms." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f all-reports/report.html ]; then
+          echo "## Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "Detailed HTML report available in artifacts." >> $GITHUB_STEP_SUMMARY
+        fi

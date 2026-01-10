@@ -22,3 +22,5 @@ settings
 source/qb64pe_start.command
 .fake
 *.tmp
+/tests/tests/coverage_data/*
+/tests/coverage_data/*

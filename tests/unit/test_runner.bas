@@ -5,6 +5,11 @@
 '
 
 '$INCLUDE:'test_framework.bi'
+'$INCLUDE:'type_system/test_type_system.bas'
+'$INCLUDE:'symbol_table/test_hash.bas'
+'$INCLUDE:'const_eval/test_const_eval.bas'
+'$INCLUDE:'parser/test_parser.bas'
+'$INCLUDE:'code_generation/test_code_generation.bas'
 
 ' Test discovery and execution
 SUB RunAllTests
@@ -16,8 +21,22 @@ SUB RunAllTests
     PRINT ""
     
     ' Run tests for each component
-    ' Note: Individual test files will be included and their test functions called
+    PRINT "Running type system tests..."
+    RunTypeSystemTests
     
+    PRINT "Running symbol table tests..."
+    RunSymbolTableTests
+    
+    PRINT "Running constant evaluation tests..."
+    RunConstEvalTests
+    
+    PRINT "Running parser tests..."
+    RunParserTests
+    
+    PRINT "Running code generation tests..."
+    RunCodeGenerationTests
+    
+    PRINT ""
     TestFramework_PrintSummary
     
     IF NOT TestFramework_AllPassed& THEN

@@ -13104,11 +13104,48 @@ END IF
 
 IF NoCCompileMode THEN compfailed = 0: GOTO NoCCompile
 IF path.exe$ = "../../" OR path.exe$ = "..\..\" THEN path.exe$ = DefaultExeSaveFolder$
+' Check for executable at the expected location
 IF _FILEEXISTS(path.exe$ + file$ + extension$) THEN
     compfailed = 0
     lastBinaryGenerated$ = path.exe$ + file$ + extension$
 ELSE
-    compfailed = 1 'detect compilation failure
+    ' If -o was specified, also check the exact path specified (handles paths with spaces)
+    IF LEN(CMDLineOutFile$) > 0 THEN
+        ' Normalize path to absolute path for better resolution
+        DIM normalizedPath$
+        normalizedPath$ = CMDLineOutFile$
+        
+        ' Check if the file exists at the exact path specified by -o
+        IF _FILEEXISTS(normalizedPath$) THEN
+            compfailed = 0
+            ' Use _FULLPATH$ to normalize the path (resolves relative paths, etc.)
+            ' Since we verified the file exists, _FULLPATH$ should work safely
+            lastBinaryGenerated$ = _FULLPATH$(normalizedPath$)
+        ELSE
+            ' Also try with .exe extension if not already present (Windows)
+            IF os$ = "WIN" THEN
+                DIM ext$
+                ext$ = UCASE$(GetFileExtension$(normalizedPath$))
+                ' Add .exe if there's no extension or if extension is not .exe
+                IF ext$ = "" OR ext$ <> "EXE" THEN
+                    IF _FILEEXISTS(normalizedPath$ + ".exe") THEN
+                        compfailed = 0
+                        ' Use _FULLPATH$ to normalize the path
+                        ' Since we verified the file exists, _FULLPATH$ should work safely
+                        lastBinaryGenerated$ = _FULLPATH$(normalizedPath$ + ".exe")
+                    ELSE
+                        compfailed = 1 'detect compilation failure
+                    END IF
+                ELSE
+                    compfailed = 1 'detect compilation failure
+                END IF
+            ELSE
+                compfailed = 1 'detect compilation failure
+            END IF
+        END IF
+    ELSE
+        compfailed = 1 'detect compilation failure
+    END IF
 END IF
 
 IF compfailed THEN
@@ -20163,41 +20200,6 @@ SUB getid (i AS LONG)
     currentid = i
 END SUB
 
-FUNCTION isoperator (a2$)
-    a$ = UCASE$(a2$)
-    l = 0
-    l = l + 1: IF a$ = "_ORELSE" THEN GOTO opfound
-    l = l + 1: IF a$ = "_ANDALSO" THEN GOTO opfound
-    l = l + 1: IF a$ = "IMP" THEN GOTO opfound
-    l = l + 1: IF a$ = "EQV" THEN GOTO opfound
-    l = l + 1: IF a$ = "XOR" THEN GOTO opfound
-    l = l + 1: IF a$ = "OR" THEN GOTO opfound
-    l = l + 1: IF a$ = "AND" THEN GOTO opfound
-    l = l + 1: IF a$ = "_NEGATE" THEN GOTO opfound
-    l = l + 1: IF a$ = "NOT" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "=" THEN GOTO opfound
-    IF a$ = ">" THEN GOTO opfound
-    IF a$ = "<" THEN GOTO opfound
-    IF a$ = "<>" THEN GOTO opfound
-    IF a$ = "<=" THEN GOTO opfound
-    IF a$ = ">=" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "+" THEN GOTO opfound
-    IF a$ = "-" THEN GOTO opfound '!CAREFUL! could be negation
-    l = l + 1: IF a$ = "MOD" THEN GOTO opfound
-    l = l + 1: IF a$ = "\" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "*" THEN GOTO opfound
-    IF a$ = "/" THEN GOTO opfound
-    'NEGATION LEVEL (MUST BE SET AFTER CALLING ISOPERATOR BY CONTEXT)
-    l = l + 1: IF a$ = CHR$(241) THEN GOTO opfound
-    l = l + 1: IF a$ = "^" THEN GOTO opfound
-    EXIT FUNCTION
-    opfound:
-    isoperator = l
-END FUNCTION
-
 FUNCTION isvalidvariable (a$)
     FOR i = 1 TO LEN(a$)
         c = ASC(a$, i)
@@ -24242,6 +24244,7 @@ END FUNCTION
 '$INCLUDE:'utilities\file.bas'
 '$INCLUDE:'utilities\build.bas'
 '$INCLUDE:'utilities\elements.bas'
+'$INCLUDE:'utilities\parser_utils.bas'
 '$INCLUDE:'subs_functions\extensions\opengl\opengl_methods.bas'
 '$INCLUDE:'utilities\ini-manager\ini.bm'
 '$INCLUDE:'utilities\s-buffer\simplebuffer.bm'

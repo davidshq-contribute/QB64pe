@@ -91,7 +91,7 @@ The compiler is written in QB64 itself and performs the following functions:
 - **Dependency Detection**: Analyzes code to determine required runtime features
 
 **Key Subsystems:**
-- **Parser** (`source/subs_functions/subs_functions.bas`): Handles all BASIC statements and functions
+- **Parser** (`source/subs_functions/subs_functions.bas`): Handles all BASIC statements and functions (~3,865 lines)
 - **Code Emitter** (`source/emit/logging.bas`): Generates C++ output
 - **Type System** (`source/utilities/type.bas`): Manages variable types and conversions
 - **Error Handling** (`source/utilities/give_error.bas`): Compiler error reporting
@@ -103,6 +103,7 @@ The compiler is written in QB64 itself and performs the following functions:
 - **File Utilities** (`source/utilities/file.bas`): File I/O and path handling
 - **Format Utilities** (`source/utilities/format.bas`): Code formatting and output
 - **Terminal Utilities** (`source/utilities/terminal.bas`): Terminal/console output
+- **Include Provider** (`source/utilities/include_provider.bas`): Abstract include file system for testability
 - **Extension System** (`source/subs_functions/extensions/`): Extensible function system (e.g., OpenGL)
 
 ### 2. Runtime Library (`internal/c/libqb`)
@@ -545,7 +546,7 @@ QB64pe/
 │   ├── global/            # Global constants, settings, version
 │   ├── ide/               # IDE component (optional)
 │   ├── subs_functions/    # Parser and code generation
-│   │   ├── subs_functions.bas  # Main parser (4,310+ lines)
+│   │   ├── subs_functions.bas  # Main parser (~3,865 lines)
 │   │   ├── syntax_highlighter_list.bas  # Keywords for IDE syntax highlighting
 │   │   └── extensions/    # Extensible function systems
 │   │       └── opengl/     # OpenGL function extensions
@@ -807,9 +808,49 @@ QB64 uses a custom string type `qbs` (QB64 String) that provides:
 
 ## Testing Architecture
 
-QB64-PE uses a multi-layered testing approach:
+QB64-PE uses a comprehensive multi-layered testing approach with enhanced infrastructure for component isolation and testability:
 
-### 1. Compiler Tests (`tests/compile_tests/`)
+### Testing Infrastructure
+
+**Include Provider System** (`source/utilities/include_provider.bas`):
+- Abstract include file system that enables testability
+- Supports multiple providers:
+  - **Filesystem Provider**: Default provider for normal compilation
+  - **Memory Provider**: In-memory include content for testing
+  - **Test Provider**: Specialized provider for unit testing
+- **Skip Includes Mode**: Allows testing individual functions without processing all includes
+- Maintains full backward compatibility with existing code
+
+**Component Test Harness**:
+- **Test State Manager** (`tests/unit/test_state_manager.bi`): Manages component state isolation
+  - Save and restore compiler state
+  - Proper initialization and cleanup
+  - Cross-platform support (Windows/Linux/macOS)
+- **Component Test Utilities** (`tests/unit/test_component_utils.bi`): Helper functions for component testing
+- **Compiler Context** (`tests/unit/test_compiler_context.bi`): Minimal compiler context for isolated testing
+
+### Test Categories
+
+### 1. Unit Tests (`tests/unit/`)
+
+**Purpose:**
+- Test individual compiler components in isolation
+- Verify component behavior without full compiler context
+- Fast, focused testing of specific functionality
+
+**Structure:**
+- Component-specific test files (type system, symbol table, constant evaluation, parser, code generation)
+- Uses test harness for state management
+- Can use include provider abstraction for testability
+
+**Coverage:**
+- Type system operations
+- Symbol table hash operations
+- Constant evaluation
+- Parser components
+- Code generation utilities
+
+### 2. Compiler Tests (`tests/compile_tests/`)
 
 **Structure:**
 - Each test is a `.bas` file
@@ -822,7 +863,21 @@ QB64-PE uses a multi-layered testing approach:
 - Dependency-specific tests
 - Error handling tests
 
-### 2. QBasic Compatibility Tests (`tests/qbasic_testcases/`)
+### 3. Integration Tests (`tests/integration/`)
+
+**Purpose:**
+- Test compiler behavior at integration level
+- Verify multi-stage compilation
+- Test error paths and recovery
+- Performance testing
+
+**Coverage:**
+- Symbol resolution across compilation stages
+- Dependency detection and tracking
+- Error message generation and recovery
+- Large file compilation performance
+
+### 4. QBasic Compatibility Tests (`tests/qbasic_testcases/`)
 
 **Purpose:**
 - Verify QB4.5/QBasic compatibility
@@ -834,7 +889,7 @@ QB64-PE uses a multi-layered testing approach:
 - Verify no compilation errors
 - (Behavior not verified, only compilation)
 
-### 3. C++ Runtime Tests (`tests/c/`)
+### 5. C++ Runtime Tests (`tests/c/`)
 
 **Structure:**
 - Individual `.cpp` test files
@@ -848,12 +903,32 @@ QB64-PE uses a multi-layered testing approach:
 - Memory management
 - Platform-specific behavior
 
-### 4. Distribution Tests (`tests/dist/`)
+### 6. Distribution Tests (`tests/dist/`)
 
 **Purpose:**
 - Verify distribution packages
 - Test setup scripts
 - Ensure all components present
+
+### Test Infrastructure Features
+
+**Automatic Test Discovery**:
+- Discovers all tests across test directories
+- Automatically categorizes tests (compile, unit, integration, runtime, format, qbasic)
+- Supports test metadata files and automatic tag inference
+- Filter by category, tag, pattern, or path
+
+**Test Reporting**:
+- Color-coded output for test results
+- Test summary generation
+- HTML and text report generation
+- Test statistics tracking
+
+**Test Utilities**:
+- `tests/test_utils.sh`: Common test utility functions
+- `tests/test_report.sh`: Test report generator
+- `tests/test_discovery.sh`: Automatic test discovery system
+- `tests/run_tests_with_discovery.sh`: Enhanced test runner with discovery
 
 ## Bootstrap Process
 
@@ -960,6 +1035,8 @@ QB64-PE doesn't use traditional compilation (parse → AST → IR → machine co
 - Parse BASIC → Generate equivalent C++
 - Let C++ compiler handle optimization and code generation
 - Leverages mature C++ toolchains
+
+**Note**: Future consideration for AST implementation (see [Future Architecture Considerations](#future-architecture-considerations)) could improve optimization opportunities and code organization.
 
 ### 2. Conditional Compilation
 
@@ -1196,11 +1273,43 @@ QB64-PE supports a library management system via `$USELIBRARY` metacommand:
 
 ### Potential Improvements
 
-1. **LLVM Backend**: Direct code generation instead of C++
-2. **JIT Compilation**: Runtime compilation for faster development
-3. **Better Optimization**: More sophisticated code optimization
-4. **Language Server**: LSP support for better IDE integration
+1. **Abstract Syntax Tree (AST)**: Introduce AST intermediate representation
+   - Benefits: Better code optimization, easier language feature implementation, cleaner separation of concerns
+   - Effort: Very High (1-2 months)
+   - Risk: High - Major architectural change
+
+2. **LLVM Backend**: Direct code generation instead of C++
+   - Could provide better optimization opportunities
+   - Would require significant refactoring
+
+3. **JIT Compilation**: Runtime compilation for faster development
+   - Could improve development iteration speed
+   - Would require new runtime infrastructure
+
+4. **Language Server Protocol (LSP)**: Standard LSP implementation
+   - Benefits: Better IDE integration, support for external editors (VS Code, etc.), standardized protocol
+   - Effort: High (1-2 months)
+   - Risk: Medium - Requires maintaining backward compatibility with existing IDE
+
 5. **Package Manager**: Library dependency management
+   - Could improve library distribution and versioning
+   - Would require new infrastructure and standards
+
+6. **Parser Modularization**: Split large parser file into logical modules
+   - Current: Single ~3,865-line file
+   - Proposed: Split into statements, expressions, functions, declarations, core
+   - Benefits: Easier navigation, reduced merge conflicts, better testability
+   - Effort: High (2-3 weeks)
+   - Risk: Medium - Requires careful refactoring
+
+### Current Technical Debt
+
+Several architectural improvements are identified in `docs/ARCHITECTURAL_REVIEW.md`:
+
+- **Error Handling API Migration**: Migrate from direct variable access to API functions
+- **Code Duplication**: Consolidate duplicate file path operations and error handling code
+- **Build System Abstraction**: Consider CMake or similar for better dependency management
+- **Testing Infrastructure**: Continue expanding unit test coverage and integration tests
 
 ## Conclusion
 
@@ -1211,5 +1320,13 @@ QB64-PE is a sophisticated transpiler that bridges the gap between classic BASIC
 - **Compatibility**: Maintains QB4.5/QBasic compatibility
 - **Extensibility**: Easy to add new features and dependencies
 - **Cross-Platform**: Single codebase for multiple platforms
+- **Testability**: Enhanced testing infrastructure with component isolation and include provider abstraction
 
-The bootstrap process enables self-hosting, and the comprehensive test suite ensures reliability across platforms and use cases.
+The bootstrap process enables self-hosting, and the comprehensive test suite ensures reliability across platforms and use cases. Recent improvements include:
+
+- **Include Provider System**: Enables testability by abstracting file I/O operations
+- **Component Test Harness**: Allows isolated testing of compiler components
+- **Enhanced Test Infrastructure**: Automatic test discovery, improved reporting, and better categorization
+- **Parser Optimization**: Reduced parser size from 4,310+ to ~3,865 lines
+
+For detailed architectural recommendations and improvement opportunities, see `docs/ARCHITECTURAL_REVIEW.md` and `docs/IMPROVEMENTS.md`.

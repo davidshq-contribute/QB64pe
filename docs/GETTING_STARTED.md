@@ -241,6 +241,13 @@ QB64pe/
 │   └── README.md          # License summary
 │
 ├── .ci/                   # CI build scripts (for releases)
+│   ├── bootstrap.bat      # Windows bootstrap build script
+│   ├── bootstrap.sh        # Linux/macOS bootstrap build script
+│   ├── compile.bat         # Windows compilation script
+│   ├── compile.sh          # Linux/macOS compilation script
+│   ├── calculate_version.sh # Version calculation script
+│   ├── make-dist.sh        # Distribution creation script
+│   └── push-internal-source.sh # Updates internal/source in CI
 │
 ├── Makefile               # Build system for C++ compilation
 ├── setup_win.cmd          # Windows setup script
@@ -256,9 +263,9 @@ QB64pe/
 
 - **`internal/c/parts/`**: Third-party dependencies. Each subdirectory contains a library that can be conditionally included in compiled programs.
 
-- **`internal/source/`**: Pre-compiled C++ source of a previous version of QB64-PE. This is used to bootstrap the compiler (compile the compiler with itself).
+- **`internal/source/`**: Pre-generated C++ source of a previous version of QB64-PE, stored as `.txt` files (approximately 1,200 files). This is used to bootstrap the compiler (compile the compiler with itself). These files are automatically updated by the CI process.
 
-- **`internal/temp/`**: Temporary directory where generated C++ code is placed during compilation of user programs.
+- **`internal/temp/`**: Temporary directory where generated C++ code is placed during compilation of user programs. The compiler generates multiple `.txt` files containing C++ code segments that are included by `qbx.cpp` during compilation.
 
 - **`tests/compile_tests/`**: Test cases for the compiler. Each test has a `.bas` file and either a `.output` or `.err` file showing expected results.
 
@@ -268,9 +275,9 @@ QB64pe/
 
 QB64-PE uses a bootstrap process to compile itself:
 
-1. **Bootstrap Compilation**: The pre-compiled C++ source in `internal/source/` is compiled into `qb64pe_bootstrap` using only a C++ compiler and the Makefile
-2. **Self-Compilation**: The bootstrap compiler is used to compile `source/qb64pe.bas` into the final `qb64pe` executable using the `-x` flag (silent compilation)
-3. **Source Update** (CI only): In CI builds, after successful compilation, the generated C++ source is copied from `internal/temp/` back to `internal/source/` for the next bootstrap. This ensures the repository always has an up-to-date bootstrap source.
+1. **Bootstrap Compilation**: The pre-generated C++ source files (`.txt` files) in `internal/source/` are compiled into `qb64pe_bootstrap` (or `qb64pe_bootstrap.exe` on Windows) using only a C++ compiler and the Makefile. The Makefile copies these `.txt` files into `internal/temp/` and compiles them.
+2. **Self-Compilation**: The bootstrap compiler is used to compile `source/qb64pe.bas` into the final `qb64pe` executable using the `-x` flag (silent compilation). This transpiles the BASIC source to C++ and generates new `.txt` files in `internal/temp/`.
+3. **Source Update** (CI only): In CI builds, after successful compilation, the generated C++ source files (`.txt` files) are copied from `internal/temp/` back to `internal/source/` for the next bootstrap. This ensures the repository always has an up-to-date bootstrap source that can be committed to version control.
 
 This process ensures that QB64-PE can always compile itself, even when making changes to the compiler. The bootstrap source in `internal/source/` is committed to the repository, allowing anyone to build QB64-PE with just a C++ compiler.
 
@@ -296,7 +303,7 @@ When modifying the QB64 compiler source code:
    - Use the bootstrap to compile your modified `source/qb64pe.bas`
    - Generate the new `qb64pe` executable
    
-   **Note**: After a successful rebuild, the generated C++ source in `internal/temp/` could be copied to `internal/source/` for future bootstraps, but this is typically only done in CI builds.
+   **Note**: After a successful rebuild, the generated C++ source files (`.txt` files) in `internal/temp/` could be copied to `internal/source/` for future bootstraps, but this is typically only done in CI builds. The bootstrap source in the repository is sufficient for local development.
 
 3. **Test your changes** using the test suite (see [Testing](#testing))
 4. **Verify** that QB64-PE can still compile itself and compile other programs correctly
@@ -314,7 +321,7 @@ When modifying the C++ runtime (`internal/c/libqb/`):
 
 The build process for a QB64 program works as follows:
 
-1. **Transpilation**: QB64-PE reads the `.bas` file and generates C++ source code into `internal/temp/`
+1. **Transpilation**: QB64-PE reads the `.bas` file and generates C++ source code as `.txt` files into `internal/temp/`
 2. **Dependency Detection**: The compiler analyzes the code to determine which `DEP_*` flags are needed
 3. **C++ Compilation**: The Makefile is called with appropriate flags:
    - Compiles third-party dependencies (if needed)
@@ -621,18 +628,19 @@ Now that you're familiar with the project:
 ### Build Failures
 
 **Bootstrap compilation fails**
-- Check that `internal/source/` contains the pre-compiled C++ source files
+- Check that `internal/source/` contains the pre-generated C++ source files (`.txt` files, approximately 1,200 files)
 - Verify your C++ compiler is working: `g++ --version` or `clang++ --version`
 - Check for disk space issues
 - On Windows, ensure MinGW was properly downloaded and extracted
 - Try running `make clean OS=[your-os]` and rebuilding
+- Verify the Makefile can find the files in `internal/source/`
 
 **Self-compilation fails after making changes**
 - Review your changes for syntax errors in the QB64 source
 - Check compiler error messages carefully - they point to the problematic code
 - Verify that you haven't broken the bootstrap process (the bootstrap should still work)
 - Try compiling a simple test program to see if the issue is specific to self-compilation
-- Check `internal/temp/` for generated C++ to see if the transpilation succeeded
+- Check `internal/temp/` for generated C++ `.txt` files to see if the transpilation succeeded
 - Try reverting recent changes to isolate the problem
 - Ensure you're using the correct bootstrap (the one in `internal/source/` should work)
 

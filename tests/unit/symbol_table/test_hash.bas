@@ -7,6 +7,8 @@
 
 '$INCLUDE:'../test_framework.bi'
 '$INCLUDE:'../test_state_manager.bi'
+'$INCLUDE:'../test_output_verification.bi'
+'$INCLUDE:'../test_output_verification.bas'
 '$INCLUDE:'../../source/utilities/hash.bi'
 '$INCLUDE:'../../source/utilities/hash.bas'
 
@@ -145,10 +147,101 @@ SUB Test_HashCollisions
     Test_End result
 END SUB
 
+SUB Test_SymbolTableVerification
+    Test_Start "Symbol table verification"
+    
+    DIM context AS TestStateContext
+    TestState_Init context, "hash"
+    
+    DIM result AS LONG
+    DIM snapshot AS SymbolTableSnapshot
+    DIM expectedSymbols$(1 TO 5) AS STRING
+    DIM count AS LONG
+    
+    ' Add multiple symbols
+    HashAdd "var1", HASHFLAG_VARIABLE, 1
+    HashAdd "var2", HASHFLAG_VARIABLE, 2
+    HashAdd "func1", HASHFLAG_FUNCTION, 10
+    HashAdd "sub1", HASHFLAG_SUB, 20
+    HashAdd "const1", HASHFLAG_CONSTANT, 30
+    
+    ' Verify symbol count
+    count = VerifySymbolTable_GetCount&()
+    result = Test_AssertEqual&(5, count, "Should have 5 symbols")
+    
+    ' Verify counts by flag
+    IF result THEN
+        count = VerifySymbolTable_GetCountByFlag&(HASHFLAG_VARIABLE)
+        result = Test_AssertEqual&(2, count, "Should have 2 variables")
+    END IF
+    
+    IF result THEN
+        count = VerifySymbolTable_GetCountByFlag&(HASHFLAG_FUNCTION)
+        result = Test_AssertEqual&(1, count, "Should have 1 function")
+    END IF
+    
+    IF result THEN
+        count = VerifySymbolTable_GetCountByFlag&(HASHFLAG_SUB)
+        result = Test_AssertEqual&(1, count, "Should have 1 sub")
+    END IF
+    
+    IF result THEN
+        count = VerifySymbolTable_GetCountByFlag&(HASHFLAG_CONSTANT)
+        result = Test_AssertEqual&(1, count, "Should have 1 constant")
+    END IF
+    
+    ' Verify exact symbols
+    IF result THEN
+        expectedSymbols$(1) = "VAR1"
+        expectedSymbols$(2) = "VAR2"
+        expectedSymbols$(3) = "FUNC1"
+        expectedSymbols$(4) = "SUB1"
+        expectedSymbols$(5) = "CONST1"
+        result = VerifySymbolTable_VerifyExactSymbols&(expectedSymbols$(), 5)
+        result = Test_Assert&(result, "Should contain exactly the expected symbols")
+    END IF
+    
+    ' Verify symbol properties
+    IF result THEN
+        result = VerifySymbolTable_VerifySymbol&("var1", HASHFLAG_VARIABLE, 1)
+        result = Test_Assert&(result, "var1 should have correct properties")
+    END IF
+    
+    IF result THEN
+        result = VerifySymbolTable_VerifySymbol&("func1", HASHFLAG_FUNCTION, 10)
+        result = Test_Assert&(result, "func1 should have correct properties")
+    END IF
+    
+    ' Test snapshot functionality
+    IF result THEN
+        VerifySymbolTable_InitSnapshot snapshot
+        result = VerifySymbolTable_Enumerate&(snapshot)
+        result = Test_Assert&(result, "Should enumerate symbols successfully")
+        
+        IF result THEN
+            result = Test_AssertEqual&(5, snapshot.symbolCount, "Snapshot should have 5 symbols")
+        END IF
+        
+        IF result THEN
+            result = Test_AssertEqual&(2, snapshot.variableCount, "Snapshot should have 2 variables")
+        END IF
+        
+        IF result THEN
+            result = Test_AssertEqual&(1, snapshot.functionCount, "Snapshot should have 1 function")
+        END IF
+        
+        VerifySymbolTable_CleanupSnapshot snapshot
+    END IF
+    
+    TestState_Cleanup context
+    Test_End result
+END SUB
+
 ' Run all symbol table tests
 SUB RunSymbolTableTests
     Test_SymbolInsertion
     Test_SymbolLookup
     Test_SymbolScope
     Test_HashCollisions
+    Test_SymbolTableVerification
 END SUB
