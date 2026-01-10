@@ -2,64 +2,146 @@
 ' Unit Tests for Symbol Table (hash.bas)
 '
 ' Tests symbol insertion, lookup, and scope resolution.
+' Uses component test harness for isolated testing.
 '
 
 '$INCLUDE:'../test_framework.bi'
+'$INCLUDE:'../test_state_manager.bi'
 '$INCLUDE:'../../source/utilities/hash.bi'
-
-' Note: These tests require the hash.bas module to be included
-' For now, these are example tests showing the testing approach
+'$INCLUDE:'../../source/utilities/hash.bas'
 
 SUB Test_SymbolInsertion
     Test_Start "Symbol insertion"
     
+    DIM context AS TestStateContext
+    TestState_Init context, "hash"
+    
     DIM result AS LONG
     
     ' Test that symbols can be inserted into the hash table
-    ' Note: Would need actual hash.bas functions to test
-    ' This is a template showing the testing approach
+    HashAdd "testVar", HASHFLAG_VARIABLE, 1
+    result = Test_Assert&(HashListNext > 1, "HashAdd should add symbol to table")
     
-    result = Test_Assert&(-1, "Placeholder test - replace with actual hash table tests")
+    ' Verify the symbol was added correctly
+    IF result THEN
+        DIM flags AS LONG, ref AS LONG
+        DIM found AS LONG
+        found = HashFind("testVar", HASHFLAG_VARIABLE, flags, ref)
+        result = Test_Assert&(found > 0, "Inserted symbol should be findable")
+        IF result THEN result = Test_AssertEqual&(HASHFLAG_VARIABLE, flags, "Symbol should have correct flags")
+        IF result THEN result = Test_AssertEqual&(1, ref, "Symbol should have correct reference")
+    END IF
     
+    TestState_Cleanup context
     Test_End result
 END SUB
 
 SUB Test_SymbolLookup
     Test_Start "Symbol lookup"
     
+    DIM context AS TestStateContext
+    TestState_Init context, "hash"
+    
     DIM result AS LONG
     
+    ' Add multiple symbols
+    HashAdd "var1", HASHFLAG_VARIABLE, 1
+    HashAdd "var2", HASHFLAG_VARIABLE, 2
+    HashAdd "func1", HASHFLAG_FUNCTION, 10
+    
     ' Test that inserted symbols can be found
-    ' result = Test_Assert&(Hash_FindSymbol&("testVar") <> 0, "Inserted symbol should be findable")
+    DIM flags AS LONG, ref AS LONG
+    DIM found AS LONG
     
-    result = Test_Assert&(-1, "Placeholder test")
+    found = HashFind("var1", HASHFLAG_VARIABLE, flags, ref)
+    result = Test_Assert&(found > 0, "var1 should be findable")
+    IF result THEN result = Test_AssertEqual&(1, ref, "var1 should have correct reference")
     
+    IF result THEN
+        found = HashFind("var2", HASHFLAG_VARIABLE, flags, ref)
+        result = Test_Assert&(found > 0, "var2 should be findable")
+        IF result THEN result = Test_AssertEqual&(2, ref, "var2 should have correct reference")
+    END IF
+    
+    IF result THEN
+        found = HashFind("func1", HASHFLAG_FUNCTION, flags, ref)
+        result = Test_Assert&(found > 0, "func1 should be findable")
+        IF result THEN result = Test_AssertEqual&(10, ref, "func1 should have correct reference")
+    END IF
+    
+    ' Test that non-existent symbols are not found
+    IF result THEN
+        found = HashFind("nonexistent", HASHFLAG_VARIABLE, flags, ref)
+        result = Test_Assert&(found = 0, "Non-existent symbol should not be found")
+    END IF
+    
+    TestState_Cleanup context
     Test_End result
 END SUB
 
 SUB Test_SymbolScope
     Test_Start "Symbol scope resolution"
     
+    DIM context AS TestStateContext
+    TestState_Init context, "hash"
+    
     DIM result AS LONG
     
-    ' Test that symbols in different scopes are handled correctly
-    ' Test global vs local scope resolution
+    ' Test that symbols with different flags can coexist
+    ' Add same name with different flags
+    HashAdd "test", HASHFLAG_VARIABLE, 1
+    HashAdd "test", HASHFLAG_FUNCTION, 2
     
-    result = Test_Assert&(-1, "Placeholder test")
+    DIM flags AS LONG, ref AS LONG
+    DIM found AS LONG
     
+    ' Find variable version
+    found = HashFind("test", HASHFLAG_VARIABLE, flags, ref)
+    result = Test_Assert&(found > 0, "Variable version should be findable")
+    IF result THEN result = Test_AssertEqual&(1, ref, "Variable should have correct reference")
+    
+    ' Find function version
+    IF result THEN
+        found = HashFind("test", HASHFLAG_FUNCTION, flags, ref)
+        result = Test_Assert&(found > 0, "Function version should be findable")
+        IF result THEN result = Test_AssertEqual&(2, ref, "Function should have correct reference")
+    END IF
+    
+    TestState_Cleanup context
     Test_End result
 END SUB
 
 SUB Test_HashCollisions
     Test_Start "Hash collision handling"
     
+    DIM context AS TestStateContext
+    TestState_Init context, "hash"
+    
     DIM result AS LONG
     
     ' Test that hash collisions are handled correctly
-    ' Insert multiple symbols that might hash to the same bucket
+    ' Insert multiple symbols - the hash table should handle collisions via chaining
+    HashAdd "a", HASHFLAG_VARIABLE, 1
+    HashAdd "b", HASHFLAG_VARIABLE, 2
+    HashAdd "c", HASHFLAG_VARIABLE, 3
+    HashAdd "d", HASHFLAG_VARIABLE, 4
+    HashAdd "e", HASHFLAG_VARIABLE, 5
     
-    result = Test_Assert&(-1, "Placeholder test")
+    ' Verify all symbols can be found
+    DIM flags AS LONG, ref AS LONG
+    DIM found AS LONG
+    DIM i AS LONG
+    DIM symbols$(1 TO 5)
+    symbols$(1) = "a": symbols$(2) = "b": symbols$(3) = "c": symbols$(4) = "d": symbols$(5) = "e"
     
+    FOR i = 1 TO 5
+        found = HashFind(symbols$(i), HASHFLAG_VARIABLE, flags, ref)
+        result = Test_Assert&(found > 0, "Symbol " + symbols$(i) + " should be findable")
+        IF result THEN result = Test_AssertEqual&(i, ref, "Symbol " + symbols$(i) + " should have correct reference")
+        IF NOT result THEN EXIT FOR
+    NEXT
+    
+    TestState_Cleanup context
     Test_End result
 END SUB
 

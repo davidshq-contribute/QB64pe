@@ -1,6 +1,7 @@
 #!/bin/bash
 # Arg 1: qb54 location
 # Arg 2: Optional category to test
+# Supports fast-fail mode: set FAST_FAIL=1 to stop on first failure
 
 PREFIX="Compilation"
 
@@ -37,6 +38,32 @@ show_incorrect_result()
 #
 # This is either win, lnx, or osx
 OS=$CI_OS
+
+# Auto-detect OS if not set
+if [ -z "$OS" ]; then
+    case "$(uname -s)" in
+        Linux*)
+            # Check if we're on WSL or Git Bash on Windows
+            if [ -f /proc/version ] && grep -qi microsoft /proc/version 2>/dev/null; then
+                OS="win"  # WSL
+            elif [ -n "$MSYSTEM" ] || [ -n "$WSL_DISTRO_NAME" ]; then
+                OS="win"  # Git Bash or WSL
+            else
+                OS="lnx"
+            fi
+            ;;
+        Darwin*)  OS="osx" ;;
+        MINGW*|MSYS*|CYGWIN*) OS="win" ;;
+        *)
+            # Default: check for .exe files or Windows paths
+            if command -v cmd.exe >/dev/null 2>&1 || [ -d "/c/Windows" ] || [ -d "/mnt/c/Windows" ]; then
+                OS="win"
+            else
+                OS="lnx"  # Default to Linux for unknown
+            fi
+            ;;
+    esac
+fi
 
 # On Linux, we make use of xvfb-run to provide each test with a framebuffer
 # based X server, which allows graphics to work.
@@ -112,8 +139,16 @@ do
         (exit $ERR)
         assert_success_named "Compile" "Compilation Error:" show_failure "$category" "$testName"
 
+        # Use absolute path to avoid issues with working directory changes
+        if [ ! -f "$EXE" ]; then
+            # Try with absolute path
+            ABS_EXE="$(cd "$(dirname "$EXE")" && pwd)/$(basename "$EXE")"
+            if [ -f "$ABS_EXE" ]; then
+                EXE="$ABS_EXE"
+            fi
+        fi
         test -f "$EXE"
-        assert_success_named "exe exists" "$test-output executable does not exist!" show_failure "$category" "$testName"
+        assert_success_named "exe exists" "Executable '$EXE' does not exist!" show_failure "$category" "$testName"
 
         if [ "$checkLicense" == "y" ]; then
             expectedResult="$(cat "./tests/compile_tests/$category/$testName.$OS.license")"
@@ -146,6 +181,10 @@ do
         (exit $ERR)
         assert_success_named "run" "Execution Error:" echo "$testResult"
 
+        # Normalize newlines for comparison (strip trailing newlines from both)
+        expectedResult=$(echo -n "$expectedResult" | sed 's/\r$//')
+        testResult=$(echo -n "$testResult" | sed 's/\r$//')
+        
         [ "$testResult" == "$expectedResult" ]
         assert_success_named "result" "Result is wrong:" show_incorrect_result "$expectedResult" "$testResult"
 

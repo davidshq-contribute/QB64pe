@@ -51,6 +51,13 @@ assert_success_named ()
         if [ $# -gt 0 ]; then
             "$@"
         fi
+        
+        # Exit immediately on failure if fast-fail is enabled
+        if [ "${FAST_FAIL:-0}" = "1" ]; then
+            echo ""
+            echo "Fast-fail enabled: Stopping on first failure"
+            exit 1
+        fi
     fi
 }
 

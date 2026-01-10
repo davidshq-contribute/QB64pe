@@ -1,0 +1,4 @@
+- Review all the code changes you've made.
+- Did you introduce any bugs or errors?
+- Implement any bad practices?
+- Lose any functionality?

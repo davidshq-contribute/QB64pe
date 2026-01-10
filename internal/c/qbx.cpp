@@ -322,6 +322,9 @@ extern void sub_wait(int32 port, int32 andexpression, int32 xorexpression, int32
 extern qbs *func_tab(int32 pos);
 extern qbs *func_spc(int32 spaces);
 extern float func_pmap(float val, int32 option);
+// Forward declaration for VAL function
+// The actual implementation uses qbs_val<long double> template from libqb/include/qbs.h
+extern long double func_val(qbs *s);
 extern uint32 func_screen(int32 y, int32 x, int32 returncol, int32 passed);
 extern void sub_bsave(qbs *filename, int32 offset, int32 size);
 extern void sub_bload(qbs *filename, int32 offset, int32 passed);

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Testing Infrastructure
+- **Component Test Harness**
+  - Added `tests/unit/test_state_manager.bi` - Test state manager for component isolation
+  - Added `tests/unit/test_component_utils.bi` - Component test utilities and helpers
+  - Added `tests/unit/test_compiler_context.bi` - Minimal compiler context for component testing
+  - Added `docs/COMPONENT_TEST_HARNESS_IMPLEMENTATION.md` - Comprehensive documentation for component test harness
+
 #### Documentation
 - **Code Analysis Documentation**
   - Added `CODE_ANALYSIS_ISSUE_DATABASE.md` - Comprehensive database of code analysis issues
@@ -46,12 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Unit Tests
 - **Constant Evaluation Tests**
   - Added `tests/unit/const_eval/test_const_eval.bas` - Tests for constant evaluation functionality
+  - Updated to use component test harness for isolated testing
 
 - **Symbol Table Tests**
   - Added `tests/unit/symbol_table/test_hash.bas` - Tests for hash functionality in symbol tables
+  - Updated to use component test harness with proper state management
 
 - **Type System Tests**
   - Added `tests/unit/type_system/test_type_system.bas` - Tests for type system functionality
+  - Updated to use component test harness for isolated testing
 
 #### Integration Tests
 - **Compiler State Tests**
@@ -75,16 +85,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Source Code
 - **Main Compiler**
   - Modified `source/qb64pe.bas` - Updates to main compiler source (317 lines changed)
+  - Modified `internal/c/qbx.cpp` - Fixed `func_val` forward declaration (changed from `static inline` to `extern`)
 
 #### Testing Infrastructure
 - **Test Runner**
   - Modified `tests/run_tests.sh` - Enhanced test runner script with improved functionality
+  - Modified `tests/compile_tests.sh` - Improved OS detection logic for cross-platform compatibility
+  - Modified `tests/add_prefix_test.sh` - Enhanced OS detection and error handling
+  - Modified `tests/assert.sh` - Added improved error reporting and fast-fail support
+
+#### Unit Tests
+- **Test Implementation Updates**
+  - Updated `tests/unit/const_eval/test_const_eval.bas` - Replaced placeholder tests with actual implementation using component harness
+  - Updated `tests/unit/symbol_table/test_hash.bas` - Implemented real hash table tests with proper state management
+  - Updated `tests/unit/type_system/test_type_system.bas` - Implemented comprehensive type system tests
+
+### Fixed
+- **Compiler Issues**
+  - Fixed `func_val` forward declaration in `internal/c/qbx.cpp` - Changed from incorrect `static inline` to proper `extern` declaration
+
+- **Test Infrastructure**
+  - Fixed hash table size mismatch in test state manager - Now uses consistent default size (65536)
+  - Fixed missing `SHARED` keyword in REDIM statements for const arrays
+  - Fixed incomplete state restoration - Arrays are now properly REDIM'd when restoring saved state
 
 ### Statistics
-- **Total Changes**: 34 files changed
-- **Additions**: 6,918 insertions
-- **Deletions**: 154 deletions
-- **Net Change**: +6,764 lines
+- **Total Changes**: 47 files changed (13 in this update)
+- **Additions**: 9,568 insertions (+2,650 in this update)
+- **Deletions**: 1,971 deletions (+1,817 in this update)
+- **Net Change**: +7,597 lines (+833 in this update)
 
 ---
 
@@ -93,5 +122,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 This changelog entry represents a significant update focusing on:
 1. **Comprehensive Documentation**: Extensive documentation added covering architecture, code analysis, and testing strategies
 2. **Testing Infrastructure**: Complete test framework implementation with unit and integration test support
-3. **Code Quality**: New include provider utility and improvements to main compiler
-4. **Test Coverage**: Addition of unit tests for core components (const eval, symbol tables, type system) and integration tests for compiler state, error handling, and performance
+3. **Component Test Harness**: New isolated testing infrastructure allowing components to be tested independently
+4. **Code Quality**: New include provider utility and improvements to main compiler
+5. **Test Coverage**: Addition of unit tests for core components (const eval, symbol tables, type system) and integration tests for compiler state, error handling, and performance
+6. **Test Implementation**: Replaced placeholder tests with actual implementations using the component test harness
+
+### Recent Updates (Component Test Harness)
+- **Component Isolation**: Tests can now run in isolation with minimal compiler state
+- **State Management**: Proper initialization and cleanup of component state for consistent testing
+- **Cross-Platform**: Improved OS detection in test scripts for better Windows/Linux/macOS support
+- **Bug Fixes**: Resolved critical and medium priority issues in test infrastructure
