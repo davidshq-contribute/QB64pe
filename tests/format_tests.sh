@@ -27,9 +27,20 @@ else
     TESTS_TO_RUN='*.bas'
 fi
 
+# Helper function to extract error messages from compile output
+extract_compile_errors() {
+    local compile_result_file="$1"
+    
+    if [ -f "$compile_result_file" ] && [ -s "$compile_result_file" ]; then
+        cat "$compile_result_file"
+    else
+        echo "[No compile output captured]"
+    fi
+}
+
 show_failure()
 {
-    cat "$RESULTS_DIR/$1-$2-$3-compile_result.txt"
+    extract_compile_errors "$RESULTS_DIR/$1-$2-$3-compile_result.txt"
 }
 
 show_incorrect_result()
@@ -55,7 +66,8 @@ do
         compilerFlags=("${map[@]:1}")
         pushd . >/dev/null
         cd "tests/format_tests/$category"
-        "../../../$QB64" -y -m "${compilerFlags[@]}" "$testName.bas" -o "../../../$output" 1>"../../../$compileResultOutput"
+        # Capture both stdout and stderr for complete error information
+        "../../../$QB64" -y -m "${compilerFlags[@]}" "$testName.bas" -o "../../../$output" >"../../../$compileResultOutput" 2>&1
         ERR=$?
         popd >/dev/null
         (exit $ERR)

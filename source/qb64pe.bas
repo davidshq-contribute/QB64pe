@@ -31,6 +31,7 @@ $VERSIONINFO:Comments='QB64 is a modern extended BASIC programming language that
 '$INCLUDE:'utilities\give_error.bi'
 '$INCLUDE:'utilities\statevars.bi'
 '$INCLUDE:'utilities\type.bi'
+'$INCLUDE:'utilities\include_provider.bi'
 
 DEFLNG A-Z
 
@@ -1333,6 +1334,7 @@ layoutok = 0
 inclevel = 0
 errorLineInInclude = 0
 addmetainclude$ = ""
+IncludeProvider_Init ' Initialize include provider system
 nextrunlineindex = 1
 lasttype = 0
 lasttypeelement = 0
@@ -2744,89 +2746,97 @@ DO
 
 
     IF LEN(addmetainclude$) THEN
-        IF Debug THEN PRINT #9, "Pre-pass:INCLUDE$-ing file:'" + addmetainclude$ + "':On line"; linenumber
-        a$ = addmetainclude$: addmetainclude$ = "" 'read/clear message
+        ' Check if skip includes mode is enabled (for unit testing)
+        IF IncludeProvider_ShouldSkipIncludes&() THEN
+            IF Debug THEN PRINT #9, "Pre-pass:SKIPPING INCLUDE$:'" + addmetainclude$ + "':On line"; linenumber
+            addmetainclude$ = "" 'clear message without processing
+        ELSE
+            IF Debug THEN PRINT #9, "Pre-pass:INCLUDE$-ing file:'" + addmetainclude$ + "':On line"; linenumber
+            a$ = addmetainclude$: addmetainclude$ = "" 'read/clear message
 
-        IF inclevel = 0 THEN
-            includingFromRoot = 0
-            autoIncludingFile = 0
-            autoInclude_prepass:
-            IF autoIncludeBuffer <> -1 THEN
-                a$ = ReadBufLine$(autoIncludeBuffer)
-                IF a$ = "-----" THEN mainEndLine = 3: GOTO autoInclude_prepass '"AfterMain" is done
-                autoIncludingFile = 1
-                IF RIGHT$(a$, 18) = "beforefirstline.bi" OR RIGHT$(a$, 16) = "afterlastline.bm" THEN
-                    autoIncludingFile = -1
+            IF inclevel = 0 THEN
+                includingFromRoot = 0
+                autoIncludingFile = 0
+                autoInclude_prepass:
+                IF autoIncludeBuffer <> -1 THEN
+                    a$ = ReadBufLine$(autoIncludeBuffer)
+                    IF a$ = "-----" THEN mainEndLine = 3: GOTO autoInclude_prepass '"AfterMain" is done
+                    autoIncludingFile = 1
+                    IF RIGHT$(a$, 18) = "beforefirstline.bi" OR RIGHT$(a$, 16) = "afterlastline.bm" THEN
+                        autoIncludingFile = -1
+                    END IF
+                    includingFromRoot = 1
                 END IF
-                includingFromRoot = 1
             END IF
-        END IF
 
-        IF inclevel = 100 THEN
-            FOR fh = 200 TO 299: CLOSE #fh: NEXT fh 'close all includes
-            a$ = "Too many indwelling INCLUDE files": GOTO errmes
-        END IF
-        '1. Verify file exists (location is either (a)relative to source file or (b)absolute)
-        IF LEFT$(a$, 2) = ".\" OR LEFT$(a$, 2) = "./" THEN a$ = MID$(a$, 3)
-        fh = 199 + inclevel + 1
+            IF inclevel = 100 THEN
+                FOR fh = 200 TO 299: CLOSE #fh: NEXT fh 'close all includes
+                a$ = "Too many indwelling INCLUDE files": GOTO errmes
+            END IF
+            '1. Verify file exists (location is either (a)relative to source file or (b)absolute)
+            IF LEFT$(a$, 2) = ".\" OR LEFT$(a$, 2) = "./" THEN a$ = MID$(a$, 3)
+            fh = 199 + inclevel + 1
 
-        firstTryMethod = 1
-        IF includingFromRoot <> 0 AND inclevel = 0 THEN firstTryMethod = 2
-        FOR try = firstTryMethod TO 2 'if including file from root, do not attempt including from relative location
-            IF try = 1 THEN
-                IF inclevel = 0 THEN
-                    IF idemode THEN p$ = idepath$ + pathsep$ ELSE p$ = getfilepath$(sourcefile$)
-                ELSE
-                    p$ = getfilepath$(incname$(inclevel))
+            firstTryMethod = 1
+            IF includingFromRoot <> 0 AND inclevel = 0 THEN firstTryMethod = 2
+            FOR try = firstTryMethod TO 2 'if including file from root, do not attempt including from relative location
+                IF try = 1 THEN
+                    IF inclevel = 0 THEN
+                        IF idemode THEN p$ = idepath$ + pathsep$ ELSE p$ = getfilepath$(sourcefile$)
+                    ELSE
+                        p$ = getfilepath$(incname$(inclevel))
+                    END IF
+                    f$ = IncludeProvider_ResolvePath$(a$, p$)
                 END IF
-                f$ = p$ + a$
-            END IF
-            IF try = 2 THEN f$ = a$
-            IF _FILEEXISTS(f$) THEN
-                qberrorhappened = -3 '***
-                OPEN f$ FOR BINARY AS #fh
-                qberrorhappened3: '***
-                IF qberrorhappened = -3 THEN
-                    '=== BEGIN: handling $INCLUDEONCE ===
-                    incDAT$ = SPACE$(LOF(fh))
-                    GET #fh, , incDAT$
-                    CLOSE #fh 'as we skip the regular CLOSE when $INCLUDEONCE
-                    incDAT$ = UCASE$(incDAT$)
-                    incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + MKI$(&H0A0D))
-                    IF incPOS& = 0 OR incPOS& > 1 THEN
-                        IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + CHR$(10))
+                IF try = 2 THEN f$ = a$
+                IF IncludeProvider_FileExists&(f$) THEN
+                    qberrorhappened = -3 '***
+                    IF IncludeProvider_Open&(f$, inclevel) = 0 THEN
+                        qberrorhappened = 0
+                    ELSE
+                        '=== BEGIN: handling $INCLUDEONCE ===
+                        incDAT$ = IncludeProvider_ReadAll$(f$)
+                        incDAT$ = UCASE$(incDAT$)
+                        incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + MKI$(&H0A0D))
                         IF incPOS& = 0 OR incPOS& > 1 THEN
-                            incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + MKI$(&H0A0D))
-                            IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + CHR$(10))
-                        END IF
-                    END IF
-                    IF incPOS& > 0 THEN
-                        nul& = SeekBuf&(IncOneBuf, 0, SBM_BufStart)
-                        WHILE NOT EndOfBuf%(IncOneBuf)
-                            IF _FULLPATH$(f$) = ReadBufLine$(IncOneBuf) THEN
-                                qberrorhappened = 0
-                                GOTO skipInc1
+                            IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + CHR$(10))
+                            IF incPOS& = 0 OR incPOS& > 1 THEN
+                                incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + MKI$(&H0A0D))
+                                IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + CHR$(10))
                             END IF
-                        WEND
+                        END IF
+                        IF incPOS& > 0 THEN
+                            nul& = SeekBuf&(IncOneBuf, 0, SBM_BufStart)
+                            WHILE NOT EndOfBuf%(IncOneBuf)
+                                IF _FULLPATH$(f$) = ReadBufLine$(IncOneBuf) THEN
+                                    IncludeProvider_Close inclevel
+                                    qberrorhappened = 0
+                                    GOTO skipInc1
+                                END IF
+                            WEND
+                        END IF
+                        WriteBufLine IncOneBuf, _FULLPATH$(f$)
+                        ' Reopen file for reading (provider handles this)
+                        IF IncludeProvider_Open&(f$, inclevel) = 0 THEN
+                            qberrorhappened = 0
+                        END IF
+                        '=== END: handling $INCLUDEONCE ===
+                        EXIT FOR '***
                     END IF
-                    WriteBufLine IncOneBuf, _FULLPATH$(f$)
-                    OPEN f$ FOR BINARY AS #fh 'reopen and continue
-                    '=== END: handling $INCLUDEONCE ===
-                    EXIT FOR '***
                 END IF
-            END IF
-            qberrorhappened = 0
-        NEXT
-        IF qberrorhappened <> -3 THEN qberrorhappened = 0: a$ = "File " + a$ + " not found": GOTO errmes
-        inclevel = inclevel + 1: incname$(inclevel) = f$: inclinenumber(inclevel) = 0
+                qberrorhappened = 0
+            NEXT
+            IF qberrorhappened <> -3 THEN qberrorhappened = 0: a$ = "File " + a$ + " not found": GOTO errmes
+            inclevel = inclevel + 1: incname$(inclevel) = f$: inclinenumber(inclevel) = 0
+        END IF 'end of skip includes check
     END IF 'fall through to next section...
     '--------------------
     DO WHILE inclevel
 
         fh = 199 + inclevel
         '2. Feed next line
-        IF EOF(fh) = 0 THEN
-            LINE INPUT #fh, x$
+        IF IncludeProvider_EOF&(inclevel) = 0 THEN
+            x$ = IncludeProvider_ReadLine$(inclevel)
 
             wholeline$ = x$
             inclinenumber(inclevel) = inclinenumber(inclevel) + 1
@@ -2857,7 +2867,7 @@ DO
             GOTO ideprepass
         END IF
         '3. Close & return control
-        CLOSE #fh
+        IncludeProvider_Close inclevel
         inclevel = inclevel - 1
         skipInc1:
         IF autoIncludingFile <> 0 AND (inclevel = 0 OR mainEndLine = 2) THEN
@@ -11424,100 +11434,106 @@ DO
 
         'Include Manager #2 '***
         IF LEN(addmetainclude$) THEN
-
-            IF inclevel = 0 THEN
-                'backup line formatting
-                layoutcomment_backup$ = layoutcomment$
-                layoutok_backup = layoutok
-                layout_backup$ = layout$
-                layoutoriginal_backup$ = layoutoriginal$
-                idecompiledline_backup$ = idecompiledline$
-                IDEAutoIndent_backup = IDEAutoIndent
-                IDEAutoLayout_backup = IDEAutoLayout
-            END IF
-
-            a$ = addmetainclude$: addmetainclude$ = "" 'read/clear message
-
-            IF inclevel = 0 THEN
-                includingFromRoot = 0
-                autoIncludingFile = 0
-                autoInclude:
-                IF autoIncludeBuffer <> -1 THEN
-                    a$ = ReadBufLine$(autoIncludeBuffer)
-                    IF a$ = "-----" THEN mainEndLine = 3: GOTO autoInclude '"AfterMain" is done
-                    autoIncludingFile = 1
-                    IF RIGHT$(a$, 18) = "beforefirstline.bi" OR RIGHT$(a$, 16) = "afterlastline.bm" THEN
-                        autoIncludingFile = -1
-                    END IF
-                    includingFromRoot = 1
+            ' Check if skip includes mode is enabled (for unit testing)
+            IF IncludeProvider_ShouldSkipIncludes&() THEN
+                addmetainclude$ = "" 'clear message without processing
+            ELSE
+                IF inclevel = 0 THEN
+                    'backup line formatting
+                    layoutcomment_backup$ = layoutcomment$
+                    layoutok_backup = layoutok
+                    layout_backup$ = layout$
+                    layoutoriginal_backup$ = layoutoriginal$
+                    idecompiledline_backup$ = idecompiledline$
+                    IDEAutoIndent_backup = IDEAutoIndent
+                    IDEAutoLayout_backup = IDEAutoLayout
                 END IF
-            END IF
 
-            IF inclevel = 100 THEN
-                FOR fh = 200 TO 299: CLOSE #fh: NEXT fh 'close all includes
-                a$ = "Too many indwelling INCLUDE files": GOTO errmes
-            END IF
-            '1. Verify file exists (location is either (a)relative to source file or (b)absolute)
-            IF LEFT$(a$, 2) = ".\" OR LEFT$(a$, 2) = "./" THEN a$ = MID$(a$, 3)
-            fh = 199 + inclevel + 1
+                a$ = addmetainclude$: addmetainclude$ = "" 'read/clear message
 
-            firstTryMethod = 1
-            IF includingFromRoot <> 0 AND inclevel = 0 THEN firstTryMethod = 2
-            FOR try = firstTryMethod TO 2 'if including file from root, do not attempt including from relative location
-                IF try = 1 THEN
-                    IF inclevel = 0 THEN
-                        IF idemode THEN p$ = idepath$ + pathsep$ ELSE p$ = getfilepath$(sourcefile$)
-                    ELSE
-                        p$ = getfilepath$(incname$(inclevel))
+                IF inclevel = 0 THEN
+                    includingFromRoot = 0
+                    autoIncludingFile = 0
+                    autoInclude:
+                    IF autoIncludeBuffer <> -1 THEN
+                        a$ = ReadBufLine$(autoIncludeBuffer)
+                        IF a$ = "-----" THEN mainEndLine = 3: GOTO autoInclude '"AfterMain" is done
+                        autoIncludingFile = 1
+                        IF RIGHT$(a$, 18) = "beforefirstline.bi" OR RIGHT$(a$, 16) = "afterlastline.bm" THEN
+                            autoIncludingFile = -1
+                        END IF
+                        includingFromRoot = 1
                     END IF
-                    f$ = p$ + a$
                 END IF
-                IF try = 2 THEN f$ = a$
-                IF _FILEEXISTS(f$) THEN
-                    qberrorhappened = -2 '***
-                    OPEN f$ FOR BINARY AS #fh
-                    qberrorhappened2: '***
-                    IF qberrorhappened = -2 THEN
-                        '=== BEGIN: handling $INCLUDEONCE ===
-                        incDAT$ = SPACE$(LOF(fh))
-                        GET #fh, , incDAT$
-                        CLOSE #fh 'as we skip the regular CLOSE when $INCLUDEONCE
-                        incDAT$ = UCASE$(incDAT$)
-                        incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + MKI$(&H0A0D))
-                        IF incPOS& = 0 OR incPOS& > 1 THEN
-                            IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + CHR$(10))
+
+                IF inclevel = 100 THEN
+                    FOR fh = 200 TO 299: CLOSE #fh: NEXT fh 'close all includes
+                    a$ = "Too many indwelling INCLUDE files": GOTO errmes
+                END IF
+                '1. Verify file exists (location is either (a)relative to source file or (b)absolute)
+                IF LEFT$(a$, 2) = ".\" OR LEFT$(a$, 2) = "./" THEN a$ = MID$(a$, 3)
+                fh = 199 + inclevel + 1
+
+                firstTryMethod = 1
+                IF includingFromRoot <> 0 AND inclevel = 0 THEN firstTryMethod = 2
+                FOR try = firstTryMethod TO 2 'if including file from root, do not attempt including from relative location
+                    IF try = 1 THEN
+                        IF inclevel = 0 THEN
+                            IF idemode THEN p$ = idepath$ + pathsep$ ELSE p$ = getfilepath$(sourcefile$)
+                        ELSE
+                            p$ = getfilepath$(incname$(inclevel))
+                        END IF
+                        f$ = IncludeProvider_ResolvePath$(a$, p$)
+                    END IF
+                    IF try = 2 THEN f$ = a$
+                    IF IncludeProvider_FileExists&(f$) THEN
+                        qberrorhappened = -2 '***
+                        IF IncludeProvider_Open&(f$, inclevel) = 0 THEN
+                            qberrorhappened = 0
+                        ELSE
+                            '=== BEGIN: handling $INCLUDEONCE ===
+                            incDAT$ = IncludeProvider_ReadAll$(f$)
+                            incDAT$ = UCASE$(incDAT$)
+                            incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + MKI$(&H0A0D))
                             IF incPOS& = 0 OR incPOS& > 1 THEN
-                                incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + MKI$(&H0A0D))
-                                IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + CHR$(10))
-                            END IF
-                        END IF
-                        IF incPOS& > 0 THEN
-                            nul& = SeekBuf&(IncOneBuf, 0, SBM_BufStart)
-                            WHILE NOT EndOfBuf%(IncOneBuf)
-                                IF _FULLPATH$(f$) = ReadBufLine$(IncOneBuf) THEN
-                                    qberrorhappened = 0
-                                    GOTO skipInc2
+                                IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + CHR$(10))
+                                IF incPOS& = 0 OR incPOS& > 1 THEN
+                                    incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + MKI$(&H0A0D))
+                                    IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, CHR$(10) + "$INCLUDEONCE" + CHR$(10))
                                 END IF
-                            WEND
+                            END IF
+                            IF incPOS& > 0 THEN
+                                nul& = SeekBuf&(IncOneBuf, 0, SBM_BufStart)
+                                WHILE NOT EndOfBuf%(IncOneBuf)
+                                    IF _FULLPATH$(f$) = ReadBufLine$(IncOneBuf) THEN
+                                        IncludeProvider_Close inclevel
+                                        qberrorhappened = 0
+                                        GOTO skipInc2
+                                    END IF
+                                WEND
+                            END IF
+                            WriteBufLine IncOneBuf, _FULLPATH$(f$)
+                            WriteBufLine ExtDepBuf, "INCL: " + _FULLPATH$(f$)
+                            ' Reopen file for reading (provider handles this)
+                            IF IncludeProvider_Open&(f$, inclevel) = 0 THEN
+                                qberrorhappened = 0
+                            END IF
+                            '=== END: handling $INCLUDEONCE ===
+                            EXIT FOR '***
                         END IF
-                        WriteBufLine IncOneBuf, _FULLPATH$(f$)
-                        WriteBufLine ExtDepBuf, "INCL: " + _FULLPATH$(f$)
-                        OPEN f$ FOR BINARY AS #fh 'reopen and continue
-                        '=== END: handling $INCLUDEONCE ===
-                        EXIT FOR '***
                     END IF
-                END IF
-                qberrorhappened = 0
-            NEXT
-            IF qberrorhappened <> -2 THEN qberrorhappened = 0: a$ = "File " + a$ + " not found": GOTO errmes
-            inclevel = inclevel + 1: incname$(inclevel) = f$: inclinenumber(inclevel) = 0
+                    qberrorhappened = 0
+                NEXT
+                IF qberrorhappened <> -2 THEN qberrorhappened = 0: a$ = "File " + a$ + " not found": GOTO errmes
+                inclevel = inclevel + 1: incname$(inclevel) = f$: inclinenumber(inclevel) = 0
+            END IF 'end of skip includes check
         END IF 'fall through to next section...
         '--------------------
         DO WHILE inclevel
             fh = 199 + inclevel
             '2. Feed next line
-            IF EOF(fh) = 0 THEN
-                LINE INPUT #fh, x$
+            IF IncludeProvider_EOF&(inclevel) = 0 THEN
+                x$ = IncludeProvider_ReadLine$(inclevel)
                 a3$ = x$
                 continuelinefrom = 0
                 inclinenumber(inclevel) = inclinenumber(inclevel) + 1
@@ -11545,7 +11561,7 @@ DO
                 GOTO compileline
             END IF
             '3. Close & return control
-            CLOSE #fh
+            IncludeProvider_Close inclevel
             inclevel = inclevel - 1
             skipInc2:
             IF (inclevel = 0 OR mainEndLine = 2) THEN
@@ -13088,11 +13104,48 @@ END IF
 
 IF NoCCompileMode THEN compfailed = 0: GOTO NoCCompile
 IF path.exe$ = "../../" OR path.exe$ = "..\..\" THEN path.exe$ = DefaultExeSaveFolder$
+' Check for executable at the expected location
 IF _FILEEXISTS(path.exe$ + file$ + extension$) THEN
     compfailed = 0
     lastBinaryGenerated$ = path.exe$ + file$ + extension$
 ELSE
-    compfailed = 1 'detect compilation failure
+    ' If -o was specified, also check the exact path specified (handles paths with spaces)
+    IF LEN(CMDLineOutFile$) > 0 THEN
+        ' Normalize path to absolute path for better resolution
+        DIM normalizedPath$
+        normalizedPath$ = CMDLineOutFile$
+        
+        ' Check if the file exists at the exact path specified by -o
+        IF _FILEEXISTS(normalizedPath$) THEN
+            compfailed = 0
+            ' Use _FULLPATH$ to normalize the path (resolves relative paths, etc.)
+            ' Since we verified the file exists, _FULLPATH$ should work safely
+            lastBinaryGenerated$ = _FULLPATH$(normalizedPath$)
+        ELSE
+            ' Also try with .exe extension if not already present (Windows)
+            IF os$ = "WIN" THEN
+                DIM ext$
+                ext$ = UCASE$(GetFileExtension$(normalizedPath$))
+                ' Add .exe if there's no extension or if extension is not .exe
+                IF ext$ = "" OR ext$ <> "EXE" THEN
+                    IF _FILEEXISTS(normalizedPath$ + ".exe") THEN
+                        compfailed = 0
+                        ' Use _FULLPATH$ to normalize the path
+                        ' Since we verified the file exists, _FULLPATH$ should work safely
+                        lastBinaryGenerated$ = _FULLPATH$(normalizedPath$ + ".exe")
+                    ELSE
+                        compfailed = 1 'detect compilation failure
+                    END IF
+                ELSE
+                    compfailed = 1 'detect compilation failure
+                END IF
+            ELSE
+                compfailed = 1 'detect compilation failure
+            END IF
+        END IF
+    ELSE
+        compfailed = 1 'detect compilation failure
+    END IF
 END IF
 
 IF compfailed THEN
@@ -20147,41 +20200,6 @@ SUB getid (i AS LONG)
     currentid = i
 END SUB
 
-FUNCTION isoperator (a2$)
-    a$ = UCASE$(a2$)
-    l = 0
-    l = l + 1: IF a$ = "_ORELSE" THEN GOTO opfound
-    l = l + 1: IF a$ = "_ANDALSO" THEN GOTO opfound
-    l = l + 1: IF a$ = "IMP" THEN GOTO opfound
-    l = l + 1: IF a$ = "EQV" THEN GOTO opfound
-    l = l + 1: IF a$ = "XOR" THEN GOTO opfound
-    l = l + 1: IF a$ = "OR" THEN GOTO opfound
-    l = l + 1: IF a$ = "AND" THEN GOTO opfound
-    l = l + 1: IF a$ = "_NEGATE" THEN GOTO opfound
-    l = l + 1: IF a$ = "NOT" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "=" THEN GOTO opfound
-    IF a$ = ">" THEN GOTO opfound
-    IF a$ = "<" THEN GOTO opfound
-    IF a$ = "<>" THEN GOTO opfound
-    IF a$ = "<=" THEN GOTO opfound
-    IF a$ = ">=" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "+" THEN GOTO opfound
-    IF a$ = "-" THEN GOTO opfound '!CAREFUL! could be negation
-    l = l + 1: IF a$ = "MOD" THEN GOTO opfound
-    l = l + 1: IF a$ = "\" THEN GOTO opfound
-    l = l + 1
-    IF a$ = "*" THEN GOTO opfound
-    IF a$ = "/" THEN GOTO opfound
-    'NEGATION LEVEL (MUST BE SET AFTER CALLING ISOPERATOR BY CONTEXT)
-    l = l + 1: IF a$ = CHR$(241) THEN GOTO opfound
-    l = l + 1: IF a$ = "^" THEN GOTO opfound
-    EXIT FUNCTION
-    opfound:
-    isoperator = l
-END FUNCTION
-
 FUNCTION isvalidvariable (a$)
     FOR i = 1 TO LEN(a$)
         c = ASC(a$, i)
@@ -21143,8 +21161,8 @@ FUNCTION lineformat$ (a$)
 
             IF inclevel THEN
                 fh = 199 + inclevel
-                IF EOF(fh) THEN GOTO lineformatdone2
-                LINE INPUT #fh, a$
+                IF IncludeProvider_EOF&(inclevel) THEN GOTO lineformatdone2
+                a$ = IncludeProvider_ReadLine$(inclevel)
                 inclinenumber(inclevel) = inclinenumber(inclevel) + 1
                 GOTO includecont 'note: should not increase linenumber
             END IF
@@ -24226,6 +24244,7 @@ END FUNCTION
 '$INCLUDE:'utilities\file.bas'
 '$INCLUDE:'utilities\build.bas'
 '$INCLUDE:'utilities\elements.bas'
+'$INCLUDE:'utilities\parser_utils.bas'
 '$INCLUDE:'subs_functions\extensions\opengl\opengl_methods.bas'
 '$INCLUDE:'utilities\ini-manager\ini.bm'
 '$INCLUDE:'utilities\s-buffer\simplebuffer.bm'
@@ -24236,6 +24255,7 @@ END FUNCTION
 '$INCLUDE:'utilities\give_error.bas'
 '$INCLUDE:'utilities\format.bas'
 '$INCLUDE:'utilities\terminal.bas'
+'$INCLUDE:'utilities\include_provider.bas'
 '$INCLUDE:'emit\logging.bas'
 
 DEFLNG A-Z
