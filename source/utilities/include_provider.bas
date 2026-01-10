@@ -300,7 +300,7 @@ END FUNCTION
 TYPE TestProviderCall
     callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
     fileName AS STRING
-    timestamp AS LONG
+    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
 END TYPE
 
 DIM SHARED testProviderCalls(1000) AS TestProviderCall
@@ -334,11 +334,15 @@ SUB IncludeProvider_Test_Clear
 END SUB
 
 ' Track a provider call
+' Uses sequence number instead of TIMER to avoid midnight reset issues
 SUB IncludeProvider_Test_TrackCall (callType$, fileName$)
     IF testProviderCallCount < 1000 THEN
         testProviderCalls(testProviderCallCount).callType = callType$
         testProviderCalls(testProviderCallCount).fileName = fileName$
-        testProviderCalls(testProviderCallCount).timestamp = TIMER
+        ' Use sequence number (0-based) instead of TIMER to ensure deterministic ordering
+        ' TIMER resets at midnight which could cause issues for tests running across midnight
+        ' callOrder provides deterministic ordering for test verification
+        testProviderCalls(testProviderCallCount).callOrder = testProviderCallCount
         testProviderCallCount = testProviderCallCount + 1
     END IF
 END SUB
@@ -348,12 +352,19 @@ FUNCTION IncludeProvider_Test_GetCallCount&
     IncludeProvider_Test_GetCallCount& = testProviderCallCount
 END FUNCTION
 
-' Get a specific call
+' Get a specific call from history
+' Returns call information including callOrder for deterministic test verification
+' Example usage for verifying call ordering:
+'   DIM call AS TestProviderCall
+'   IncludeProvider_Test_GetCall$ 0, call
+'   IF call.callOrder = 0 THEN ' First call
+'   IncludeProvider_Test_GetCall$ 1, call
+'   IF call.callOrder = 1 THEN ' Second call, etc.
 FUNCTION IncludeProvider_Test_GetCall$ (index AS LONG, callType AS TestProviderCall)
     IF index >= 0 AND index < testProviderCallCount THEN
         callType.callType = testProviderCalls(index).callType
         callType.fileName = testProviderCalls(index).fileName
-        callType.timestamp = testProviderCalls(index).timestamp
+        callType.callOrder = testProviderCalls(index).callOrder
         IncludeProvider_Test_GetCall$ = "OK"
     ELSE
         IncludeProvider_Test_GetCall$ = "ERROR"

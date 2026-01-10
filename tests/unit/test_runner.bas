@@ -5,6 +5,8 @@
 '
 
 '$INCLUDE:'test_framework.bi'
+'$INCLUDE:'test_state_manager.bi'
+'$INCLUDE:'test_output_verification.bi'
 '$INCLUDE:'type_system/test_type_system.bas'
 '$INCLUDE:'symbol_table/test_hash.bas'
 '$INCLUDE:'const_eval/test_const_eval.bas'

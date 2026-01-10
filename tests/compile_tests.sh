@@ -143,24 +143,32 @@ if [ "$OS" == "lnx" ]; then
     LNX_PREFIX=xvfb-run
 fi
 
-# Helper function to convert WSL path to Windows path format
-# Converts /mnt/c/... to C:\... for Windows executables
-wsl_to_windows_path() {
+# Helper function to convert a Unix path to a Windows path when needed.
+# Prefer wslpath when available (WSL), otherwise fall back to /mnt/<drive>/... conversion.
+to_windows_path() {
     local path="$1"
-    # Check if path starts with /mnt/ (WSL format)
+
+    # If wslpath exists, use it (most robust for WSL).
+    if command -v wslpath >/dev/null 2>&1; then
+        wslpath -w "$path"
+        return
+    fi
+
+    # Fallback: Convert /mnt/c/... to C:\...
     if [[ "$path" =~ ^/mnt/([a-z])/(.*) ]]; then
         local drive="${BASH_REMATCH[1]}"
         local rest="${BASH_REMATCH[2]}"
-        # Convert to Windows format: C:\...
         echo "${drive^^}:\\${rest//\//\\}"
-    else
-        echo "$path"
+        return
     fi
+
+    # Already a Windows path or an unknown format; return as-is.
+    echo "$path"
 }
 
-# Helper function to convert a path to absolute path robustly
-# Handles paths with spaces and relative paths correctly
-# On Windows/WSL, ensures directory exists and may convert path format for Windows executables
+# Helper function to convert a path to an absolute *Unix* path robustly
+# Handles paths with spaces and relative paths correctly.
+# Note: do not convert to Windows paths here; keep Unix paths for bash file ops.
 to_absolute_path() {
     local path="$1"
     local dir base
@@ -178,10 +186,6 @@ to_absolute_path() {
     # Convert to absolute path
     if dir_abs="$(cd "$dir" 2>/dev/null && pwd)"; then
         local result="$dir_abs/$base"
-        # On Windows, if we're running a Windows executable, convert WSL paths to Windows format
-        if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
-            result="$(wsl_to_windows_path "$result")"
-        fi
         echo "$result"
     else
         # Fallback: try to resolve from current directory
@@ -189,15 +193,9 @@ to_absolute_path() {
             # Handle case where path might be relative to current directory
             if [ "$dir" = "." ]; then
                 local result="$current_dir/$base"
-                if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
-                    result="$(wsl_to_windows_path "$result")"
-                fi
                 echo "$result"
             else
                 local result="$current_dir/$path"
-                if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
-                    result="$(wsl_to_windows_path "$result")"
-                fi
                 echo "$result"
             fi
         else
@@ -228,9 +226,15 @@ do
     
     EXE="$CATEGORY_RESULTS_DIR/$EXE_NAME"
     
-    # Convert to absolute path using helper function
+    # Convert to absolute *Unix* path using helper function
     # This ensures robust path handling with spaces and directory changes
     EXE="$(to_absolute_path "$EXE")"
+
+    # QB64 is typically a Windows executable on Windows/WSL. It expects -o to be a Windows path.
+    EXE_OUT="$EXE"
+    if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
+        EXE_OUT="$(to_windows_path "$EXE")"
+    fi
     
     # Ensure the output directory exists before compilation
     # This prevents "path not found" errors when QB64 tries to create the executable
@@ -247,7 +251,7 @@ do
     fi
 
     # Clear out temp folder before next compile, avoids stale compilelog files
-    rm -fr ./internal/temp/*
+    rm -fr ./internal/temp/* 2>/dev/null || true
 
     # Clean up existing EXE, so we don't use it by accident
     # Use find to properly handle paths with spaces in filenames
@@ -286,7 +290,7 @@ do
         # -m and -q make sure that we get predictable results
         # Capture both stdout and stderr for complete error information
         # Both EXE and compileResultOutput are already absolute paths
-        "$QB64" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "./tests/compile_tests/$category/$testName.bas" -o "$EXE" >"$compileResultOutput" 2>&1
+        "$QB64" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "./tests/compile_tests/$category/$testName.bas" -o "$EXE_OUT" >"$compileResultOutput" 2>&1
         ERR=$?
     else
         pushd . >/dev/null
@@ -296,7 +300,7 @@ do
         # Capture both stdout and stderr for complete error information
         # Both EXE and compileResultOutput are already absolute paths, so use them directly
         # This avoids path resolution issues when changing directories
-        "../../../$QB64" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "$testName.bas" -o "$EXE" >"$compileResultOutput" 2>&1
+        "../../../$QB64" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "$testName.bas" -o "$EXE_OUT" >"$compileResultOutput" 2>&1
         ERR=$?
 
         popd >/dev/null
@@ -373,12 +377,22 @@ do
         # Use absolute paths to avoid path resolution issues when changing directories
         # Store log files in category-specific directory
         LOG_FILE_PATH="$CATEGORY_RESULTS_DIR/$category-$testName-log.txt"
-        # Use absolute path for EXE to ensure it's found after directory change
-        testResult=$(\
+        # Execute compiled program.
+        # - On Windows/WSL: run the .exe via its Unix path, but pass Windows paths as args/env.
+        # - On Linux/macOS: run normally with Unix paths.
+        CATEGORY_RESULTS_DIR_ARG="$CATEGORY_RESULTS_DIR"
+        LOG_FILE_PATH_ARG="$LOG_FILE_PATH"
+        if [ "$OS" == "win" ] && [[ "$EXE" == *.exe ]]; then
+            CATEGORY_RESULTS_DIR_ARG="$(to_windows_path "$CATEGORY_RESULTS_DIR")"
+            LOG_FILE_PATH_ARG="$(to_windows_path "$LOG_FILE_PATH")"
+        fi
+
+        testResult=$(
             QB64PE_LOG_HANDLERS=file \
             QB64PE_LOG_SCOPES="qb64,libqb,libqb-image,libqb-audio" \
-            QB64PE_LOG_FILE_PATH="$LOG_FILE_PATH" \
-            $LNX_PREFIX "$EXE" "$CATEGORY_RESULTS_DIR" "$category-$testName" 2>&1)
+            QB64PE_LOG_FILE_PATH="$LOG_FILE_PATH_ARG" \
+            $LNX_PREFIX "$EXE" "$CATEGORY_RESULTS_DIR_ARG" "$category-$testName" 2>&1
+        )
         ERR=$?
         popd > /dev/null
 

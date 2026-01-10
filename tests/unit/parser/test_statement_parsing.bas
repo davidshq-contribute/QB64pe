@@ -4,9 +4,7 @@
 ' Tests statement parsing functionality.
 ' Uses component test harness for isolated testing.
 '
-
-'$INCLUDE:'../test_framework.bi'
-'$INCLUDE:'../test_state_manager.bi'
+' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
 '$INCLUDE:'../../source/global/constants.bas'
 '$INCLUDE:'../../source/utilities/type.bi'
 '$INCLUDE:'../../source/utilities/hash.bi'

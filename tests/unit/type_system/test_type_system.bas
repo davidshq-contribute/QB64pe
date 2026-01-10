@@ -4,11 +4,9 @@
 ' Tests type inference, conversions, and checking functionality.
 ' Uses component test harness for isolated testing.
 '
-
-'$INCLUDE:'../test_framework.bi'
-'$INCLUDE:'../test_state_manager.bi'
-'$INCLUDE:'../../source/utilities/type.bi'
-'$INCLUDE:'../../source/utilities/type.bas'
+' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/type.bi'
+'$INCLUDE:'../../../source/utilities/type.bas'
 
 SUB Test_TypeSymbolConversion
     Test_Start "Type symbol conversion"

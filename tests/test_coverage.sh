@@ -2,6 +2,13 @@
 # Test Coverage Analysis Tool
 # Analyzes code coverage by mapping tests to source files and generating coverage reports
 #
+# Requirements:
+#   - jq: JSON processor (required for HTML and text reports)
+#     * On Linux/macOS: Install via package manager (apt, brew, etc.)
+#     * On Windows: WSL is recommended for best compatibility
+#     * On Git Bash: Ensure jq is in PATH or use WSL
+#     * Install: sudo apt install jq (Ubuntu/Debian) or brew install jq (macOS)
+#
 # Usage:
 #   ./tests/test_coverage.sh [options]
 #
@@ -481,6 +488,38 @@ calculate_coverage_stats() {
     echo "$coverage_percent|$total_files|$covered_count"
 }
 
+# Helper function to check if jq is available
+# Sets jq_available (0 or 1) and jq_cmd (command to use) as output variables
+# 
+# Requirements:
+#   - jq must be installed and available in PATH
+#   - On Windows, WSL is recommended for best compatibility
+#   - On Git Bash, ensure jq is in PATH or use WSL
+#
+# Usage:
+#   local jq_available jq_cmd
+#   check_jq_available jq_available jq_cmd
+check_jq_available() {
+    local __jq_available_var=$1
+    local __jq_cmd_var=$2
+    local detected_available=0
+    local detected_cmd="jq"
+    
+    # Check if jq is available via command -v (standard method)
+    if command -v jq >/dev/null 2>&1; then
+        detected_available=1
+        detected_cmd="jq"
+    # Fallback: try running jq directly (handles cases where command -v fails)
+    elif jq --version >/dev/null 2>&1; then
+        detected_available=1
+        detected_cmd="jq"
+    fi
+    
+    # Return values via eval (set the variables in the caller's scope)
+    eval "$__jq_available_var=$detected_available"
+    eval "$__jq_cmd_var=\"$detected_cmd\""
+}
+
 # Generate HTML coverage report
 generate_html_coverage_report() {
     local output_file="$1"
@@ -492,11 +531,13 @@ generate_html_coverage_report() {
         return 1
     fi
     
-    # Check if jq is available
+    # Check if jq is available using shared helper
     local jq_available=0
-    if command -v jq >/dev/null 2>&1; then
-        jq_available=1
-    fi
+    local jq_cmd="jq"
+    check_jq_available jq_available jq_cmd
+    # Ensure variables are set (printf might fail in some shells)
+    jq_available=${jq_available:-0}
+    jq_cmd=${jq_cmd:-jq}
     
     {
         cat << 'EOF'
@@ -657,10 +698,10 @@ EOF
         if [ "$jq_available" -eq 1 ]; then
             # Use jq for robust JSON parsing
             local total_files covered_files uncovered_files coverage_percent
-            total_files=$(jq -r '.summary.total_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            covered_files=$(jq -r '.summary.covered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            uncovered_files=$(jq -r '.summary.uncovered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            coverage_percent=$(jq -r '.summary.coverage_percent' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            total_files=$("$jq_cmd" -r '.summary.total_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            covered_files=$("$jq_cmd" -r '.summary.covered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            uncovered_files=$("$jq_cmd" -r '.summary.uncovered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            coverage_percent=$("$jq_cmd" -r '.summary.coverage_percent' "$COVERAGE_JSON" 2>/dev/null || echo "0")
             
             cat << EOF
         <script>
@@ -683,7 +724,7 @@ EOF
 EOF
             
             # Generate file rows
-            jq -r '.files[] | "\(.file)|\(.covered)|\(.covering_tests | join(","))"' "$COVERAGE_JSON" 2>/dev/null | while IFS='|' read -r file covered tests; do
+            "$jq_cmd" -r '.files[] | "\(.file)|\(.covered)|\(.covering_tests | join(","))"' "$COVERAGE_JSON" 2>/dev/null | while IFS='|' read -r file covered tests; do
                 local status_class="file-uncovered"
                 local status_text="Not Covered"
                 if [ "$covered" = "1" ]; then
@@ -733,11 +774,13 @@ generate_text_coverage_report() {
         return 1
     fi
     
-    # Check if jq is available
+    # Check if jq is available using shared helper
     local jq_available=0
-    if command -v jq >/dev/null 2>&1; then
-        jq_available=1
-    fi
+    local jq_cmd="jq"
+    check_jq_available jq_available jq_cmd
+    # Ensure variables are set (printf might fail in some shells)
+    jq_available=${jq_available:-0}
+    jq_cmd=${jq_cmd:-jq}
     
     {
         echo "QB64-PE Code Coverage Report"
@@ -749,10 +792,10 @@ generate_text_coverage_report() {
         
         if [ "$jq_available" -eq 1 ]; then
             local total_files covered_files uncovered_files coverage_percent
-            total_files=$(jq -r '.summary.total_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            covered_files=$(jq -r '.summary.covered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            uncovered_files=$(jq -r '.summary.uncovered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
-            coverage_percent=$(jq -r '.summary.coverage_percent' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            total_files=$("$jq_cmd" -r '.summary.total_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            covered_files=$("$jq_cmd" -r '.summary.covered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            uncovered_files=$("$jq_cmd" -r '.summary.uncovered_files' "$COVERAGE_JSON" 2>/dev/null || echo "0")
+            coverage_percent=$("$jq_cmd" -r '.summary.coverage_percent' "$COVERAGE_JSON" 2>/dev/null || echo "0")
             
             echo "Total Files:     $total_files"
             echo "Covered Files:  $covered_files"
@@ -762,7 +805,7 @@ generate_text_coverage_report() {
             echo "File Coverage Details:"
             echo "---------------------"
             
-            jq -r '.files[] | "\(.file)|\(.covered)|\(.covering_tests | join(","))"' "$COVERAGE_JSON" 2>/dev/null | while IFS='|' read -r file covered tests; do
+            "$jq_cmd" -r '.files[] | "\(.file)|\(.covered)|\(.covering_tests | join(","))"' "$COVERAGE_JSON" 2>/dev/null | while IFS='|' read -r file covered tests; do
                 local status="[NOT COVERED]"
                 if [ "$covered" = "1" ]; then
                     status="[COVERED]"

@@ -92,26 +92,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Modified `source/qb64pe.bas` - Updates to main compiler source (317 lines changed)
   - Modified `internal/c/qbx.cpp` - Fixed `func_val` forward declaration (changed from `static inline` to `extern`)
 
+- **Include Provider Utility**
+  - Updated `source/utilities/include_provider.bas` - Enhanced include provider implementation with improved functionality
+  - Updated `source/utilities/include_provider.bi` - Updated interface definitions for include provider
+
+#### Documentation
+- **Architecture Documentation**
+  - Enhanced `docs/ARCHITECTURE.md` - Expanded architecture documentation with additional details and improvements (84 lines added)
+  - Removed `docs/CODE_REVIEW_COMBINED.md` - Consolidated documentation removed as part of documentation reorganization
+
 #### Testing Infrastructure
 - **Test Runner**
-  - Modified `tests/run_tests.sh` - Enhanced test runner script with improved functionality
-  - Modified `tests/compile_tests.sh` - Improved OS detection logic for cross-platform compatibility
+  - Enhanced `tests/run_tests.sh` - Significant improvements to test runner script with expanded functionality and better test execution (214 lines added)
+  - Modified `tests/compile_tests.sh` - Improved OS detection logic and enhanced cross-platform compatibility (70 lines modified)
   - Modified `tests/add_prefix_test.sh` - Enhanced OS detection and error handling
   - Modified `tests/assert.sh` - Added improved error reporting and fast-fail support
+
+- **Test Coverage**
+  - Enhanced `tests/test_coverage.sh` - Improved test coverage analysis with better file discovery, path normalization, and coverage calculation (79 lines modified)
+  - Added support for more comprehensive coverage mapping and statistics generation
 
 - **Test Reporting**
   - Enhanced `tests/test_report.sh` - Added comprehensive error handling with trap handlers, input validation, and JSON parsing fallback support
   - Improved error recovery and cleanup mechanisms in test reporting
 
 - **Continuous Testing**
-  - Enhanced `tests/continuous_test.sh` - Improved error handling with `set -euo pipefail` and trap handlers
+  - Enhanced `tests/continuous_test.sh` - Improved error handling with `set -euo pipefail` and trap handlers, better process management (101 lines modified)
   - Mitigated race conditions in parallel test execution with improved array handling and process management
 
-#### Unit Tests
-- **Test Implementation Updates**
-  - Updated `tests/unit/const_eval/test_const_eval.bas` - Replaced placeholder tests with actual implementation using component harness
-  - Updated `tests/unit/symbol_table/test_hash.bas` - Implemented real hash table tests with proper state management
-  - Updated `tests/unit/type_system/test_type_system.bas` - Implemented comprehensive type system tests
+- **Test Output Verification**
+  - Updated `tests/unit/test_output_verification.bas` - Improved output verification logic and error handling (36 lines modified)
+  - Updated `tests/unit/test_output_verification.bi` - Enhanced interface definitions for output verification
+
+- **Unit Tests**
+  - Updated multiple unit test files with improved test implementations and better integration with test framework:
+    - `tests/unit/code_generation/test_code_emission.bas`
+    - `tests/unit/code_generation/test_code_generation.bas`
+    - `tests/unit/code_generation/test_code_structure.bas`
+    - `tests/unit/const_eval/test_const_eval.bas`
+    - `tests/unit/parser/test_error_handling.bas`
+    - `tests/unit/parser/test_expression_parsing.bas`
+    - `tests/unit/parser/test_parser.bas`
+    - `tests/unit/parser/test_statement_parsing.bas`
+    - `tests/unit/symbol_table/test_hash.bas`
+    - `tests/unit/type_system/test_type_system.bas`
+  - Updated `tests/unit/test_runner.bas` - Minor improvements to test runner functionality
 
 ### Fixed
 - **Compiler Issues**
@@ -126,10 +151,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved JSON parsing robustness - Added fallback handling when `jq` is not available, with proper escaping for special characters
 
 ### Statistics
-- **Total Changes**: 47 files changed (13 in this update)
-- **Additions**: 9,568 insertions (+2,650 in this update)
-- **Deletions**: 1,971 deletions (+1,817 in this update)
-- **Net Change**: +7,597 lines (+833 in this update)
+- **Total Changes**: 69 files changed (22 in this update)
+- **Additions**: 10,102 insertions (+534 in this update)
+- **Deletions**: 2,334 deletions (+363 in this update)
+- **Net Change**: +7,768 lines (+171 in this update)
 
 ---
 

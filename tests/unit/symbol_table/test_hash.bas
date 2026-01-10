@@ -4,10 +4,7 @@
 ' Tests symbol insertion, lookup, and scope resolution.
 ' Uses component test harness for isolated testing.
 '
-
-'$INCLUDE:'../test_framework.bi'
-'$INCLUDE:'../test_state_manager.bi'
-'$INCLUDE:'../test_output_verification.bi'
+' Note: test_framework.bi, test_state_manager.bi, and test_output_verification.bi are included by test_runner.bas
 '$INCLUDE:'../test_output_verification.bas'
 '$INCLUDE:'../../source/utilities/hash.bi'
 '$INCLUDE:'../../source/utilities/hash.bas'

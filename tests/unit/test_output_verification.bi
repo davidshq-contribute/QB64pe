@@ -14,7 +14,7 @@ END TYPE
 
 TYPE SymbolTableSnapshot
     symbolCount AS LONG
-    symbols() AS SymbolInfo
+    ' Note: symbols array stored separately due to QB64 TYPE limitations
     variableCount AS LONG
     functionCount AS LONG
     subCount AS LONG
@@ -25,7 +25,7 @@ END TYPE
 ' Generated code verification structures
 TYPE CodeStructure
     totalLines AS LONG
-    lines() AS STRING
+    ' Note: lines array stored separately due to QB64 TYPE limitations
     functionCount AS LONG
     classCount AS LONG
     includeCount AS LONG

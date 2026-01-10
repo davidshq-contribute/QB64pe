@@ -13,6 +13,8 @@
 #   --tag TAG            Run only tests with tag
 #   --pattern PAT        Run only tests matching pattern
 #   --path PATH          Run only tests in path
+#   --state-dir DIR      Set test state directory (default: ./tests/.test_state)
+#                        Can also be set via TEST_STATE_DIR environment variable
 #   --help               Show this help message
 #
 # Examples:
@@ -20,6 +22,8 @@
 #   ./tests/continuous_test.sh --watch --incremental      # Watch mode with incremental testing
 #   ./tests/continuous_test.sh --parallel 4               # Run tests in parallel (4 jobs)
 #   ./tests/continuous_test.sh --watch --parallel 8       # Watch mode with 8 parallel jobs
+#   ./tests/continuous_test.sh --state-dir /tmp/test_state # Use custom state directory
+#   TEST_STATE_DIR=/tmp/test_state ./tests/continuous_test.sh  # Use environment variable
 #
 # Edge Cases and Limitations:
 #   - Parallel execution: If a test process hangs, it will block a job slot until timeout.
@@ -39,6 +43,16 @@
 
 set -euo pipefail
 
+# Trap to handle errors and cleanup
+cleanup_on_error() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo "Error: Continuous test execution failed with exit code $exit_code" >&2
+    fi
+    exit $exit_code
+}
+trap cleanup_on_error ERR
+
 . ./tests/test_utils.sh
 . ./tests/test_discovery.sh
 
@@ -50,7 +64,10 @@ CATEGORY_FILTER=""
 TAG_FILTER=""
 PATTERN_FILTER=""
 PATH_FILTER=""
-TEST_STATE_DIR="./tests/.test_state"
+# Test state directory: can be overridden via TEST_STATE_DIR environment variable or --state-dir option
+# Default to ./tests/.test_state if not set
+# Note: Relative paths are resolved relative to the current working directory
+TEST_STATE_DIR="${TEST_STATE_DIR:-./tests/.test_state}"
 TEST_DEPENDENCIES_FILE="$TEST_STATE_DIR/dependencies.json"
 TEST_TIMESTAMPS_FILE="$TEST_STATE_DIR/timestamps.json"
 
@@ -84,6 +101,29 @@ detect_cpu_cores() {
         # Default fallback: assume 4 cores if detection fails
         # This is a conservative default that works on most systems
         echo 4
+    fi
+}
+
+# Detect the operating system platform
+# Uses OSTYPE if available (set by most modern shells), falls back to uname -s
+# Returns platform identifier: "darwin" for macOS, "linux" for Linux, or uname output
+# This function ensures platform detection works even when OSTYPE is not set
+detect_platform() {
+    if [ -n "${OSTYPE:-}" ]; then
+        # OSTYPE is set (most modern shells: bash, zsh, etc.)
+        # Extract base platform name (e.g., "darwin" from "darwin18.0" or "darwin-gnu")
+        # First remove everything after first dash, then remove trailing digits/dots
+        # This handles both "darwin18.0" (no dash) and "linux-gnu" (with dash) formats
+        echo "$OSTYPE" | sed -E 's/-.*$//' | sed -E 's/[0-9.].*$//'
+    elif command -v uname >/dev/null 2>&1; then
+        # Fallback: use uname -s (works on all Unix-like systems)
+        # uname -s returns: Darwin (macOS), Linux, FreeBSD, etc.
+        # Convert to lowercase for consistency with OSTYPE format
+        uname -s | tr '[:upper:]' '[:lower:]'
+    else
+        # Last resort: assume Linux (most common case)
+        # This should rarely happen as uname is standard on Unix systems
+        echo "linux"
     fi
 }
 
@@ -123,6 +163,18 @@ while [[ $# -gt 0 ]]; do
             PATH_FILTER="$2"
             shift 2
             ;;
+        --state-dir)
+            if [ -z "${2:-}" ]; then
+                echo "Error: --state-dir requires a directory path" >&2
+                echo "Example: --state-dir /tmp/test_state" >&2
+                exit 1
+            fi
+            TEST_STATE_DIR="$2"
+            # Update dependent file paths after setting TEST_STATE_DIR
+            TEST_DEPENDENCIES_FILE="$TEST_STATE_DIR/dependencies.json"
+            TEST_TIMESTAMPS_FILE="$TEST_STATE_DIR/timestamps.json"
+            shift 2
+            ;;
         --help)
             head -n 20 "$0" | grep "^# " | sed 's/^# //'
             exit 0
@@ -150,7 +202,8 @@ mkdir -p "$TEST_STATE_DIR"
 get_file_timestamp() {
     local file=$1
     if [ -f "$file" ]; then
-        if [[ "$OSTYPE" == "darwin"* ]]; then
+        local platform=$(detect_platform)
+        if [[ "$platform" == "darwin" ]]; then
             # macOS: BSD stat uses -f flag, %m is modification time
             stat -f %m "$file" 2>/dev/null || echo 0
         else
@@ -241,10 +294,11 @@ test_needs_run() {
     # than the last test run, we rerun the test. This may cause false positives
     # (e.g., unrelated source file changes), but ensures we don't miss real changes.
     local source_dirs=("source" "internal/c" "tests")
+    local platform=$(detect_platform)
     for dir in "${source_dirs[@]}"; do
         if [ -d "$dir" ]; then
             # Platform-specific: macOS and Linux have different find syntax for time comparisons
-            if [[ "$OSTYPE" == "darwin"* ]]; then
+            if [[ "$platform" == "darwin" ]]; then
                 # macOS: BSD find doesn't support -newermt, so we create a reference file
                 # with the timestamp and use -newer (compares against file mtime)
                 # This is a workaround for BSD find limitations
@@ -323,6 +377,10 @@ run_single_test() {
                     $EXE >> "$output_file" 2>> "$error_file" || result=1
                     rm -f "$EXE"  # Clean up compiled binary
                 fi
+            else
+                # Test runner missing - this is a failure
+                echo "Error: test_runner.bas not found: ./tests/unit/test_runner.bas" > "$error_file"
+                result=1
             fi
             ;;
         integration)
@@ -361,6 +419,11 @@ run_single_test() {
             # QBasic compatibility tests: run qbasic_tests.sh
             ./tests/qbasic_tests.sh "$QB64_EXE" > "$output_file" 2> "$error_file" || result=1
             ;;
+        *)
+            # Unknown category - this is an error
+            echo "Error: Unknown test category: $category" > "$error_file"
+            result=1
+            ;;
     esac
     
     # Update timestamp only if test passed (incremental mode tracking)
@@ -397,7 +460,8 @@ run_tests_parallel() {
     # Function to wait for a job to complete
     # Uses wait() to block until process exits and capture exit code.
     # Note: If process already exited, wait() returns immediately with stored exit code.
-    # This function updates counters but doesn't return a value (it's a helper function).
+    # This function updates counters in parent scope and returns the test result.
+    # Returns: 0 if test passed, non-zero if test failed
     wait_for_job() {
         local pid=$1
         local test_name=$2
@@ -413,7 +477,7 @@ run_tests_parallel() {
         fi
         
         running_jobs=$((running_jobs - 1))
-        # Note: This function doesn't return a value; it updates parent scope variables
+        return $result
     }
     
     # Process tests line by line (format: category|path|name|tags)
@@ -477,7 +541,12 @@ run_tests_parallel() {
     echo ""
     print_test_summary $total_tests $passed_tests $failed_tests
     
-    return $([ $failed_tests -eq 0 ] && echo 0 || echo 1)
+    # Return exit code: 0 if all tests passed, 1 if any failed
+    if [ $failed_tests -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Run tests sequentially
@@ -512,7 +581,12 @@ run_tests_sequential() {
     echo ""
     print_test_summary $total_tests $passed_tests $failed_tests
     
-    return $([ $failed_tests -eq 0 ] && echo 0 || echo 1)
+    # Return exit code: 0 if all tests passed, 1 if any failed
+    if [ $failed_tests -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Watch for file changes and rerun tests
@@ -541,7 +615,7 @@ watch_mode() {
     
     if [ -z "$tests" ]; then
         echo "No tests found matching criteria"
-        return 0
+        return 0  # Not an error - just no tests to run
     fi
     
     # Determine watch command based on platform and available tools
@@ -578,6 +652,7 @@ watch_mode() {
     else
         run_tests_sequential "$tests" || test_result=$?
     fi
+    # Note: test_result is tracked but watch mode continues regardless of failures
     
     # Main watch loop: continuously monitor for file changes
     while true; do
@@ -650,12 +725,16 @@ watch_mode() {
         echo "=========================================="
         
         # Rerun tests (using same parallel/sequential logic as initial run)
-        # Note: We don't capture exit codes here as watch mode continues regardless
+        # Note: We capture exit codes but watch mode continues regardless of failures
+        # This allows users to see test results while continuing to watch for changes
+        local rerun_result=0
         if [ "$PARALLEL_JOBS" -gt 1 ]; then
-            run_tests_parallel "$tests" "$PARALLEL_JOBS" || true
+            run_tests_parallel "$tests" "$PARALLEL_JOBS" || rerun_result=$?
         else
-            run_tests_sequential "$tests" || true
+            run_tests_sequential "$tests" || rerun_result=$?
         fi
+        # Update test_result to reflect latest run (for potential future use)
+        test_result=$rerun_result
         
         echo ""
         echo "Watching for changes... (Press Ctrl+C to stop)"

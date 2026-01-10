@@ -187,9 +187,9 @@ END FUNCTION
 
 ' Test provider call tracking type
 TYPE TestProviderCall
-    callType AS STRING * 20
+    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
     fileName AS STRING
-    timestamp AS LONG
+    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
 END TYPE
 
 ' Clear test provider state

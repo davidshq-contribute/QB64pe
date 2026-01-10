@@ -3,8 +3,7 @@
 '
 ' Includes and runs all code generation tests.
 '
-
-'$INCLUDE:'../test_framework.bi'
+' Note: test_framework.bi is included by test_runner.bas
 '$INCLUDE:'test_code_emission.bas'
 '$INCLUDE:'test_code_structure.bas'
 

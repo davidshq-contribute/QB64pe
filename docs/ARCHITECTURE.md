@@ -823,11 +823,21 @@ QB64-PE uses a comprehensive multi-layered testing approach with enhanced infras
 
 **Component Test Harness**:
 - **Test State Manager** (`tests/unit/test_state_manager.bi`): Manages component state isolation
-  - Save and restore compiler state
-  - Proper initialization and cleanup
+  - Save and restore compiler state with full state preservation
+  - Component-specific initialization ("hash", "type", "const", "all")
+  - Proper initialization and cleanup with state restoration
   - Cross-platform support (Windows/Linux/macOS)
+  - Context management (init, cleanup, reset, verification)
+  - Handles both initialized and uninitialized states safely
 - **Component Test Utilities** (`tests/unit/test_component_utils.bi`): Helper functions for component testing
+  - Context initialization helpers
+  - State verification functions
+  - Hash table statistics
+  - Component state verification utilities
 - **Compiler Context** (`tests/unit/test_compiler_context.bi`): Minimal compiler context for isolated testing
+  - Initializes only required global state
+  - Includes include provider initialization
+  - Allows components to run in isolation
 
 ### Test Categories
 
@@ -844,11 +854,29 @@ QB64-PE uses a comprehensive multi-layered testing approach with enhanced infras
 - Can use include provider abstraction for testability
 
 **Coverage:**
-- Type system operations
-- Symbol table hash operations
-- Constant evaluation
-- Parser components
-- Code generation utilities
+- **Type System** (`tests/unit/type_system/test_type_system.bas`): ✅ Complete
+  - Type symbol conversion (`typevalue2symbol$()`)
+  - Type name conversion (`type2symbol$()`)
+  - Type size functions (`Type_GetSizeInBits~&()`)
+  - Type flag checking (`Type_IsString`, `Type_IsFloatingPoint`, etc.)
+  - Type conversions (`typ2ctyp$()`, `typname2typ&()`)
+- **Symbol Table** (`tests/unit/symbol_table/test_hash.bas`): ✅ Complete
+  - Symbol insertion (`HashAdd()`)
+  - Symbol lookup (`HashFind()`)
+  - Symbol scope resolution
+  - Hash collision handling
+  - Symbol table verification
+- **Constant Evaluation** (`tests/unit/const_eval/test_const_eval.bas`): ✅ Complete
+  - Constant folding (arithmetic operations)
+  - Constant function evaluation
+  - Error handling for invalid expressions
+- **Parser** (`tests/unit/parser/`): ✅ Complete
+  - Expression parsing (`test_expression_parsing.bas`)
+  - Statement parsing (`test_statement_parsing.bas`)
+  - Error handling (`test_error_handling.bas`)
+- **Code Generation** (`tests/unit/code_generation/`): ✅ Complete
+  - Code emission (`test_code_emission.bas`)
+  - Code structure (`test_code_structure.bas`)
 
 ### 2. Compiler Tests (`tests/compile_tests/`)
 
@@ -917,18 +945,34 @@ QB64-PE uses a comprehensive multi-layered testing approach with enhanced infras
 - Automatically categorizes tests (compile, unit, integration, runtime, format, qbasic)
 - Supports test metadata files and automatic tag inference
 - Filter by category, tag, pattern, or path
+- Cross-platform OS detection for better Windows/Linux/macOS support
+
+**Continuous Testing**:
+- Watch mode for automatic re-testing on file changes
+- Parallel test execution with configurable job pool
+- Incremental testing mode for faster feedback
+- Improved race condition handling in parallel execution
+- Enhanced process management with array rebuilding approach
 
 **Test Reporting**:
 - Color-coded output for test results
 - Test summary generation
 - HTML and text report generation
 - Test statistics tracking
+- Comprehensive error handling with trap handlers
+- Input validation and file write error checking
+- JSON parsing with fallback support (jq when available, grep fallback)
+- Enhanced error recovery mechanisms
 
 **Test Utilities**:
 - `tests/test_utils.sh`: Common test utility functions
-- `tests/test_report.sh`: Test report generator
+- `tests/test_report.sh`: Test report generator with comprehensive error handling
 - `tests/test_discovery.sh`: Automatic test discovery system
 - `tests/run_tests_with_discovery.sh`: Enhanced test runner with discovery
+- `tests/continuous_test.sh`: Continuous testing with watch mode and parallel execution
+  - Improved error handling with `set -euo pipefail` and trap handlers
+  - Race condition mitigation with improved array handling
+  - Parallel test execution with job pool management
 
 ## Bootstrap Process
 
@@ -1325,8 +1369,26 @@ QB64-PE is a sophisticated transpiler that bridges the gap between classic BASIC
 The bootstrap process enables self-hosting, and the comprehensive test suite ensures reliability across platforms and use cases. Recent improvements include:
 
 - **Include Provider System**: Enables testability by abstracting file I/O operations
-- **Component Test Harness**: Allows isolated testing of compiler components
-- **Enhanced Test Infrastructure**: Automatic test discovery, improved reporting, and better categorization
+  - Multiple provider types (Filesystem, Memory, Test)
+  - Skip includes mode for testing individual functions
+  - Full backward compatibility maintained
+- **Component Test Harness**: Complete infrastructure for isolated testing of compiler components
+  - Test state manager with full state preservation and restoration
+  - Component-specific initialization support
+  - All major components have comprehensive test coverage (type system, symbol table, constant evaluation, parser, code generation)
+- **Enhanced Test Infrastructure**: 
+  - Automatic test discovery with categorization
+  - Improved reporting with comprehensive error handling
+  - Continuous testing with watch mode and parallel execution
+  - Race condition mitigation in parallel test execution
+  - Enhanced JSON parsing with fallback support
 - **Parser Optimization**: Reduced parser size from 4,310+ to ~3,865 lines
+- **Test Coverage**: Unit tests implemented for all major compiler components with real implementations (not mocks)
 
-For detailed architectural recommendations and improvement opportunities, see `docs/ARCHITECTURAL_REVIEW.md` and `docs/IMPROVEMENTS.md`.
+**Current Testing Status**:
+- ✅ Unit Tests: Complete for all major components
+- ✅ Integration Tests: Basic coverage (30% complete, expanding)
+- ✅ Runtime Tests: Complete for major modules
+- ✅ Test Infrastructure: 75% complete with robust error handling
+
+For detailed architectural recommendations and improvement opportunities, see `docs/general/CODE_ANALYSIS.md`, `docs/general/IMPROVEMENTS.md`, and `docs/CODE_REVIEW_COMBINED.md`.

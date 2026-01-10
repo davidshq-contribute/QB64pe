@@ -373,8 +373,14 @@ collect_test_results() {
                 subcategory="$dir_part/"
             fi
             
+            # Escape test name and subcategory for JSON (handles special characters)
+            local full_name="${subcategory}${test_name}"
+            local escaped_name
+            escaped_name=$(escape_json_string "$full_name")
+            # escape_json_string returns a quoted string, use it directly as JSON value
+            
             echo "        {" >> "$test_results_file"
-            echo "          \"name\": \"${subcategory}${test_name}\"," >> "$test_results_file"
+            echo "          \"name\": $escaped_name," >> "$test_results_file"
             echo "          \"status\": \"$test_status\"," >> "$test_results_file"
             if [ -n "$test_error" ]; then
                 # Escape JSON special characters using helper function
@@ -383,7 +389,11 @@ collect_test_results() {
                 escaped_error=$(escape_json_string "$test_error")
                 echo "          \"error\": $escaped_error," >> "$test_results_file"
             fi
-            echo "          \"file\": \"$(basename "$result_file")\"" >> "$test_results_file"
+            # Escape file name for JSON (handles special characters in filenames)
+            local file_name=$(basename "$result_file")
+            local escaped_file
+            escaped_file=$(escape_json_string "$file_name")
+            echo "          \"file\": $escaped_file" >> "$test_results_file"
             echo -n "        }" >> "$test_results_file"
         done < <(find "$category_dir" -type f \( -name "*-compile_result.txt" -o -name "*-run-output.txt" \) 2>/dev/null | sort)
         

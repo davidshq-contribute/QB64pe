@@ -10,6 +10,10 @@
 '$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bi'
 '$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bm'
 
+' Module-level arrays for snapshot data (QB64 limitation: can't have arrays in TYPE)
+DIM SHARED snapshotSymbols(10000) AS SymbolInfo
+DIM SHARED snapshotLines(10000) AS STRING
+
 ' Initialize a symbol table snapshot
 FUNCTION VerifySymbolTable_InitSnapshot& (snapshot AS SymbolTableSnapshot)
     snapshot.symbolCount = 0
@@ -18,7 +22,7 @@ FUNCTION VerifySymbolTable_InitSnapshot& (snapshot AS SymbolTableSnapshot)
     snapshot.subCount = 0
     snapshot.constantCount = 0
     snapshot.typeCount = 0
-    REDIM snapshot.symbols(1 TO 1) AS SymbolInfo
+    ' Static array - no REDIM needed
     VerifySymbolTable_InitSnapshot& = 1
 END FUNCTION
 
@@ -75,15 +79,12 @@ FUNCTION VerifySymbolTable_Enumerate& (snapshot AS SymbolTableSnapshot)
         END IF
     NEXT
     
-    ' Resize and copy to snapshot
+    ' Copy to snapshot (using static array, 0-based indexing)
     snapshot.symbolCount = count
-    IF count > 0 THEN
-        REDIM snapshot.symbols(1 TO count) AS SymbolInfo
-        FOR i = 1 TO count
-            snapshot.symbols(i) = tempSymbols(i)
+    IF count > 0 AND count <= 10000 THEN
+        FOR i = 0 TO count - 1
+            snapshot.symbols(i) = tempSymbols(i + 1)
         NEXT
-    ELSE
-        REDIM snapshot.symbols(1 TO 1) AS SymbolInfo
     END IF
     
     VerifySymbolTable_Enumerate& = 1
@@ -289,15 +290,12 @@ FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStruct
         tempLines(count) = line$
     LOOP
     
-    ' Populate structure
+    ' Populate structure (using static array, 0-based indexing)
     code.totalLines = count
-    IF count > 0 THEN
-        REDIM code.lines(1 TO count) AS STRING
-        FOR i = 1 TO count
-            code.lines(i) = tempLines(i)
+    IF count > 0 AND count <= 10000 THEN
+        FOR i = 0 TO count - 1
+            code.lines(i) = tempLines(i + 1)
         NEXT
-    ELSE
-        REDIM code.lines(1 TO 1) AS STRING
     END IF
     
     ' Count functions and classes (simple pattern matching)
@@ -414,9 +412,7 @@ END FUNCTION
 
 ' Clean up symbol table snapshot
 SUB VerifySymbolTable_CleanupSnapshot (snapshot AS SymbolTableSnapshot)
-    IF snapshot.symbolCount > 0 THEN
-        REDIM snapshot.symbols(1 TO 1) AS SymbolInfo
-    END IF
+    ' Static array - no cleanup needed, just reset counts
     snapshot.symbolCount = 0
     snapshot.variableCount = 0
     snapshot.functionCount = 0
@@ -427,9 +423,7 @@ END SUB
 
 ' Clean up code structure
 SUB VerifyCode_CleanupStructure (code AS CodeStructure)
-    IF code.totalLines > 0 THEN
-        REDIM code.lines(1 TO 1) AS STRING
-    END IF
+    ' Static array - no cleanup needed, just reset counts
     code.totalLines = 0
     code.functionCount = 0
     code.classCount = 0
