@@ -6,6 +6,8 @@ frameworks covering compiler functionality, runtime behavior, and compatibility.
 The testing system includes automatic test discovery, reporting, and continuous
 testing capabilities.
 
+> **For comprehensive testing documentation**, see [TESTING_IMPLEMENTATION.md](TESTING_IMPLEMENTATION.md).
+
 ## Test Categories
 
 ### 1. Compiler Tests (`tests/compile_tests/`)
@@ -305,7 +307,9 @@ with detailed test results and coverage information.
 ## Additional Resources
 
 For more detailed information about the testing infrastructure, see:
-- `docs/TESTING_IMPLEMENTATION.md` - Detailed implementation documentation
-- `docs/TESTING_IMPLEMENTATION.md` - Testing strategy, implementation, and usage
+- **[TESTING_IMPLEMENTATION.md](TESTING_IMPLEMENTATION.md)** - Complete testing strategy, implementation, and usage (authoritative source)
+- **[TEST_DISCOVERY.md](TEST_DISCOVERY.md)** - Test discovery system details
+- **[CONTINUOUS_TESTING.md](CONTINUOUS_TESTING.md)** - Continuous testing features
+- **[COMPONENT_TESTING_STRATEGY.md](COMPONENT_TESTING_STRATEGY.md)** - Component testing strategy
 - `tests/test_discovery.sh` - Test discovery system implementation
 - `tests/test_utils.sh` - Test utility functions

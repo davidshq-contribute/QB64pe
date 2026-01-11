@@ -84,78 +84,18 @@ make build-tests OS=lnx
 
 ## High-Level Architecture
 
-### Compilation Pipeline
+For comprehensive architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-```
-QB64 Source (.bas)
-    ↓
-QB64 Compiler (source/qb64pe.bas)
-    ↓
-Generated C++ (.txt files in internal/temp/)
-    ↓
-Makefile + C++ Compiler
-    ↓
-Native Executable
-```
+**Quick Overview:**
+- QB64 Source → QB64 Compiler → Generated C++ → Makefile + C++ Compiler → Native Executable
+- Self-hosting compiler written in QB64
+- Runtime library (`libqb`) provides core execution environment
+- Conditional dependency compilation via `DEP_*` flags
 
-### Key Components
-
-1. **QB64 Compiler** (`source/qb64pe.bas`)
-   - Written in QB64 itself (self-hosting)
-   - Performs lexical analysis, parsing, semantic analysis, and C++ code generation
-   - Main parser in `source/subs_functions/subs_functions.bas` (~3,865 lines)
-
-2. **Runtime Library** (`internal/c/libqb/`)
-   - C++ runtime providing core execution environment
-   - ~41 header files, ~48 implementation files
-   - Includes: string handling (qbs), memory management, graphics, I/O, threading
-
-3. **Third-Party Dependencies** (`internal/c/parts/`)
-   - Organized by category: audio, core (OpenGL), data, gui, input, network, video
-   - Each has its own `build.mk` file
-   - Compiled conditionally based on `DEP_*` flags
-
-4. **Build System** (`Makefile`)
-   - Platform-specific (Windows/Linux/macOS)
-   - Conditional dependency compilation
-   - Links everything into final executable
-
-### Bootstrap Process
-
-QB64-PE is self-hosting - it compiles itself:
-
-1. `internal/source/` contains pre-generated C++ from previous QB64-PE build (~1,200 .txt files)
-2. C++ compiler builds `qb64pe_bootstrap` from these files
-3. `qb64pe_bootstrap` compiles `source/qb64pe.bas` → final `qb64pe` executable
-4. CI auto-updates `internal/source/` when compiler changes
-
-**Why .txt extension?** Generated C++ files use `.txt` extension by convention to distinguish them from hand-written source. The C++ preprocessor includes them via `#include` directives in `qbx.cpp`.
-
-### Multi-Pass Compilation
-
-The compiler uses multiple passes to handle forward references and feature activation:
-
-- **fullrecompile:** Complete reset of compiler state
-- **recompile:** Incremental recompilation with preserved state
-- **RCStateVar System** (`statevars.bas`): Tracks feature activation (color sets, OPTION _EXPLICIT, assertions, console mode, debugging) and triggers recompiles when state changes
-
-### Auto-Include System
-
-QB64-PE automatically injects support files at three positions:
-
-1. **AtTop** (before first user line): Constants, types, library headers
-   - `beforefirstline.bi`: Core constants (_TRUE, _FALSE, etc.)
-   - Color constants (`color0.bi` or `color32.bi`)
-   - Library "AtTop" files (from `$USELIBRARY`)
-
-2. **AfterMain** (before first SUB/FUNCTION): Global data, GOSUB routines, error handlers
-   - `aftermain.bas`: Implicit END injection
-   - Library "AfterMain" files
-
-3. **AtBottom** (after last user line): SUB/FUNCTION implementations
-   - `vwatch.bm`: Debug support (if `$DEBUG` used)
-   - Library "AtBottom" files
-   - `afterlastline.bm`: QB64-PE support functions
+**Key Documentation:**
+- **Architecture Details**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Complete system architecture, components, and data flow
+- **Build System**: [docs/build-system.md](docs/build-system.md) - Build process, Makefile parameters, and CI process
+- **Auto-Include System**: [docs/auto-including.md](docs/auto-including.md) - Auto-include mechanism details
 
 ## Code Organization
 
@@ -198,22 +138,24 @@ source/
 - **Error Handling** (`error_handle.cpp`): ON ERROR GOTO support
 - **Utilities**: datetime, environ, command, shell, string functions, etc.
 
-### Testing Infrastructure (`tests/`)
+### Testing Infrastructure
 
-```
-tests/
-├── compile_tests/          # Language feature tests (.bas + .output/.err)
-├── unit/                   # Component unit tests (type system, parser, etc.)
-├── integration/            # End-to-end compiler tests
-├── c/                      # C++ runtime tests (test.h framework)
-├── qbasic_testcases/       # QBasic compatibility tests
-├── dist/                   # Distribution tests
-└── *.sh                    # Test runners and utilities
-```
+For comprehensive testing documentation, see [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md).
 
-**Test Discovery System**: `test_discovery.sh` auto-discovers, categorizes, and filters tests. Supports filtering by category, tag, pattern, or path.
+**Quick Overview:**
+- **Compile Tests**: Language feature tests
+- **Unit Tests**: Component unit tests (type system, parser, etc.)
+- **Integration Tests**: End-to-end compiler tests
+- **Runtime Tests**: C++ runtime tests
+- **Test Discovery**: Automatic test discovery and filtering
+- **Continuous Testing**: Watch mode, incremental testing, parallel execution
 
-**Continuous Testing**: `continuous_test.sh` provides watch mode, incremental testing, and parallel execution.
+**Key Documentation:**
+- **Testing Implementation**: [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md) - Complete testing strategy and implementation
+- **Test Discovery**: [docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md) - Test discovery system details
+- **Continuous Testing**: [docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md) - Continuous testing features
+- **Component Testing**: [docs/testing/COMPONENT_TESTING_STRATEGY.md](docs/testing/COMPONENT_TESTING_STRATEGY.md) - Component testing strategy
+- **Testing Overview**: [docs/testing/testing.md](docs/testing/testing.md) - Testing framework overview
 
 ## Development Patterns
 
@@ -224,6 +166,17 @@ tests/
 - Error: "Common label within a SUB/FUNCTION"
 - Solution: Refactor to structured control flow (IF/ELSEIF/ELSE, DO...LOOP)
 - See `docs/problems_encountered/qb64_goto_labels_in_included_functions.md`
+
+**GOTO Label Refactoring (2026-01-10):**
+- All GOTO labels have been eliminated from utility files to enable test compilation
+- **Files Refactored:**
+  - `source/utilities/hash.bas` - 6 GOTO labels replaced with DO...LOOP
+  - `source/utilities/include_provider.bas` - 2 error handler GOTOs replaced with pre-validation
+  - `source/utilities/elements.bas` - 4 GOTO labels replaced with DO...LOOP
+- **Total:** 12 GOTO labels eliminated across 3 files
+- **Pattern:** All refactored to structured control flow (DO WHILE loops, IF/ELSEIF/ELSE)
+- **Result:** Test compilation now succeeds at 100%, all 73 unit tests pass
+- See `docs/REFACTORING_LOG.md` for detailed refactoring notes
 
 **Implicit END Injection:**
 - QB64 injects implicit END before first SUB/FUNCTION
@@ -275,7 +228,9 @@ From `.cursor/commands/code-review.md`:
 - **docs/ARCHITECTURE.md**: Comprehensive architecture documentation
 - **docs/build-system.md**: Build system details
 - **docs/auto-including.md**: Auto-include mechanism
-- **docs/testing/testing.md**: Testing infrastructure
+- **docs/testing/TESTING_IMPLEMENTATION.md**: Complete testing strategy and implementation
+- **docs/testing/testing.md**: Testing framework overview
+- **docs/GETTING_STARTED.md**: Getting started guide for developers
 - **Makefile**: Build orchestration (called by qb64pe internally)
 - **internal/source/**: Bootstrap files (pre-generated C++ of QB64-PE)
 - **internal/temp/**: Generated C++ for current compilation (not in git)

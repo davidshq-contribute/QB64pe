@@ -4,7 +4,7 @@
 ' Tests filesystem, memory, and test provider implementations.
 ' Uses component test harness for isolated testing.
 '
-' Note: test_framework.bi, test_state_manager.bi, and include_provider.bi are included by test_runner.bas
+' Note: test_framework_declarations.bi, test_framework_implementations.bas, test_state_manager_declarations.bi, test_state_manager_implementations.bas, and include_provider.bi are included by test_runner.bas
 '$INCLUDE:'../../../source/utilities/include_provider.bas'
 
 SUB Test_IncludeProviderInit

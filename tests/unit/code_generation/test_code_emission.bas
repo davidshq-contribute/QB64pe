@@ -4,7 +4,7 @@
 ' Tests C++ code emission functionality.
 ' Uses component test harness for isolated testing.
 '
-' Note: test_framework.bi, test_state_manager.bi, and test_output_verification.bi are included by test_runner.bas
+' Note: test_framework_declarations.bi, test_framework_implementations.bas, test_state_manager_declarations.bi, test_state_manager_implementations.bas, and test_output_verification.bi are included by test_runner.bas
 ' Note: test_output_verification.bas and simplebuffer.bi are included by test_runner.bas
 '$INCLUDE:'../../../source/utilities/s-buffer/simplebuffer.bm'
 

@@ -4,7 +4,7 @@
 ' Tests error state setting and propagation.
 ' Uses component test harness for isolated testing.
 '
-' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
+' Note: test_framework_declarations.bi, test_framework_implementations.bas, test_state_manager_declarations.bi, and test_state_manager_implementations.bas are included by test_runner.bas
 '$INCLUDE:'../../../source/utilities/give_error.bi'
 '$INCLUDE:'../../../source/utilities/give_error.bas'
 

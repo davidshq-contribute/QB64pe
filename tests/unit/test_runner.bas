@@ -3,7 +3,7 @@
 '
 ' Discovers and runs unit tests for QB64 compiler components.
 '
-' This file follows the recommended structure from QB64_MAIN_PROGRAM_STRUCTURE_DEBUG.md:
+' This file follows the recommended structure from docs/problems_encountered/qb64_main_program_structure.md:
 ' 1. Include declaration files (.bi) with only CONST, TYPE, DIM SHARED, DECLARE
 ' 2. Include main program code (test_runner_main.bas) with RunAllTests call
 ' 3. Include implementation files (.bas) with SUB/FUNCTION definitions

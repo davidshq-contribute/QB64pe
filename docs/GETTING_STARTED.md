@@ -123,52 +123,14 @@ qb64pe -x hello.bas
 
 ## Project Architecture Overview
 
-QB64-PE follows a multi-stage compilation architecture:
+For comprehensive architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-```mermaid
-flowchart TD
-    A[QB64 Source<br/>.bas file] --> B[QB64-PE Compiler<br/>qb64pe.bas]
-    B --> C[Generated C++<br/>Source Files<br/>in temp/]
-    C --> D[Makefile<br/>Build System]
-    D --> E[Native<br/>Executable]
-    
-    F[Runtime Library<br/>libqb] --> D
-    G[Third-party<br/>Dependencies] --> D
-```
-
-### Core Components
-
-1. **QB64 Compiler** (`source/qb64pe.bas`)
-   - Self-hosting transpiler written in QB64
-   - Performs lexical analysis, parsing, semantic analysis, and code generation
-   - Converts BASIC statements and expressions to equivalent C++ code
-   - Handles preprocessing (`$INCLUDE`, `$DEFINE`, conditional compilation)
-
-2. **Runtime Library** (`internal/c/libqb`)
-   - C++ runtime library providing core execution environment
-   - Compiled into a single object file (`libqb_make_*.o`) that gets linked with every program
-   - Provides string management, memory allocation, graphics, file I/O, threading, and more
-   - Conditionally compiled based on `DEP_*` flags to include only needed features
-
-3. **Build System** (`Makefile`)
-   - Orchestrates C++ compilation and linking
-   - Compiles generated C++ source files
-   - Builds `libqb` with appropriate feature flags
-   - Compiles third-party dependencies conditionally
-   - Links all components into final executable
-
-4. **IDE Component** (`source/ide/`)
-   - Optional integrated development environment
-   - Code editor with syntax highlighting
-   - Project management and file organization
-   - Debugging support (variable watch, breakpoints, call stack)
-   - Build integration and compilation feedback
-
-5. **Third-Party Dependencies** (`internal/c/parts/`)
-   - Modular third-party libraries organized by category
-   - Each dependency has its own `build.mk` file
-   - Compiled conditionally based on `DEP_*` flags
-   - Includes audio libraries, image codecs, networking, fonts, and more
+**Quick Overview:**
+- QB64 Source → QB64-PE Compiler → Generated C++ → Makefile → Native Executable
+- Self-hosting transpiler written in QB64
+- Runtime library (`libqb`) provides core execution environment
+- Conditional dependency compilation via `DEP_*` flags
+- Optional IDE component for development
 
 > **For detailed architecture information**, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -273,13 +235,14 @@ QB64pe/
 
 ### Bootstrap Process
 
-QB64-PE uses a bootstrap process to compile itself:
+For detailed bootstrap process information, see [ARCHITECTURE.md](ARCHITECTURE.md#bootstrap-process).
 
-1. **Bootstrap Compilation**: The pre-generated C++ source files (`.txt` files) in `internal/source/` are compiled into `qb64pe_bootstrap` (or `qb64pe_bootstrap.exe` on Windows) using only a C++ compiler and the Makefile. The Makefile copies these `.txt` files into `internal/temp/` and compiles them.
-2. **Self-Compilation**: The bootstrap compiler is used to compile `source/qb64pe.bas` into the final `qb64pe` executable using the `-x` flag (silent compilation). This transpiles the BASIC source to C++ and generates new `.txt` files in `internal/temp/`.
-3. **Source Update** (CI only): In CI builds, after successful compilation, the generated C++ source files (`.txt` files) are copied from `internal/temp/` back to `internal/source/` for the next bootstrap. This ensures the repository always has an up-to-date bootstrap source that can be committed to version control.
+**Quick Overview:**
+1. Bootstrap compilation from `internal/source/` (pre-generated C++ files)
+2. Self-compilation using the bootstrap compiler
+3. CI updates `internal/source/` for future bootstraps
 
-This process ensures that QB64-PE can always compile itself, even when making changes to the compiler. The bootstrap source in `internal/source/` is committed to the repository, allowing anyone to build QB64-PE with just a C++ compiler.
+This ensures QB64-PE can always compile itself. See [ARCHITECTURE.md](ARCHITECTURE.md#bootstrap-process) for complete details.
 
 ### Making Changes to the Compiler
 
@@ -319,20 +282,16 @@ When modifying the C++ runtime (`internal/c/libqb/`):
 
 ### Build Process Overview
 
-The build process for a QB64 program works as follows:
+For detailed build process information, see [build-system.md](build-system.md).
 
-1. **Transpilation**: QB64-PE reads the `.bas` file and generates C++ source code as `.txt` files into `internal/temp/`
-2. **Dependency Detection**: The compiler analyzes the code to determine which `DEP_*` flags are needed
-3. **C++ Compilation**: The Makefile is called with appropriate flags:
-   - Compiles third-party dependencies (if needed)
-   - Compiles `libqb.cpp` with the required `DEP_*` flags
-   - Compiles `qbx.cpp` which includes the generated C++ source
-4. **Linking**: All object files (`qbx.o`, `libqb.o`, dependencies) are linked into the final executable
-5. **Symbol Stripping**: Debug symbols are stripped from the executable (saved to `.sym` file) to reduce size
+**Quick Overview:**
+1. Transpilation: QB64-PE generates C++ source code
+2. Dependency Detection: Compiler determines required `DEP_*` flags
+3. C++ Compilation: Makefile compiles dependencies, libqb, and generated code
+4. Linking: All components linked into final executable
+5. Symbol Stripping: Debug symbols removed (saved to `.sym` file)
 
-The Makefile is invoked automatically by QB64-PE with the correct parameters. You typically don't need to call it directly unless you're working on the build system itself.
-
-> **For detailed build system information**, including Makefile parameters and the CI process, see [build-system.md](build-system.md).
+The Makefile is invoked automatically by QB64-PE. See [build-system.md](build-system.md) for complete details including Makefile parameters and CI process.
 
 ## Testing
 
@@ -429,27 +388,13 @@ The generated C++ code is placed in `internal/temp/` and then compiled by the Ma
 
 ### Conditional Compilation and Dependency Flags
 
-QB64-PE uses `DEP_*` flags to conditionally include features. These flags are automatically detected by the compiler based on what features your QB64 program uses, or can be manually specified when calling the Makefile.
+QB64-PE uses `DEP_*` flags to conditionally include features. These flags are automatically detected by the compiler or can be manually specified.
 
-Common dependency flags:
-- **`DEP_GL`**: OpenGL support (required for graphics)
-- **`DEP_IMAGE_CODEC`**: Image loading/saving (`_LOADIMAGE`, `_SAVEIMAGE`)
-- **`DEP_AUDIO_MINIAUDIO`**: Audio playback (`PLAY`, `_SNDPLAY`, etc.)
-- **`DEP_SOCKETS`**: Networking support (`_OPENCLIENT`, `_OPENHOST`)
-- **`DEP_HTTP`**: HTTP client support (requires `DEP_SOCKETS`)
-- **`DEP_FONT`**: Font loading (`_LOADFONT`)
-- **`DEP_ZLIB`**: Compression (`_DEFLATE$`, `_INFLATE$`)
-- **`DEP_CONSOLE`**: Console support on Windows
-- **`DEP_CONSOLE_ONLY`**: Console-only mode (no graphics)
-- And many more...
+**Common flags:** `DEP_GL`, `DEP_IMAGE_CODEC`, `DEP_AUDIO_MINIAUDIO`, `DEP_SOCKETS`, `DEP_HTTP`, `DEP_FONT`, `DEP_ZLIB`, `DEP_CONSOLE`, `DEP_CONSOLE_ONLY`, and many more.
 
-These flags control:
-- Which parts of `libqb` are compiled (reducing executable size)
-- Which third-party dependencies are included
-- What functions are available in the compiled program
-- The name of the compiled `libqb` object file (e.g., `libqb_make_00010100.o`)
+These flags control which parts of `libqb` are compiled, which dependencies are included, and what functions are available.
 
-> **For a complete list of dependency flags**, see [build-system.md](build-system.md).
+> **For a complete list of dependency flags and details**, see [build-system.md](build-system.md#makefile-usage-and-parameters).
 
 ### Symbol Table and Hash-Based Lookup
 

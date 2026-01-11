@@ -3,7 +3,7 @@
 This document consolidates all code analysis findings for the QB64-PE codebase, including issue tracking, file inventory, dead code analysis, and architectural review.
 
 **Analysis Date**: Generated during comprehensive review  
-**Last Updated**: 2024-12-19  
+**Last Updated**: 2026-01-10  
 **Total Files Analyzed**: 183 project-owned files  
 **Analysis Scope**: All project source code excluding third-party libraries and generated files
 
@@ -1620,7 +1620,7 @@ QB64 Source → QB64-PE Compiler → C++ Intermediate → Native Executable
 - Cross-platform support (Windows, Linux, macOS)
 
 **Weaknesses:**
-- Large monolithic files (4,310+ line parser)
+- Large monolithic files (3,865 line parser)
 - Mixed concerns in some modules
 - Technical debt in error handling and memory management
 - Limited abstraction layers
@@ -1628,10 +1628,10 @@ QB64 Source → QB64-PE Compiler → C++ Intermediate → Native Executable
 ### 1.2 Component Architecture
 
 #### Compiler Component (`source/`)
-- **Size**: ~20,800+ lines of QB64 code
+- **Size**: ~20,945 lines of QB64 code
 - **Structure**: Monolithic with utility modules
 - **Key Files**:
-  - `qb64pe.bas`: Main entry point (~20,792 lines)
+  - `qb64pe.bas`: Main entry point (~20,945 lines)
   - `subs_functions.bas`: Parser (~3,865 lines)
   - Utilities: Well-modularized
 
@@ -1729,7 +1729,7 @@ QB64 Source → QB64-PE Compiler → C++ Intermediate → Native Executable
 
 ### 3.3 Monolithic Parser File (HIGH)
 
-**Issue**: `subs_functions.bas` is 3,865 lines, making it difficult to maintain. (Note: Reduced from 4,310+ lines, but still needs modularization)
+**Issue**: `subs_functions.bas` is 3,865 lines, making it difficult to maintain. (Note: Already reduced from 4,310+ lines, but still needs modularization)
 
 **Impact**:
 - Hard to navigate and understand
@@ -1909,7 +1909,7 @@ END FUNCTION
 
 ### 6.1 Modularize Parser
 
-**Current**: Single 3,865-line file (reduced from 4,310+ lines, but still needs modularization)
+**Current**: Single 3,865-line file (already reduced from 4,310+ lines, but still needs modularization)
 
 **Proposed Structure**:
 ```
@@ -2002,7 +2002,7 @@ subs_functions/
 ### 7.1 Code Metrics
 
 **Large Files**:
-- `source/qb64pe.bas`: ~20,792 lines
+- `source/qb64pe.bas`: ~20,945 lines
 - `source/subs_functions/subs_functions.bas`: 3,865 lines
 - `Makefile`: 467+ lines
 
@@ -2245,6 +2245,9 @@ When implementing recommendations, consider:
 
 **2024 Update**:
 - Updated file size metrics: `qb64pe.bas` reduced to ~20,792 lines, `subs_functions.bas` reduced to 3,865 lines
+
+**2026-01-10 Update**:
+- Updated file size metrics: `qb64pe.bas` now ~20,945 lines (increased from ~20,792), `subs_functions.bas` remains 3,865 lines
 - Updated error handling variable reference count: 50 references (increased from 31)
 - Updated error handling block count: 13+ instances (increased from 12)
 - Updated debug code instance count: 139+ instances (increased from 47+)

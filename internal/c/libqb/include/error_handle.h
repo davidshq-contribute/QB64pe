@@ -4,7 +4,27 @@
 #include "qbs.h"
 #include <stdint.h>
 
+/**
+ * @file error_handle.h
+ * @brief Error handling functions and error code definitions
+ * 
+ * This header provides error handling functionality for QB64-PE programs,
+ * including error reporting, error codes, and error state management.
+ */
+
+/**
+ * @brief Reports an error and initiates error handling
+ * @param error_number Error code (see QB_ERROR_* constants)
+ * @note This function sets the error state and may trigger error handlers or terminate the program.
+ *       The behavior depends on the error code and current error handling mode.
+ */
 void error(int32_t error_number);
+
+/**
+ * @brief Attempts to fix or recover from the current error
+ * @note This function is called during error recovery. Behavior depends on the error type
+ *       and whether error handlers are active.
+ */
 void fix_error();
 
 // FIXME: Should be removed in the future, use `is_error_pending()`.
@@ -19,20 +39,71 @@ extern qbs *error_handler_history;
 extern uint32_t error_handling;
 extern uint32_t error_retry;
 
+/**
+ * @brief Checks if an error is currently pending
+ * @return true if an error is pending, false otherwise
+ * @note This is the recommended way to check for pending errors.
+ *       Prefer this over directly accessing the new_error variable.
+ */
 static inline bool is_error_pending() {
     return new_error != 0;
 }
 
+/**
+ * @brief Clears the current error state
+ * @note Resets all error flags and state. Use with caution.
+ */
 void clear_error();
 
+/**
+ * @brief Gets the error line number (extended)
+ * @return Error line number as a double (for compatibility with QB64)
+ * @note Returns the line number where the error occurred
+ */
 double get_error_erl();
+
+/**
+ * @brief Gets the current error code
+ * @return Current error code (see QB_ERROR_* constants)
+ * @note Returns 0 if no error is pending
+ */
 uint32_t get_error_err();
 
+/**
+ * @brief Gets the line number where the error occurred (QB64 _ERRORLINE function)
+ * @return Line number where error occurred, or 0 if no error
+ */
 int32_t func__errorline();
+
+/**
+ * @brief Gets the line number in the include file where the error occurred
+ * @return Line number in include file, or 0 if no error or not in include
+ */
 int32_t func__inclerrorline();
+
+/**
+ * @brief Gets the filename of the include file where the error occurred
+ * @return qbs string containing the include filename, or empty string if not in include
+ * @note Caller must free the returned qbs with qbs_free()
+ */
 qbs *func__inclerrorfile();
+
+/**
+ * @brief Gets the error message for a given error code
+ * @param errorcode Error code to get message for (if passed > 0)
+ * @param passed Flag indicating if errorcode parameter was provided
+ * @return qbs string containing the error message
+ * @note If passed is 0, returns message for current error. Caller must free with qbs_free()
+ */
 qbs *func__errormessage(int32_t errorcode, int32_t passed);
 
+/**
+ * @brief Sets error line information for error reporting
+ * @param errorline Line number where error occurred
+ * @param incerrorline Line number in include file (if applicable)
+ * @param incfilename Filename of include file (if applicable, NULL if not in include)
+ * @note This function is typically called by the compiler when reporting errors
+ */
 void error_set_line(uint32_t errorline, uint32_t incerrorline, const char *incfilename);
 
 #define QB_ERROR_NEXT_WITHOUT_FOR 1

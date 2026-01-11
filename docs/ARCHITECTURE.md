@@ -93,9 +93,12 @@ The compiler is written in QB64 itself and performs the following functions:
 **Key Subsystems:**
 - **Parser** (`source/subs_functions/subs_functions.bas`): Handles all BASIC statements and functions (~3,865 lines)
 - **Code Emitter** (`source/emit/logging.bas`): Generates C++ output
-- **Type System** (`source/utilities/type.bas`): Manages variable types and conversions
+- **Type System** (`source/utilities/type.bas`, `type_declarations.bi`, `type_init.bas`): Manages variable types and conversions
+  - Split into declaration (`.bi`) and initialization (`.bas`) files to support QB64's three-phase include system
 - **Error Handling** (`source/utilities/give_error.bas`): Compiler error reporting
-- **Symbol Table** (`source/utilities/hash.bas`): Hash table-based symbol lookup system
+- **Symbol Table** (`source/utilities/hash.bas`, `hash_declarations.bi`, `hash_init.bas`): Hash table-based symbol lookup system
+  - Split into declaration (`.bi`) and initialization (`.bas`) files to support QB64's three-phase include system
+  - Refactored to eliminate GOTO labels, using structured DO...LOOP control flow
 - **Constant Evaluation** (`source/utilities/const_eval.bas`): Compile-time constant folding and evaluation
 - **State Management** (`source/utilities/statevars.bas`): Feature activation and recompile triggering
 - **Build Utilities** (`source/utilities/build.bas`): Build system integration and cleanup
@@ -104,6 +107,11 @@ The compiler is written in QB64 itself and performs the following functions:
 - **Format Utilities** (`source/utilities/format.bas`): Code formatting and output
 - **Terminal Utilities** (`source/utilities/terminal.bas`): Terminal/console output
 - **Include Provider** (`source/utilities/include_provider.bas`): Abstract include file system for testability
+  - Refactored to eliminate GOTO labels, using pre-validation checks
+- **Element Management** (`source/utilities/elements.bas`): Element parsing and management
+  - Refactored to eliminate GOTO labels, using structured DO...LOOP control flow
+- **String Buffer** (`source/utilities/s-buffer/`): String buffer utilities
+  - Split into `simplebuffer_declarations.bi` and `simplebuffer_init.bas` for three-phase include system
 - **Extension System** (`source/subs_functions/extensions/`): Extensible function system (e.g., OpenGL)
 
 ### 2. Runtime Library (`internal/c/libqb`)
@@ -555,9 +563,13 @@ QB64pe/
 │   └── utilities/         # Compiler utility modules
 │       ├── build.bas      # Build system integration
 │       ├── const_eval.bas # Constant evaluation system
-│       ├── hash.bas       # Hash table symbol lookup
+│       ├── hash.bas       # Hash table symbol lookup (implementation)
+│       ├── hash_declarations.bi  # Hash table declarations (Phase 1)
+│       ├── hash_init.bas  # Hash table initialization (Phase 2)
 │       ├── statevars.bas  # State variable management (recompile system)
-│       ├── type.bas       # Type system
+│       ├── type.bas       # Type system (implementation)
+│       ├── type_declarations.bi  # Type system declarations (Phase 1)
+│       ├── type_init.bas  # Type system initialization (Phase 2)
 │       ├── give_error.bas # Error reporting
 │       ├── strings.bas    # String utilities
 │       ├── file.bas       # File utilities
@@ -566,6 +578,8 @@ QB64pe/
 │       ├── elements.bas   # Element management
 │       ├── ini-manager/   # INI file management
 │       └── s-buffer/      # String buffer utilities
+│           ├── simplebuffer_declarations.bi  # Buffer declarations (Phase 1)
+│           └── simplebuffer_init.bas        # Buffer initialization (Phase 2)
 │
 ├── internal/
 │   ├── c/                # C/C++ runtime and build system
@@ -808,171 +822,47 @@ QB64 uses a custom string type `qbs` (QB64 String) that provides:
 
 ## Testing Architecture
 
-QB64-PE uses a comprehensive multi-layered testing approach with enhanced infrastructure for component isolation and testability:
+For comprehensive testing documentation, see [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md).
 
-### Testing Infrastructure
+**Quick Overview:**
+QB64-PE uses a comprehensive multi-layered testing approach with:
+- **Include Provider System**: Abstract include file system enabling testability
+- **Component Test Harness**: State isolation for component testing
+- **Multiple Test Categories**: Compile, unit, integration, runtime, format, qbasic, dist tests
+- **Test Discovery**: Automatic test discovery and filtering
+- **Continuous Testing**: Watch mode, incremental testing, parallel execution
 
-**Include Provider System** (`source/utilities/include_provider.bas`):
-- Abstract include file system that enables testability
-- Supports multiple providers:
-  - **Filesystem Provider**: Default provider for normal compilation
-  - **Memory Provider**: In-memory include content for testing
-  - **Test Provider**: Specialized provider for unit testing
-- **Skip Includes Mode**: Allows testing individual functions without processing all includes
-- Maintains full backward compatibility with existing code
-
-**Component Test Harness**:
-- **Test State Manager** (`tests/unit/test_state_manager.bi`): Manages component state isolation
-  - Save and restore compiler state with full state preservation
-  - Component-specific initialization ("hash", "type", "const", "all")
-  - Proper initialization and cleanup with state restoration
-  - Cross-platform support (Windows/Linux/macOS)
-  - Context management (init, cleanup, reset, verification)
-  - Handles both initialized and uninitialized states safely
-- **Component Test Utilities** (`tests/unit/test_component_utils.bi`): Helper functions for component testing
-  - Context initialization helpers
-  - State verification functions
-  - Hash table statistics
-  - Component state verification utilities
-- **Compiler Context** (`tests/unit/test_compiler_context.bi`): Minimal compiler context for isolated testing
-  - Initializes only required global state
-  - Includes include provider initialization
-  - Allows components to run in isolation
+**Key Documentation:**
+- **[docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md)** - Complete testing strategy and implementation (authoritative source)
+- **[docs/testing/COMPONENT_TESTING_STRATEGY.md](docs/testing/COMPONENT_TESTING_STRATEGY.md)** - Component testing strategy details
+- **[docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md)** - Test discovery system
+- **[docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md)** - Continuous testing features
 
 ### Test Categories
 
-### 1. Unit Tests (`tests/unit/`)
+For detailed test category information, see [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md#test-categories).
 
-**Purpose:**
-- Test individual compiler components in isolation
-- Verify component behavior without full compiler context
-- Fast, focused testing of specific functionality
-
-**Structure:**
-- Component-specific test files (type system, symbol table, constant evaluation, parser, code generation)
-- Uses test harness for state management
-- Can use include provider abstraction for testability
-
-**Coverage:**
-- **Type System** (`tests/unit/type_system/test_type_system.bas`): ✅ Complete
-  - Type symbol conversion (`typevalue2symbol$()`)
-  - Type name conversion (`type2symbol$()`)
-  - Type size functions (`Type_GetSizeInBits~&()`)
-  - Type flag checking (`Type_IsString`, `Type_IsFloatingPoint`, etc.)
-  - Type conversions (`typ2ctyp$()`, `typname2typ&()`)
-- **Symbol Table** (`tests/unit/symbol_table/test_hash.bas`): ✅ Complete
-  - Symbol insertion (`HashAdd()`)
-  - Symbol lookup (`HashFind()`)
-  - Symbol scope resolution
-  - Hash collision handling
-  - Symbol table verification
-- **Constant Evaluation** (`tests/unit/const_eval/test_const_eval.bas`): ✅ Complete
-  - Constant folding (arithmetic operations)
-  - Constant function evaluation
-  - Error handling for invalid expressions
-- **Parser** (`tests/unit/parser/`): ✅ Complete
-  - Expression parsing (`test_expression_parsing.bas`)
-  - Statement parsing (`test_statement_parsing.bas`)
-  - Error handling (`test_error_handling.bas`)
-- **Code Generation** (`tests/unit/code_generation/`): ✅ Complete
-  - Code emission (`test_code_emission.bas`)
-  - Code structure (`test_code_structure.bas`)
-
-### 2. Compiler Tests (`tests/compile_tests/`)
-
-**Structure:**
-- Each test is a `.bas` file
-- Expected output in `.output` file
-- Expected errors in `.err` file
-- Optional `.flags` file for compiler options
-
-**Categories:**
-- Language feature tests
-- Dependency-specific tests
-- Error handling tests
-
-### 3. Integration Tests (`tests/integration/`)
-
-**Purpose:**
-- Test compiler behavior at integration level
-- Verify multi-stage compilation
-- Test error paths and recovery
-- Performance testing
-
-**Coverage:**
-- Symbol resolution across compilation stages
-- Dependency detection and tracking
-- Error message generation and recovery
-- Large file compilation performance
-
-### 4. QBasic Compatibility Tests (`tests/qbasic_testcases/`)
-
-**Purpose:**
-- Verify QB4.5/QBasic compatibility
-- Ensure legacy code compiles
-- Test real-world programs
-
-**Process:**
-- Compile all test cases
-- Verify no compilation errors
-- (Behavior not verified, only compilation)
-
-### 5. C++ Runtime Tests (`tests/c/`)
-
-**Structure:**
-- Individual `.cpp` test files
-- Each test has its own `main()`
-- Uses `test.h` framework
-- Exit code indicates pass/fail
-
-**Coverage:**
-- Runtime library functions
-- Data structure correctness
-- Memory management
-- Platform-specific behavior
-
-### 6. Distribution Tests (`tests/dist/`)
-
-**Purpose:**
-- Verify distribution packages
-- Test setup scripts
-- Ensure all components present
+**Quick Overview:**
+1. **Unit Tests** (`tests/unit/`) - Component isolation tests
+2. **Compiler Tests** (`tests/compile_tests/`) - Language feature tests
+3. **Integration Tests** (`tests/integration/`) - End-to-end compiler tests
+4. **Runtime Tests** (`tests/c/`) - C++ runtime library tests
+5. **Format Tests** (`tests/format_tests/`) - Code formatting tests
+6. **QBasic Tests** (`tests/qbasic_testcases/`) - Compatibility tests
+7. **Distribution Tests** (`tests/dist/`) - Distribution verification
 
 ### Test Infrastructure Features
 
-**Automatic Test Discovery**:
-- Discovers all tests across test directories
-- Automatically categorizes tests (compile, unit, integration, runtime, format, qbasic)
-- Supports test metadata files and automatic tag inference
-- Filter by category, tag, pattern, or path
-- Cross-platform OS detection for better Windows/Linux/macOS support
+For detailed test infrastructure information, see:
+- **[docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md#test-infrastructure-details)** - Complete test infrastructure details
+- **[docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md)** - Test discovery system
+- **[docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md)** - Continuous testing features
 
-**Continuous Testing**:
-- Watch mode for automatic re-testing on file changes
-- Parallel test execution with configurable job pool
-- Incremental testing mode for faster feedback
-- Improved race condition handling in parallel execution
-- Enhanced process management with array rebuilding approach
-
-**Test Reporting**:
-- Color-coded output for test results
-- Test summary generation
-- HTML and text report generation
-- Test statistics tracking
-- Comprehensive error handling with trap handlers
-- Input validation and file write error checking
-- JSON parsing with fallback support (jq when available, grep fallback)
-- Enhanced error recovery mechanisms
-
-**Test Utilities**:
-- `tests/test_utils.sh`: Common test utility functions
-- `tests/test_report.sh`: Test report generator with comprehensive error handling
-- `tests/test_discovery.sh`: Automatic test discovery system
-- `tests/run_tests_with_discovery.sh`: Enhanced test runner with discovery
-- `tests/continuous_test.sh`: Continuous testing with watch mode and parallel execution
-  - Improved error handling with `set -euo pipefail` and trap handlers
-  - Race condition mitigation with improved array handling
-  - Parallel test execution with job pool management
+**Quick Overview:**
+- **Test Discovery**: Automatic discovery, categorization, and filtering
+- **Continuous Testing**: Watch mode, incremental testing, parallel execution
+- **Test Reporting**: HTML/text reports with comprehensive error handling
+- **Test Utilities**: Common utilities for test execution and reporting
 
 ## Bootstrap Process
 
@@ -1089,7 +979,39 @@ Runtime features are compiled conditionally:
 - Allows feature-specific dependencies
 - Platform-specific code paths
 
-### 3. Auto-Inclusion
+### 3. Three-Phase Include System
+
+QB64-PE uses a three-phase include system to properly handle declarations and initialization code:
+
+**Phase 1: Declarations** (`.bi` files - included at top):
+- TYPE definitions
+- CONST declarations
+- DIM SHARED declarations (as dynamic arrays)
+- DECLARE statements for functions
+- No executable code allowed
+
+**Phase 2: Initialization** (`.bas` files - included in main program section):
+- Array initialization code
+- REDIM statements to allocate dynamic arrays
+- Initialization loops and setup code
+- Must be included after corresponding declaration files
+
+**Phase 3: Implementation** (`.bas` files - included at bottom):
+- SUB/FUNCTION implementations
+- Executable code
+
+**Examples of Split Files**:
+- `hash_declarations.bi` + `hash_init.bas` + `hash.bas`: Hash table system
+- `type_declarations.bi` + `type_init.bas` + `type.bas`: Type system
+- `simplebuffer_declarations.bi` + `simplebuffer_init.bas`: String buffer system
+
+**Benefits**:
+- Enables proper initialization order
+- Supports testability (declarations can be included separately)
+- Prevents initialization code from running during declaration phase
+- Allows components to be tested in isolation
+
+### 4. Auto-Inclusion
 
 Support code is automatically included at three strategic positions (see `docs/auto-including.md` for details):
 
@@ -1118,14 +1040,14 @@ Support code is automatically included at three strategic positions (see `docs/a
 - AfterMain and AtBottom files included in declaration order
 - Each library can have files at all three positions
 
-### 4. Dependency Injection
+### 5. Dependency Injection
 
 Dependencies detected at compile time:
 - Compiler analyzes code usage
 - Sets appropriate `DEP_*` flags
 - Build system includes only needed components
 
-### 5. Recompile Mechanism
+### 6. Recompile Mechanism
 
 The compiler uses a sophisticated recompile system to handle feature activation:
 
@@ -1149,7 +1071,7 @@ The compiler uses a sophisticated recompile system to handle feature activation:
 5. `ExecuteRCStateVar()` applies state changes
 6. Compilation continues with new state
 
-### 6. Extension System
+### 7. Extension System
 
 QB64-PE supports extensible function systems:
 
@@ -1163,14 +1085,19 @@ QB64-PE supports extensible function systems:
 - Each extension has global initialization and method implementations
 - Integrated into main parser via registration system
 
-### 7. Symbol Table and Hash System
+### 8. Symbol Table and Hash System
 
-**Hash Table Implementation** (`hash.bas`):
+**Hash Table Implementation** (`hash.bas`, `hash_declarations.bi`, `hash_init.bas`):
 - Fast symbol lookup using hash-based indexing
 - 64MB lookup table for O(1) average-case symbol access
 - Supports multiple symbol types (variables, functions, subroutines, constants, etc.)
 - Symbol flags track type and properties (HASHFLAG_VARIABLE, HASHFLAG_FUNCTION, etc.)
 - Free list management for efficient memory usage
+- **Three-Phase Structure**: Split into declarations (`.bi`), initialization (`.bas`), and implementation (`.bas`)
+  - `hash_declarations.bi`: TYPE definitions, CONST declarations, DIM SHARED arrays (dynamic)
+  - `hash_init.bas`: Array initialization, REDIM statements, hash table setup
+  - `hash.bas`: Function implementations (HashAdd, HashFind, HashRemove, etc.)
+- **Code Quality**: Refactored to eliminate GOTO labels, using structured DO...LOOP control flow
 
 **Symbol Types Tracked**:
 - Variables, arrays, constants
@@ -1180,7 +1107,7 @@ QB64-PE supports extensible function systems:
 - Operators and custom syntax
 - Reserved keywords
 
-### 8. External Dependency Tracking
+### 9. External Dependency Tracking
 
 The compiler tracks external dependencies to trigger recompiles when needed:
 
@@ -1348,12 +1275,15 @@ QB64-PE supports a library management system via `$USELIBRARY` metacommand:
 
 ### Current Technical Debt
 
-Several architectural improvements are identified in `docs/ARCHITECTURAL_REVIEW.md`:
+For comprehensive code analysis and improvement recommendations, see:
+- **[docs/general/CODE_ANALYSIS.md](docs/general/CODE_ANALYSIS.md)** - Complete code analysis findings (authoritative source)
+- **[docs/general/IMPROVEMENTS.md](docs/general/IMPROVEMENTS.md)** - Low-hanging fruit improvements (authoritative source)
 
-- **Error Handling API Migration**: Migrate from direct variable access to API functions
-- **Code Duplication**: Consolidate duplicate file path operations and error handling code
-- **Build System Abstraction**: Consider CMake or similar for better dependency management
-- **Testing Infrastructure**: Continue expanding unit test coverage and integration tests
+**Key Areas:**
+- Error Handling API Migration
+- Code Duplication
+- Build System Abstraction
+- Testing Infrastructure expansion
 
 ## Conclusion
 
@@ -1368,6 +1298,15 @@ QB64-PE is a sophisticated transpiler that bridges the gap between classic BASIC
 
 The bootstrap process enables self-hosting, and the comprehensive test suite ensures reliability across platforms and use cases. Recent improvements include:
 
+- **Three-Phase Include System**: Split utility files into declaration (`.bi`) and initialization (`.bas`) files
+  - `hash_declarations.bi` + `hash_init.bas` + `hash.bas`: Hash table system
+  - `type_declarations.bi` + `type_init.bas` + `type.bas`: Type system
+  - `simplebuffer_declarations.bi` + `simplebuffer_init.bas`: String buffer system
+  - Enables proper initialization order and component testability
+- **Code Quality Improvements**: GOTO label refactoring for better maintainability
+  - Eliminated 12 GOTO labels across utility files (hash.bas: 6, include_provider.bas: 2, elements.bas: 4)
+  - Replaced with structured DO...LOOP control flow
+  - Enables full test suite compilation and execution
 - **Include Provider System**: Enables testability by abstracting file I/O operations
   - Multiple provider types (Filesystem, Memory, Test)
   - Skip includes mode for testing individual functions
@@ -1382,7 +1321,7 @@ The bootstrap process enables self-hosting, and the comprehensive test suite ens
   - Continuous testing with watch mode and parallel execution
   - Race condition mitigation in parallel test execution
   - Enhanced JSON parsing with fallback support
-- **Parser Optimization**: Reduced parser size from 4,310+ to ~3,865 lines
+- **Parser Optimization**: Reduced parser size from 4,310+ to 3,865 lines (current)
 - **Test Coverage**: Unit tests implemented for all major compiler components with real implementations (not mocks)
 
 **Current Testing Status**:
@@ -1391,4 +1330,6 @@ The bootstrap process enables self-hosting, and the comprehensive test suite ens
 - ✅ Runtime Tests: Complete for major modules
 - ✅ Test Infrastructure: 75% complete with robust error handling
 
-For detailed architectural recommendations and improvement opportunities, see `docs/general/CODE_ANALYSIS.md`, `docs/general/IMPROVEMENTS.md`, and `docs/CODE_REVIEW_COMBINED.md`.
+For detailed architectural recommendations and improvement opportunities, see:
+- **[docs/general/CODE_ANALYSIS.md](docs/general/CODE_ANALYSIS.md)** - Complete code analysis findings (authoritative source)
+- **[docs/general/IMPROVEMENTS.md](docs/general/IMPROVEMENTS.md)** - Low-hanging fruit improvements (authoritative source)

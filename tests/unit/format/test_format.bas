@@ -4,10 +4,10 @@
 ' Tests code formatting and indentation logic.
 ' Uses component test harness for isolated testing.
 '
-' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
+' Note: test_framework_declarations.bi, test_framework_implementations.bas, test_state_manager_declarations.bi, and test_state_manager_implementations.bas are included by test_runner.bas
 ' Note: format.bas has many dependencies on global IDE variables, so we test
 '       what we can with minimal setup
-' Note: constants.bas is included by test_runner_format_minimal.bas (test_constants.bas)
+' Note: constants.bas is included by test_runner.bas
 ' We don't include it here to avoid duplicate includes
 '$INCLUDE:'../../../source/utilities/format.bas'
 

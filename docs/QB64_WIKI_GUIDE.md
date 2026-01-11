@@ -204,39 +204,17 @@ END SUB
 
 ### Auto-Include System
 
+For comprehensive auto-include documentation, see [docs/auto-including.md](../auto-including.md).
+
+**Quick Overview:**
 QB64-PE automatically includes support files at three positions:
+- **AtTop** (before first line): Constants, types, declarations
+- **AfterMain** (before first SUB/FUNCTION): DATA, GOSUB, error handlers
+- **AtBottom** (after last line): SUB/FUNCTION definitions
 
-#### AtTop (Before First Line)
-- **Files**: `beforefirstline.bi`, color constants, library AtTop files
-- **Content**: CONST, TYPE, DIM [SHARED], DECLARE statements only
-- **Restriction**: No SUB/FUNCTION definitions
-- **State Variable**: `firstLine` (0=inactive, 1=triggered, 2=in progress, 3=done)
-- **Trigger**: Automatically triggered at start of program compilation
+State variables (`firstLine`, `mainEndLine`, `lastLine`) track auto-include processing through states: inactive (0), triggered (1), in progress (2), done (3).
 
-#### AfterMain (Before First SUB/FUNCTION)
-- **Files**: `aftermain.bas`, library AfterMain files
-- **Content**: DATA statements, GOSUB routines, error handlers
-- **Restriction**: No SUB/FUNCTION definitions
-- **Special**: Implicit END is injected here
-- **State Variable**: `mainEndLine` (0=inactive, 1=triggered, 2=in progress, 3=done)
-- **Trigger**: Automatically triggered when first SUB/FUNCTION is detected OR when end of file is reached
-
-#### AtBottom (After Last Line)
-- **Files**: `afterlastline.bm`, `vwatch.bm`, library AtBottom files
-- **Content**: SUB/FUNCTION definitions, support code
-- **No Restrictions**: Can contain any code
-- **State Variable**: `lastLine` (0=inactive, 1=triggered, 2=in progress, 3=done)
-- **Trigger**: Automatically triggered when end of source file is reached
-
-#### State Variable Lifecycle
-
-The compiler uses state variables to track auto-include processing:
-
-1. **Triggered (1)**: Position detected, ready to process auto-includes
-2. **In Progress (2)**: Auto-include files are being processed
-3. **Done (3)**: Auto-includes completed for this position
-
-This ensures auto-includes happen at the correct positions and prevents duplicate processing.
+See [docs/auto-including.md](../auto-including.md) for complete details including file restrictions, library dependencies, and program structure.
 
 ### Best Practices
 
@@ -310,6 +288,7 @@ The compiler uses state variables to detect main program structure:
 - See [Includes and Code Organization](#includes-and-code-organization) for detailed include system
 - See [Metacommands](#metacommands) for `$INCLUDE` and `$USELIBRARY`
 - See [Error Handling](#error-handling-and-debugging) for error handler placement
+- See [docs/auto-including.md](../auto-including.md) for comprehensive auto-include system documentation
 
 ---
 
@@ -395,112 +374,17 @@ CONST PI = 3.14159
 
 ### Auto-Include System
 
-QB64-PE automatically includes support files and library code at three strategic positions in your program. This system was introduced in QB64-PE v4.0.0 for support files and extended in v4.3.0 for libraries.
+For comprehensive auto-include documentation, see [docs/auto-including.md](../auto-including.md).
 
-#### Auto-Include Positions
+**Quick Overview:**
+QB64-PE automatically includes support files and library code at three positions:
+- **AtTop** - Before first line (constants, types, declarations)
+- **AfterMain** - Before first SUB/FUNCTION (DATA, GOSUB, error handlers)
+- **AtBottom** - After last line (SUB/FUNCTION definitions)
 
-The auto-include system operates at three positions:
+This system was introduced in QB64-PE v4.0.0 for support files and extended in v4.3.0 for libraries.
 
-1. **AtTop** - Before the first line of your program
-2. **AfterMain** - Before the first SUB/FUNCTION definition
-3. **AtBottom** - After the last line of your program
-
-#### AtTop Auto-Includes
-
-**Position:** Before the first line of your program (before any user code)
-
-**Files Included:**
-- `beforefirstline.bi` - General QB64-PE constants and declarations
-- `color0.bi` or `color32.bi` - Color constants (if `$COLOR:0` or `$COLOR:32` is used)
-- Library AtTop files (if `$USELIBRARY` is used)
-- `vwatch.bi` - Debug support (if `$DEBUG` is used)
-
-**Allowed Content:**
-- `CONST` declarations
-- `TYPE` definitions
-- `DIM [SHARED]` variable declarations
-- `DECLARE SUB/FUNCTION` forward declarations
-- `$INCLUDE` directives (to other files with same restrictions)
-
-**Restrictions:**
-- **NO** SUB/FUNCTION definitions
-- **NO** executable code
-- **NO** DATA statements
-- **NO** GOSUB labels
-
-**Example:**
-```basic
-' This is what AtTop files can contain
-CONST MAX_SIZE = 100
-TYPE Point
-    x AS INTEGER
-    y AS INTEGER
-END TYPE
-DIM SHARED globalVar AS INTEGER
-DECLARE SUB MySub
-```
-
-#### AfterMain Auto-Includes
-
-**Position:** Right before the first SUB/FUNCTION definition (or after last line if no SUB/FUNCTION exists)
-
-**Files Included:**
-- `aftermain.bas` - QB64-PE support code (injects implicit END)
-- Library AfterMain files (if `$USELIBRARY` is used)
-
-**Allowed Content:**
-- `DATA` statements
-- GOSUB routines and labels
-- Error handlers (`ON ERROR GOTO`)
-- `$INCLUDE` directives (to other files with same restrictions)
-
-**Restrictions:**
-- **NO** SUB/FUNCTION definitions
-- **NO** CONST, TYPE, DIM declarations (use AtTop for these)
-
-**Special Note:** The implicit `END` statement is injected here, separating main program code from SUB/FUNCTION definitions.
-
-**Example:**
-```basic
-' This is what AfterMain files can contain
-MyData:
-DATA 1, 2, 3, 4, 5
-
-MyGosub:
-    PRINT "In GOSUB"
-    RETURN
-
-MyErrorHandler:
-    PRINT "Error occurred"
-    RESUME NEXT
-```
-
-#### AtBottom Auto-Includes
-
-**Position:** After the last line of your program
-
-**Files Included:**
-- `vwatch.bm` or `vwatch_stub.bm` - Debug support (if `$DEBUG` is used)
-- Library AtBottom files (if `$USELIBRARY` is used)
-- `afterlastline.bm` - QB64-PE support functions
-
-**Allowed Content:**
-- **ANY** valid QB64 code
-- SUB/FUNCTION definitions
-- Support code and utilities
-- No restrictions
-
-**Example:**
-```basic
-' This is what AtBottom files can contain
-SUB MySub
-    PRINT "In sub"
-END SUB
-
-FUNCTION MyFunction AS INTEGER
-    MyFunction = 42
-END FUNCTION
-```
+See [docs/auto-including.md](../auto-including.md) for complete details including file restrictions, allowed content, library dependencies, and program structure.
 
 ### File Extensions and Their Meanings
 
@@ -821,7 +705,7 @@ Understanding how the compiler processes includes can help debug issues:
 
 - See [Main Program Code Structure](#main-program-code-structure) for program flow
 - See [Metacommands](#metacommands) for `$INCLUDE` and `$USELIBRARY` details
-- See [Auto-Including Documentation](../auto-including.md) for technical details
+- **[docs/auto-including.md](../auto-including.md)** - Comprehensive auto-include system documentation (authoritative source)
 - See [Architecture Documentation](../ARCHITECTURE.md) for compiler internals
 - See source code: `source/utilities/include_provider.bi` and `include_provider.bas` for include provider implementation
 - See source code: `source/qb64pe.bas` (Include Manager sections) for include processing logic

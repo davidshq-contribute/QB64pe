@@ -233,7 +233,7 @@ Current test coverage:
 - **Main documentation:** `../../docs/testing/testing.md`
 - **Architecture:** `../../docs/ARCHITECTURE.md`
 - **Build system:** `../../docs/build-system.md`
-- **Refactoring log:** `../../REFACTORING_LOG.md`
+- **Refactoring log:** `../../docs/REFACTORING_LOG.md`
 
 ## Contributing
 

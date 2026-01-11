@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Documentation
+- **Documentation Reorganization**
+  - Added `OUTSTANDING_TASKS.md` - Consolidated task tracking from all markdown documentation
+  - Added `docs/problems_encountered/documentation_added_code_review.md` - Code review documentation for documentation additions
+  - Added `docs/problems_encountered/documentation_update_code_review.md` - Code review documentation for documentation updates
+  - Added `docs/testing/TESTING_HISTORY.md` - Comprehensive testing history and evolution
+  - Added `docs/testing/TEST_RESULTS.md` - Test results documentation
+  - Added `tests/unit/TEST_RESULTS.md` - Unit test results documentation
+
 #### Testing Infrastructure
 - **Component Test Harness**
   - Added `tests/unit/test_state_manager.bi` - Test state manager for component isolation
@@ -101,6 +110,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### Documentation
+- **Documentation Reorganization and Updates**
+  - Updated `docs/general/CODE_ANALYSIS.md` - Updated file size metrics (qb64pe.bas: ~20,792 → ~20,945 lines), updated dates to 2026-01-10, updated parser size references
+  - Updated `docs/general/IMPROVEMENTS.md` - Updated dates to 2026-01-10
+  - Updated `docs/ARCHITECTURE.md` - Enhanced architecture documentation with updated metrics and improved organization
+  - Updated `docs/GETTING_STARTED.md` - Streamlined getting started guide
+  - Updated `docs/QB64_WIKI_GUIDE.md` - Updated wiki guide documentation
+  - Updated `docs/testing/COMPONENT_TESTING_STRATEGY.md` - Streamlined component testing strategy documentation
+  - Updated `docs/testing/TESTING_IMPLEMENTATION.md` - Enhanced testing implementation documentation with comprehensive details
+  - Updated `docs/testing/testing.md` - Updated testing documentation
+  - Updated `tests/unit/README.md` - Updated unit test documentation
+  - Moved `REFACTORING_LOG.md` → `docs/REFACTORING_LOG.md` - Reorganized documentation structure
+  - Moved `tests/unit/WSL_SETUP.md` → `docs/testing/WSL_SETUP.md` - Reorganized testing documentation
+  - Moved `tests/unit/QB64_MAIN_PROGRAM_STRUCTURE_DEBUG.md` → `docs/problems_encountered/qb64_main_program_structure.md` - Reorganized problem documentation
+
+- **C Header Documentation**
+  - Enhanced `internal/c/libqb/include/buffer.h` - Added comprehensive function documentation (76 lines added)
+  - Enhanced `internal/c/libqb/include/datetime.h` - Added function and type documentation (67 lines added)
+  - Enhanced `internal/c/libqb/include/error_handle.h` - Added error handling documentation (71 lines added)
+  - Enhanced `internal/c/libqb/include/filepath.h` - Added file path utility documentation (66 lines added)
+  - Enhanced `internal/c/libqb/include/filesystem.h` - Added filesystem operation documentation (108 lines added)
+  - Enhanced `internal/c/libqb/include/mem.h` - Added memory management documentation (178 lines added)
+  - Enhanced `internal/c/libqb/include/qbs.h` - Added QB64 string system documentation (360 lines added)
+
 #### Source Code
 - **Main Compiler**
   - Modified `source/qb64pe.bas` - Updates to main compiler source (317 lines changed)
@@ -159,6 +192,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `tests/unit/test_runner.bas` - Enhanced with three-phase include system support, enabled all 10 test suites, fixed $INCLUDE syntax
   - Updated `tests/unit/test_framework_implementations.bas` - Added file output support for test results (test_results.txt) to enable result capture on Windows console applications
 
+### Removed
+
+#### Documentation Cleanup
+- Removed `CODE_REVIEW.md` - Consolidated into other documentation files
+- Removed `tests/unit/COMPILATION_NOTES.md` - Consolidated into testing documentation
+- Removed `tests/unit/FORMAT_TESTING.md` - Consolidated into testing documentation
+- Removed `tests/unit/INFRASTRUCTURE_FIXES.md` - Consolidated into testing documentation
+- Removed `tests/unit/PHASE1_IMPLEMENTATION_STATUS.md` - Consolidated into testing documentation
+- Removed `tests/unit/TESTING_ISSUES_ANALYSIS.md` - Consolidated into testing documentation
+- Removed `tests/unit/TESTING_STATUS.md` - Consolidated into testing documentation
+- Removed `tests/unit/TESTING_STRATEGY_ANALYSIS.md` - Consolidated into testing documentation
+- Removed `tests/unit/TESTING_SUCCESS_SUMMARY.md` - Consolidated into testing documentation
+- Removed `tests/unit/TEST_ISOLATION_ANALYSIS.md` - Consolidated into testing documentation
+- Removed `tests/unit/TROUBLESHOOTING_LOG.md` - Consolidated into testing documentation
+
+#### Test Infrastructure Cleanup
+- Removed `tests/unit/test_constants.bas` - Consolidated into component test harness
+- Removed `tests/unit/test_constants_setup.bi` - Consolidated into component test harness
+- Removed `tests/unit/test_format_standalone.bas` - Consolidated into test framework
+- Removed `tests/unit/test_framework.bi` - Consolidated into component test harness
+- Removed `tests/unit/test_global_state_reset.bi` - Consolidated into component test harness
+- Removed `tests/unit/test_minimal.bas` - Consolidated into test framework
+- Removed `tests/unit/test_runner_format_minimal.bas` - Consolidated into test framework
+- Removed `tests/unit/test_runner_simple.bas` - Consolidated into test framework
+
 ### Fixed
 - **Compiler Issues**
   - Fixed `func_val` forward declaration in `internal/c/qbx.cpp` - Changed from incorrect `static inline` to proper `extern` declaration
@@ -177,10 +235,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **All tests now passing**: 73/73 tests pass with 100% assertion success rate
 
 ### Statistics
-- **Total Changes**: 69 files changed (22 in this update)
-- **Additions**: 10,102 insertions (+534 in this update)
-- **Deletions**: 2,334 deletions (+363 in this update)
-- **Net Change**: +7,768 lines (+171 in this update)
+- **Total Changes**: 69 files changed (63 in this update)
+- **Additions**: 10,102 insertions (+3,471 in this update)
+- **Deletions**: 2,334 deletions (+4,483 in this update)
+- **Net Change**: +7,768 lines (-1,012 in this update)
 
 ---
 
@@ -213,3 +271,12 @@ This changelog entry represents a significant update focusing on:
 - **Test Execution Tools**: Added wrapper scripts for seamless test execution across platforms, with WSL support for fully automated testing on Windows
 - **Test Results**: Achieved 100% test pass rate (73/73 tests, 73/73 assertions) after fixing test bugs and refactoring code
 - **Code Quality**: Improved maintainability by replacing GOTO labels with structured DO...LOOP control flow throughout utility files
+
+### Recent Updates (2026-01-10 - Documentation Reorganization & C Header Documentation)
+- **Documentation Reorganization**: Consolidated and reorganized documentation structure, moving files to appropriate directories and removing duplicate/outdated documentation
+- **Documentation Updates**: Updated file size metrics (qb64pe.bas: ~20,792 → ~20,945 lines), updated dates to 2026-01-10, and updated parser size references throughout documentation
+- **C Header Documentation**: Added comprehensive documentation to 7 C header files (buffer.h, datetime.h, error_handle.h, filepath.h, filesystem.h, mem.h, qbs.h) with function descriptions, parameter documentation, and usage notes
+- **Task Tracking**: Created OUTSTANDING_TASKS.md to consolidate all outstanding tasks from markdown documentation
+- **Code Reviews**: Added documentation code review files tracking documentation additions and updates
+- **Test Infrastructure Cleanup**: Removed obsolete test files and consolidated functionality into component test harness
+- **Net Documentation Change**: -1,012 lines (removed duplicates and consolidated documentation)

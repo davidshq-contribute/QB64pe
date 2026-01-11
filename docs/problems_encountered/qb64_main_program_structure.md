@@ -122,7 +122,7 @@ The issue is that our included `.bas` files contain SUB/FUNCTION definitions. Wh
 - **Initial**: 10% - `$INCLUDE` syntax errors
 - **After $INCLUDE fix**: 36% - String function error in `type.bas`
 - **After constants.bas include**: 96% - Label placement error
-- **Current**: Stuck on main program structure issue
+- **After restructuring**: 100% - ✅ **RESOLVED** - All issues fixed
 
 ## Files with SUB/FUNCTION Definitions
 
@@ -158,7 +158,7 @@ The following included files contain SUB/FUNCTION definitions (triggering implic
 3. Was there a wrapper or different entry point?
 4. Did the includes not contain SUB/FUNCTION definitions before?
 
-**Status**: Investigating
+**Status**: ✅ **RESOLVED** - Solution found via Option A (restructuring includes)
 
 ## Attempt 7: Call Before Includes with Full Forward Declarations
 
@@ -343,13 +343,13 @@ Move SUB/FUNCTION definitions out of `.bi` files:
 **Pros**: Works with current QB64, no compiler changes needed
 **Cons**: Requires refactoring test framework structure
 
-## Next Steps
+## Next Steps (Historical - All Completed)
 
-1. **Investigate include file structure**: Check if we can move SUB/FUNCTION out of `.bi` files
-2. **Try including main program code**: Create a file with the RunAllTests call and include it before SUB/FUNCTION definitions
-3. **Check for QB64-specific workarounds**: Research if there's a documented way to handle this
-4. **Contact QB64 community**: This seems like a common issue that might have a known solution
-5. **Consider architectural changes**: Evaluate if QB64's include system needs enhancement for better modularity
+1. ✅ **Investigate include file structure**: ✅ **COMPLETED** - Moved SUB/FUNCTION out of `.bi` files into separate `.bas` files
+2. ✅ **Try including main program code**: ✅ **COMPLETED** - Implemented three-phase include structure (declarations → main code → implementations)
+3. ✅ **Check for QB64-specific workarounds**: ✅ **COMPLETED** - Found solution via restructuring (Option A)
+4. ✅ **Contact QB64 community**: ✅ **NOT NEEDED** - Solution found independently
+5. **Consider architectural changes**: ⏸️ **FUTURE CONSIDERATION** - Option C (compiler enhancement) remains a long-term possibility, but not required
 
 ## Recommended Solution: Restructure Test Framework
 
@@ -379,8 +379,8 @@ test_framework_implementations.bas - SUB/FUNCTION definitions
 - Updated `test_runner.bas` with three-phase include structure
 - Updated `test_output_verification.bi` with DECLARE statements
 
-**Progress**: Compilation now reaches 96% (up from 10%), indicating the structure is working.
-**Remaining Issue**: Runtime error "Common label within a SUB/FUNCTION" at line 63 - needs investigation.
+**Progress**: Compilation now reaches 100% (up from 10%), indicating the structure is working.
+**Status**: ✅ **RESOLVED** - GOTO label issue fixed by refactoring to structured control flow (see GOTO Label Restrictions section below).
 
 ### Option B: Use Auto-Include System
 
@@ -393,9 +393,128 @@ Propose enhancement to QB64 compiler:
 - Or modify implicit END logic to only trigger on SUB/FUNCTION in main file, not includes
 - Or add two-phase include processing (declarations first, then implementations)
 
+## GOTO Label Restrictions (2026-01-10)
+
+### Problem: "Common label within a SUB/FUNCTION" Error
+
+When compiling test code that includes utility files with GOTO labels inside SUB/FUNCTION definitions, QB64 throws:
+```
+Common label within a SUB/FUNCTION (at line 67, 48%, etc.)
+```
+
+### Why GOTO Labels Fail in Test Context
+
+**Key Learning:** QB64 allows GOTO labels in the main program section of qb64pe.bas, but when functions are included in test contexts, GOTO labels inside SUB/FUNCTION definitions cause compilation errors.
+
+**The Error Location:**
+The error is triggered in `qb64pe.bas` line 12047 during label validation:
+```qbasic
+IF Labels(r).Scope_Restriction THEN
+    v = HashFind(a$, HASHFLAG_LABEL, ignore, r2)
+    IF v THEN
+        IF Labels(r2).Scope = Labels(r).Scope_Restriction THEN
+            ' ERROR: "Common label within a SUB/FUNCTION"
+```
+
+**What QB64 Tracks:**
+- `Scope`: Where the label is **defined** (which SUB/FUNCTION, or 0 for main program)
+- `Scope_Restriction`: Where the label is **referenced/used** (which SUB/FUNCTION it's jumped to from)
+
+The error occurs when QB64 detects a label that appears to be "common" (shared across scopes) when it should be local to a specific SUB/FUNCTION.
+
+**Why Different Behavior?**
+
+1. **Bootstrap Compilation (Main Compiler)**
+   - When QB64 compiles itself (`qb64pe.bas`), it uses a pre-built bootstrap compiler
+   - The bootstrap was compiled from pre-generated C++ code in `internal/c/`
+   - The bootstrap may use older/different validation rules or more lenient compilation flags
+
+2. **Fresh Compilation (Test Framework)**
+   - When QB64 compiles `test_runner.bas`, it's a fresh compilation with current validation rules
+   - The compiler applies stricter scope checking
+   - Complex include structure (10 test suites, each including utilities) may trigger edge cases in scope tracking
+
+3. **Include Complexity**
+   - Test framework has unique structure: split files (declarations + initialization), multiple test files all including the same utilities, three-phase include system
+   - This may cause QB64's scope tracking to see label definitions and references in an unexpected order
+   - The complex dependency graph can confuse the label scope validator
+
+4. **Label Location Matters**
+   - GOTO labels in the **main program section** (before any SUB/FUNCTION includes) work fine
+   - Example: `test_runner.bas` line 17 has `qberror_test:` label that compiles successfully
+   - Labels **inside SUB/FUNCTION definitions** that are included from other files trigger the error
+
+### Solution: Refactor to Structured Control Flow
+
+**Best Practice:** Avoid GOTO entirely in modern QB64 code, especially in code that might be included in different contexts. Structured control flow (DO WHILE, IF/ELSE, EXIT FUNCTION/SUB, flags) is:
+- More reliable across compilation contexts
+- Easier to understand and maintain
+- The recommended approach in QB64 Phoenix Edition
+
+**Refactoring Pattern:**
+```qbasic
+' OLD (GOTO):
+FUNCTION MyFunction
+    i = start
+    loop_label:
+    IF condition THEN EXIT FUNCTION
+    i = i + 1
+    IF i < max THEN GOTO loop_label
+END FUNCTION
+
+' NEW (Structured):
+FUNCTION MyFunction
+    i = start
+    DO WHILE i < max
+        IF condition THEN EXIT FUNCTION
+        i = i + 1
+    LOOP
+END FUNCTION
+```
+
+**Error Handler Pattern:**
+```qbasic
+' OLD (ON ERROR GOTO):
+FUNCTION MyFunction
+    ON ERROR GOTO error_handler
+    OPEN fileName$ FOR BINARY AS #fh
+    ON ERROR GOTO _LASTHANDLER
+    EXIT FUNCTION
+error_handler:
+    ON ERROR GOTO _LASTHANDLER
+    ' handle error
+END FUNCTION
+
+' NEW (Pre-validation):
+FUNCTION MyFunction
+    IF _FILEEXISTS(fileName$) = 0 THEN
+        ' handle error
+        EXIT FUNCTION
+    END IF
+    OPEN fileName$ FOR BINARY AS #fh
+END FUNCTION
+```
+
+### Files Refactored (2026-01-10)
+
+- ✅ `source/utilities/hash.bas` - 6 GOTO labels → DO...LOOP
+- ✅ `source/utilities/include_provider.bas` - 2 error handler GOTOs → pre-validation
+- ✅ `source/utilities/elements.bas` - 4 GOTO labels → DO...LOOP
+- ✅ **Total:** 12 GOTO labels eliminated
+
+**Result:** Test compilation now succeeds at 100%, all 73 unit tests pass.
+
+### References
+
+- See `docs/REFACTORING_LOG.md` for detailed refactoring documentation
+- See `docs/testing/TESTING_IMPLEMENTATION.md` for compilation-specific notes
+- See `docs/problems_encountered/qb64_goto_labels_in_included_functions.md` for original problem analysis
+
 ## Conclusion
 
 The issue is **architectural** - QB64's text-substitution include system combined with implicit END injection creates an unsolvable problem when includes contain SUB/FUNCTION definitions. The solution requires either:
-1. Restructuring code to separate declarations from implementations
+1. Restructuring code to separate declarations from implementations ✅ **IMPLEMENTED**
 2. Enhancing QB64's compiler to handle this case
 3. Using a different approach (like auto-includes or compiler modifications)
+
+**Additionally**, GOTO labels inside SUB/FUNCTION definitions cause compilation errors in test contexts. The solution is to refactor to structured control flow, which has been completed for all utility files (2026-01-10).
