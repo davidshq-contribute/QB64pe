@@ -9,6 +9,17 @@
 #include "logging.h"
 #include "logging_private.h"
 
+/**
+ * @file stacktrace.cpp
+ * @brief Implementation of stack trace generation for QB64-PE
+ * 
+ * This file implements stack trace generation using libunwind, with support for
+ * filtering QB64-only stack frames and resolving symbols.
+ */
+
+/**
+ * @brief Stack trace generation state
+ */
 struct stacktrace_state {
     bool qb64_only;
     bool started_qb64_stack;
@@ -17,6 +28,12 @@ struct stacktrace_state {
     std::string str;
 };
 
+/**
+ * @brief Checks if a string starts with a prefix
+ * @param l String to check
+ * @param r Prefix string
+ * @return true if string starts with prefix, false otherwise
+ */
 static bool startsWith(const std::string &l, const char *r) {
     size_t rlen = strlen(r);
     if (l.size() < rlen)
@@ -25,6 +42,14 @@ static bool startsWith(const std::string &l, const char *r) {
     return strncmp(l.c_str(), r, rlen) == 0;
 }
 
+/**
+ * @brief Unwind handler for stack trace generation
+ * @param context Unwind context
+ * @param ref Pointer to stacktrace_state
+ * @return Unwind reason code
+ * @note Called for each stack frame during unwinding. Resolves symbols and
+ *       filters out logging functions. Limits to 40 frames.
+ */
 static _Unwind_Reason_Code handler(struct _Unwind_Context *context, void *ref) {
     stacktrace_state *result = static_cast<stacktrace_state *>(ref);
 
@@ -66,6 +91,13 @@ static _Unwind_Reason_Code handler(struct _Unwind_Context *context, void *ref) {
 	return _URC_NO_REASON;
 }
 
+/**
+ * @brief Generates a stack trace
+ * @param qb64_only If true, only include QB64 stack frames
+ * @return String containing the stack trace
+ * @note Uses libunwind to walk the stack. Resolves symbols and filters logging functions.
+ *       Returns formatted stack trace with frame numbers and addresses.
+ */
 std::string libqb_log_get_stacktrace(bool qb64_only) {
     stacktrace_state state = {
         .qb64_only = qb64_only,

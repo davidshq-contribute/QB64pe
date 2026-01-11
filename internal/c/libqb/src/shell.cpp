@@ -16,15 +16,38 @@
 #include "qbs.h"
 #include "shell.h"
 
+/**
+ * @file shell.cpp
+ * @brief Implementation of shell command execution for QB64-PE
+ * 
+ * This file implements cross-platform shell command execution, including
+ * support for visible/hidden execution, waiting/non-waiting modes, and
+ * Windows-specific command parsing.
+ */
+
 // FIXME
 extern int32_t console;
 extern int32_t console_active;
 
+/**
+ * @brief Flag indicating a shell call is in progress
+ * @note Used to prevent reentrancy issues during shell execution.
+ */
 int32_t shell_call_in_progress = 0;
 
 #ifdef QB64_WINDOWS
+/**
+ * @brief Cached availability of cmd.exe
+ * @note -1 = not checked, 0 = unavailable, 1 = available
+ */
 static int32_t cmd_available = -1;
 
+/**
+ * @brief Checks if cmd.exe is available (Windows only)
+ * @return Non-zero if cmd.exe is available, 0 otherwise
+ * @note Tests cmd.exe availability by running "cmd.exe /c ver" in a hidden process.
+ *       Caches the result to avoid repeated checks.
+ */
 static int32_t cmd_ok() {
     static const char testCommandLine[] = "cmd.exe /c ver";
 
@@ -61,6 +84,13 @@ static int32_t cmd_ok() {
     return cmd_available;
 }
 
+/**
+ * @brief Checks if a command is a built-in cmd.exe command (Windows only)
+ * @param str2 Command string to check (case-insensitive)
+ * @return Non-zero if command is a built-in cmd.exe command, 0 otherwise
+ * @note Checks against a list of built-in cmd.exe commands. Used to determine
+ *       if a command should be executed via cmd.exe /c or directly.
+ */
 static int32_t cmd_command(qbs *str2) {
     static qbs *str = NULL;
     static int32_t s;
@@ -168,6 +198,15 @@ static int32_t cmd_command(qbs *str2) {
 extern int32_t full_screen;
 extern int32_t full_screen_set;
 
+/**
+ * @brief Executes a shell command and returns exit code (QB64 SHELL function)
+ * @param str Command string to execute
+ * @return Exit code of the command, or 1 on error
+ * @note Exits full screen mode before execution and re-enters it afterwards.
+ *       On Windows, uses ShellExecuteEx or CreateProcess depending on command type.
+ *       On POSIX, uses system(). Waits for command to complete.
+ *       Returns 1 if an error is pending.
+ */
 int64_t func_shell(qbs *str) {
     if (is_error_pending())
         return 1;
@@ -457,6 +496,14 @@ shell_complete:
     return return_code;
 } // func SHELL(...
 
+/**
+ * @brief Executes a shell command hidden and returns exit code (QB64 _SHELLHIDE function)
+ * @param str Command string to execute
+ * @return Exit code of the command, or 1 on error
+ * @note Executes the command without showing a window. Generates error 5 if str is empty.
+ *       On Windows, uses SW_HIDE flag. On POSIX, uses system() (cannot truly hide).
+ *       Waits for command to complete. Returns 1 if an error is pending.
+ */
 int64_t func__shellhide(qbs *str) { // func _SHELLHIDE(...
     if (is_error_pending())
         return 1;
@@ -670,6 +717,14 @@ shell_complete:
     return return_code;
 } // func _SHELLHIDE(...
 
+/**
+ * @brief Executes a shell command (QB64 SHELL statement)
+ * @param str Command string to execute, or empty string to open a new console
+ * @param passed Flag indicating if str parameter was provided
+ * @note If str is empty or passed is 0, opens a new console window (Windows only).
+ *       Exits full screen mode before execution and re-enters it afterwards.
+ *       Waits for command to complete. Does not return exit code.
+ */
 void sub_shell(qbs *str, int32_t passed) {
     if (is_error_pending())
         return;
@@ -950,6 +1005,14 @@ shell_complete:
     } // full_screen_mode
 }
 
+/**
+ * @brief Executes a shell command hidden (QB64 SHELL _HIDE statement)
+ * @param str Command string to execute
+ * @param passed Flags: bit 0 = _DONTWAIT, bit 1 = string provided
+ * @note Executes command without showing a window. If _DONTWAIT is set, delegates
+ *       to sub_shell4(). Generates error 5 if string not provided or if trying
+ *       to hide a console waiting for input.
+ */
 void sub_shell2(qbs *str, int32_t passed) { // HIDE
     if (is_error_pending())
         return;
@@ -1161,6 +1224,14 @@ shell_complete:;
 #endif
 }
 
+/**
+ * @brief Executes a shell command without waiting (QB64 SHELL _DONTWAIT statement)
+ * @param str Command string to execute, or empty to launch console
+ * @param passed Flags: bit 0 = _HIDE, bit 1 = string provided
+ * @note Launches the command but does not wait for it to complete. If _HIDE is set,
+ *       delegates to sub_shell4(). On POSIX, uses fork() to run command in background.
+ *       On Windows, uses ShellExecuteEx without waiting for process.
+ */
 void sub_shell3(qbs *str, int32_t passed) { //_DONTWAIT
     // shell3 launches 'str' but does not wait for it to complete
     if (is_error_pending())
@@ -1350,6 +1421,15 @@ shell_complete:;
 #endif
 } // SHELL _DONTWAIT
 
+/**
+ * @brief Executes a shell command hidden without waiting (QB64 SHELL _DONTWAIT _HIDE statement)
+ * @param str Command string to execute
+ * @param passed Flags: bit 1 = string provided
+ * @note Executes command hidden and does not wait for completion. Generates error 5
+ *       if string not provided (cannot hide a console waiting for input).
+ *       On POSIX, uses fork() to run command in background.
+ *       On Windows, uses ShellExecuteEx with SW_HIDE and no wait.
+ */
 void sub_shell4(qbs *str, int32_t passed) { //_DONTWAIT & _HIDE
     // if passed&2 set a string was given
     if (!(passed & 2)) {

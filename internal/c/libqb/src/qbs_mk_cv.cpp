@@ -8,39 +8,35 @@
 #include "error_handle.h"
 #include "qbs-mk-cv.h"
 
-//
-// The following are implementations of Microsoft RTL functions not
-// include in the Borland RTL.
-//
-// Functions:
-//     _fmsbintoieee()
-//     _fieeetomsbin()
-//     _dmsbintoieee()
-//     _dieeetomsbin()
-//
-// These functions convert back and forth from Microsoft Binary Format
-// to IEEE floating point format.
-//
-// As with the Microsoft RTL functions,
-//
-// The argument srcX points to the value to be converted and the
-// result is stored at the location given at destX.
-//
-// These routines do not handle IEE NAN's and infinities.  IEEE
-// denormals are treated as 0's.
-//
-// Return:
-//
-// These functions return 0 if the conversion is successful and 1
-// if the conversion causes an overflow.
-//
-//
-//
-// Examples of the use of these functions can be found online as
-// MSBIN.ZIP.
-//
-//--------------------------------------------------------------------
+/**
+ * @file qbs_mk_cv.cpp
+ * @brief Implementation of Microsoft Binary Format (MBF) conversion functions for QB64-PE
+ * 
+ * This file implements functions for converting between Microsoft Binary Format (MBF)
+ * and IEEE floating point format. These are implementations of Microsoft RTL functions
+ * not included in the Borland RTL.
+ * 
+ * Functions:
+ *     _fmsbintoieee() - Convert single-precision MBF to IEEE
+ *     _fieeetomsbin() - Convert single-precision IEEE to MBF
+ *     _dmsbintoieee() - Convert double-precision MBF to IEEE
+ *     _dieeetomsbin() - Convert double-precision IEEE to MBF
+ * 
+ * These routines do not handle IEEE NAN's and infinities. IEEE denormals are treated as 0's.
+ * 
+ * Return: 0 if conversion is successful, 1 if conversion causes an overflow.
+ * 
+ * Examples of the use of these functions can be found online as MSBIN.ZIP.
+ */
 
+/**
+ * @brief Converts single-precision MBF to IEEE format
+ * @param src4 Pointer to source MBF float
+ * @param dest4 Pointer to destination IEEE float
+ * @return 0 on success, 1 on overflow
+ * @note MBF uses bias 128, IEEE uses bias 127. MBF places decimal point before assumed bit,
+ *       IEEE places it after. Handles byte order conversion.
+ */
 static int32_t _fmsbintoieee(float *src4, float *dest4) {
     unsigned char *msbin = (unsigned char *)src4;
     unsigned char *ieee = (unsigned char *)dest4;
@@ -95,6 +91,13 @@ static int32_t _fmsbintoieee(float *src4, float *dest4) {
     return 0;
 }
 
+/**
+ * @brief Converts single-precision IEEE to MBF format
+ * @param src4 Pointer to source IEEE float
+ * @param dest4 Pointer to destination MBF float
+ * @return 0 on success, 1 on overflow
+ * @note IEEE exponent 0xfe overflows in MBF. Handles byte order conversion.
+ */
 static int32_t _fieeetomsbin(float *src4, float *dest4) {
     unsigned char *ieee = (unsigned char *)src4;
     unsigned char *msbin = (unsigned char *)dest4;
@@ -202,6 +205,14 @@ static int32_t _dmsbintoieee(double *src8, double *dest8) {
         return 0;
 }
 
+/**
+ * @brief Converts double-precision IEEE to MBF format
+ * @param src8 Pointer to source IEEE double
+ * @param dest8 Pointer to destination MBF double
+ * @return 0 on success, 1 on overflow
+ * @note Verifies exponent is in range for MBF encoding. Handles mantissa shifting.
+ *       Returns 0 if source is all zeros.
+ */
 static int32_t _dieeetomsbin(double *src8, double *dest8) {
     unsigned char ieee[8];
     unsigned char *msbin = (unsigned char *)dest8;
@@ -247,6 +258,13 @@ static int32_t _dieeetomsbin(double *src8, double *dest8) {
     return 0;
 }
 
+/**
+ * @brief Makes a single-precision MBF string (QB64 MKSMBF$ function)
+ * @param val Single-precision float value
+ * @return qbs string containing MBF representation, or empty string on error
+ * @note Converts IEEE float to MBF format. Generates error 5 on overflow.
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *func_mksmbf(float val) {
     qbs *tqbs = qbs_new(4, 1);
     if (_fieeetomsbin(&val, (float *)tqbs->chr) == 1) {
@@ -256,6 +274,13 @@ qbs *func_mksmbf(float val) {
     return tqbs;
 }
 
+/**
+ * @brief Makes a double-precision MBF string (QB64 MKDMBF$ function)
+ * @param val Double-precision float value
+ * @return qbs string containing MBF representation, or empty string on error
+ * @note Converts IEEE double to MBF format. Generates error 5 on overflow.
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *func_mkdmbf(double val) {
     qbs *tqbs = qbs_new(8, 1);
     if (_dieeetomsbin(&val, (double *)tqbs->chr) == 1) {
@@ -265,6 +290,12 @@ qbs *func_mkdmbf(double val) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a single-precision MBF string to float (QB64 CVSMBF function)
+ * @param str qbs string containing MBF data
+ * @return Converted float value, or 0 on error
+ * @note Converts MBF format to IEEE float. Generates error 5 if string is too short or on overflow.
+ */
 float func_cvsmbf(qbs *str) {
     float val;
     if (str->len < 4) {
@@ -278,6 +309,12 @@ float func_cvsmbf(qbs *str) {
     return val;
 }
 
+/**
+ * @brief Converts a double-precision MBF string to double (QB64 CVDMBF function)
+ * @param str qbs string containing MBF data
+ * @return Converted double value, or 0 on error
+ * @note Converts MBF format to IEEE double. Generates error 5 if string is too short or on overflow.
+ */
 double func_cvdmbf(qbs *str) {
     double val;
     if (str->len < 8) {
@@ -291,66 +328,128 @@ double func_cvdmbf(qbs *str) {
     return val;
 }
 
+/**
+ * @name Type-to-String Binary Conversion Functions
+ * @brief Convert numeric types to binary string representation
+ * @note These functions store the binary representation of values directly in the string.
+ *       Used for binary I/O operations. Caller must free returned qbs with qbs_free().
+ */
+///@{
+/**
+ * @brief Converts signed byte to binary string
+ * @param v Byte value
+ * @return qbs string containing binary representation (1 byte)
+ */
 qbs *b2string(char v) {
     qbs *tqbs = qbs_new(1, 1);
     *((char *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned byte to binary string
+ * @param v Byte value
+ * @return qbs string containing binary representation (1 byte)
+ */
 qbs *ub2string(char v) {
     qbs *tqbs = qbs_new(1, 1);
     *((uint8_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts signed 16-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (2 bytes)
+ */
 qbs *i2string(int16_t v) {
     qbs *tqbs = qbs_new(2, 1);
     *((int16_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned 16-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (2 bytes)
+ */
 qbs *ui2string(int16_t v) {
     qbs *tqbs = qbs_new(2, 1);
     *((uint16_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts signed 32-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (4 bytes)
+ */
 qbs *l2string(int32_t v) {
     qbs *tqbs = qbs_new(4, 1);
     *((int32_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned 32-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (4 bytes)
+ */
 qbs *ul2string(uint32_t v) {
     qbs *tqbs = qbs_new(4, 1);
     *((uint32_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts signed 64-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (8 bytes)
+ */
 qbs *i642string(int64_t v) {
     qbs *tqbs = qbs_new(8, 1);
     *((int64_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned 64-bit integer to binary string
+ * @param v Integer value
+ * @return qbs string containing binary representation (8 bytes)
+ */
 qbs *ui642string(uint64_t v) {
     qbs *tqbs = qbs_new(8, 1);
     *((uint64_t *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts single-precision float to binary string
+ * @param v Float value
+ * @return qbs string containing binary representation (4 bytes)
+ */
 qbs *s2string(float v) {
     qbs *tqbs = qbs_new(4, 1);
     *((float *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts double-precision float to binary string
+ * @param v Double value
+ * @return qbs string containing binary representation (8 bytes)
+ */
 qbs *d2string(double v) {
     qbs *tqbs = qbs_new(8, 1);
     *((double *)(tqbs->chr)) = v;
     return tqbs;
 }
 
+/**
+ * @brief Converts long double to binary string
+ * @param v Long double value
+ * @return qbs string containing binary representation (32 bytes, zero-padded)
+ */
 qbs *f2string(long double v) {
     qbs *tqbs = qbs_new(32, 1);
     memset(tqbs->chr, 0, 32);
@@ -358,6 +457,11 @@ qbs *f2string(long double v) {
     return tqbs;
 }
 
+/**
+ * @brief Converts signed pointer/offset to binary string
+ * @param v Pointer/offset value
+ * @return qbs string containing binary representation (sizeof(intptr_t) bytes, zero-padded)
+ */
 qbs *o2string(intptr_t v) {
     qbs *tqbs = qbs_new(sizeof(intptr_t), 1);
     memset(tqbs->chr, 0, sizeof(intptr_t));
@@ -365,6 +469,11 @@ qbs *o2string(intptr_t v) {
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned pointer/offset to binary string
+ * @param v Pointer/offset value
+ * @return qbs string containing binary representation (sizeof(uintptr_t) bytes, zero-padded)
+ */
 qbs *uo2string(uintptr_t v) {
     qbs *tqbs = qbs_new(sizeof(uintptr_t), 1);
     memset(tqbs->chr, 0, sizeof(uintptr_t));
@@ -372,6 +481,12 @@ qbs *uo2string(uintptr_t v) {
     return tqbs;
 }
 
+/**
+ * @brief Converts signed bit field to binary string
+ * @param bsize Bit size of the field
+ * @param v Bit field value
+ * @return qbs string containing binary representation (masked to bsize bits)
+ */
 qbs *bit2string(uint32_t bsize, int64_t v) {
     qbs *tqbs = qbs_new(8, 1);
     int64_t bmask;
@@ -381,6 +496,12 @@ qbs *bit2string(uint32_t bsize, int64_t v) {
     return tqbs;
 }
 
+/**
+ * @brief Converts unsigned bit field to binary string
+ * @param bsize Bit size of the field
+ * @param v Bit field value
+ * @return qbs string containing binary representation (masked to bsize bits)
+ */
 qbs *ubit2string(uint32_t bsize, uint64_t v) {
     qbs *tqbs = qbs_new(8, 1);
     int64_t bmask = ~(-(((int64_t)1) << bsize));
@@ -388,7 +509,20 @@ qbs *ubit2string(uint32_t bsize, uint64_t v) {
     tqbs->len = (bsize + 7) >> 3;
     return tqbs;
 }
+///@}
 
+/**
+ * @name String-to-Type Binary Conversion Functions
+ * @brief Convert binary string representation to numeric types
+ * @note These functions read binary data directly from the string.
+ *       Generates error 5 if string is too short.
+ */
+///@{
+/**
+ * @brief Converts binary string to signed byte
+ * @param str qbs string containing binary data
+ * @return Converted byte value, or 0 on error
+ */
 char string2b(qbs *str) {
     if (str->len < 1) {
         error(5);
@@ -398,6 +532,11 @@ char string2b(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned byte
+ * @param str qbs string containing binary data
+ * @return Converted byte value, or 0 on error
+ */
 uint8_t string2ub(qbs *str) {
     if (str->len < 1) {
         error(5);
@@ -407,6 +546,11 @@ uint8_t string2ub(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to signed 16-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 int16_t string2i(qbs *str) {
     if (str->len < 2) {
         error(5);
@@ -416,6 +560,11 @@ int16_t string2i(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned 16-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 uint16_t string2ui(qbs *str) {
     if (str->len < 2) {
         error(5);
@@ -425,6 +574,11 @@ uint16_t string2ui(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to signed 32-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 int32_t string2l(qbs *str) {
     if (str->len < 4) {
         error(5);
@@ -434,6 +588,11 @@ int32_t string2l(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned 32-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 uint32_t string2ul(qbs *str) {
     if (str->len < 4) {
         error(5);
@@ -443,6 +602,11 @@ uint32_t string2ul(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to signed 64-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 int64_t string2i64(qbs *str) {
     if (str->len < 8) {
         error(5);
@@ -452,6 +616,11 @@ int64_t string2i64(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned 64-bit integer
+ * @param str qbs string containing binary data
+ * @return Converted integer value, or 0 on error
+ */
 uint64_t string2ui64(qbs *str) {
     if (str->len < 8) {
         error(5);
@@ -461,6 +630,11 @@ uint64_t string2ui64(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to single-precision float
+ * @param str qbs string containing binary data
+ * @return Converted float value, or 0 on error
+ */
 float string2s(qbs *str) {
     if (str->len < 4) {
         error(5);
@@ -470,6 +644,11 @@ float string2s(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to double-precision float
+ * @param str qbs string containing binary data
+ * @return Converted double value, or 0 on error
+ */
 double string2d(qbs *str) {
     if (str->len < 8) {
         error(5);
@@ -479,6 +658,11 @@ double string2d(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to long double
+ * @param str qbs string containing binary data
+ * @return Converted long double value, or 0 on error
+ */
 long double string2f(qbs *str) {
     if (str->len < 32) {
         error(5);
@@ -488,6 +672,11 @@ long double string2f(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to signed pointer/offset
+ * @param str qbs string containing binary data
+ * @return Converted pointer/offset value, or 0 on error
+ */
 intptr_t string2o(qbs *str) {
     if (size_t(str->len) < sizeof(intptr_t)) {
         error(5);
@@ -497,6 +686,11 @@ intptr_t string2o(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned pointer/offset
+ * @param str qbs string containing binary data
+ * @return Converted pointer/offset value, or 0 on error
+ */
 uintptr_t string2uo(qbs *str) {
     if (size_t(str->len) < sizeof(uintptr_t)) {
         error(5);
@@ -506,6 +700,12 @@ uintptr_t string2uo(qbs *str) {
     }
 }
 
+/**
+ * @brief Converts binary string to unsigned bit field
+ * @param str qbs string containing binary data
+ * @param bsize Bit size of the field
+ * @return Converted bit field value (masked), or 0 on error
+ */
 uint64_t string2ubit(qbs *str, uint32_t bsize) {
     int64_t bmask;
     if (uint32_t(str->len) < ((bsize + 7) >> 3)) {
@@ -516,6 +716,12 @@ uint64_t string2ubit(qbs *str, uint32_t bsize) {
     return (*(uint64_t *)str->chr) & bmask;
 }
 
+/**
+ * @brief Converts binary string to signed bit field
+ * @param str qbs string containing binary data
+ * @param bsize Bit size of the field
+ * @return Converted bit field value (sign-extended), or 0 on error
+ */
 int64_t string2bit(qbs *str, uint32_t bsize) {
     int64_t bmask, bval64;
     if (uint32_t(str->len) < ((bsize + 7) >> 3)) {
@@ -528,3 +734,4 @@ int64_t string2bit(qbs *str, uint32_t bsize) {
         return (bval64 | (~bmask));
     return bval64;
 }
+///@}

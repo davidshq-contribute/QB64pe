@@ -16,18 +16,43 @@
 #include "glut-thread.h"
 #include "mutex.h"
 
+/**
+ * @file glut-msg-queue.cpp
+ * @brief Implementation of GLUT message queue for QB64-PE
+ * 
+ * This file implements a thread-safe message queue for GLUT operations,
+ * allowing the main thread to safely communicate with the GLUT thread.
+ */
+
+/**
+ * @brief Mutex protecting the GLUT message queue
+ */
 static libqb_mutex *glut_msg_queue_lock = libqb_mutex_new();
+
+/**
+ * @brief Queue of GLUT messages waiting to be processed
+ */
 static std::queue<glut_message *> glut_msg_queue;
 
-// These values from GLUT are read on every process of the msg queue. Calls to
-// libqb_glut_get() can then read from these values directly rather than wait
-// for the GLUT thread to process the command.
+/**
+ * @brief Cached GLUT window X position
+ * @note These values from GLUT are read on every process of the msg queue. Calls to
+ *       libqb_glut_get() can then read from these values directly rather than wait
+ *       for the GLUT thread to process the command.
+ */
 static int glut_window_x, glut_window_y;
 
 #ifdef CORE_FREEGLUT
 static int glut_window_border_width, glut_window_header_height;
 #endif
 
+/**
+ * @brief Queues a GLUT message for execution on the GLUT thread
+ * @param msg Message to queue
+ * @return true if queued successfully, false if GLUT is not up
+ * @note If GLUT is not up, the message is finished immediately and false is returned.
+ *       Thread-safe: uses mutex to protect the queue.
+ */
 bool libqb_queue_glut_message(glut_message *msg) {
     if (!libqb_is_glut_up()) {
         msg->finish();
@@ -41,6 +66,11 @@ bool libqb_queue_glut_message(glut_message *msg) {
     return true;
 }
 
+/**
+ * @brief Processes all queued GLUT messages
+ * @note Must be called on the GLUT thread. Executes all queued messages and
+ *       updates cached GLUT state values. Thread-safe: uses mutex to protect the queue.
+ */
 void libqb_process_glut_queue() {
     libqb_mutex_guard guard(glut_msg_queue_lock);
 
@@ -62,14 +92,31 @@ void libqb_process_glut_queue() {
     }
 }
 
+/**
+ * @brief Sets the GLUT cursor style
+ * @param style Cursor style constant
+ * @note Queues a message to set the cursor. Thread-safe wrapper around GLUT function.
+ */
 void libqb_glut_set_cursor(int style) {
     libqb_queue_glut_message(new glut_message_set_cursor(style));
 }
 
+/**
+ * @brief Warps the mouse pointer
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @note Queues a message to warp the pointer. Thread-safe wrapper around GLUT function.
+ */
 void libqb_glut_warp_pointer(int x, int y) {
     libqb_queue_glut_message(new glut_message_warp_pointer(x, y));
 }
 
+/**
+ * @brief Checks if a GLUT value is cached statically
+ * @param id GLUT value ID
+ * @return true if the value is cached, false otherwise
+ * @note Some GLUT values are cached to avoid waiting for the GLUT thread.
+ */
 static bool is_static_glut_value(int id) {
     return id == GLUT_WINDOW_Y || id == GLUT_WINDOW_X
 #ifdef CORE_FREEGLUT
@@ -78,6 +125,12 @@ static bool is_static_glut_value(int id) {
         ;
 }
 
+/**
+ * @brief Gets a cached static GLUT value
+ * @param id GLUT value ID
+ * @return Cached value, or -1 if not cached
+ * @note Returns cached values without waiting for GLUT thread.
+ */
 static int __get_static_glut_value(int id) {
     switch (id) {
     case GLUT_WINDOW_Y:

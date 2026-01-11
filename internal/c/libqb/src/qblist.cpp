@@ -7,6 +7,21 @@
 #include "gui.h"
 #include "qblist.h"
 
+/**
+ * @file qblist.cpp
+ * @brief Implementation of list data structure for QB64-PE
+ * 
+ * This file implements the list structure used for managing collections of objects
+ * (such as handles) with efficient indexing and memory management.
+ */
+
+/**
+ * @brief Creates a new list (not thread-safe)
+ * @param structure_size Size of each structure in the list
+ * @return Pointer to newly created list, or NULL on failure
+ * @note Initializes a list with the specified structure size.
+ *       The list does not use index 0.
+ */
 list *list_new(intptr_t structure_size) {
     list *L;
     L = (list *)calloc(1, sizeof(list));
@@ -20,6 +35,12 @@ list *list_new(intptr_t structure_size) {
     return L;
 }
 
+/**
+ * @brief Creates a new thread-safe list
+ * @param structure_size Size of each structure in the list
+ * @return Pointer to newly created list, or NULL on failure
+ * @note Creates a list with mutex protection for thread-safe add/remove operations.
+ */
 list *list_new_threadsafe(intptr_t structure_size) {
     list *L = list_new(structure_size);
     L->lock_add = libqb_mutex_new();
@@ -27,6 +48,14 @@ list *list_new_threadsafe(intptr_t structure_size) {
     return L;
 }
 
+/**
+ * @brief Adds a new structure to the list
+ * @param L List to add to
+ * @return Index of the newly added structure, or 0 on failure
+ * @note Thread-safe if list was created with list_new_threadsafe().
+ *       Reuses freed structure slots when available. Expands buffers as needed.
+ *       Index 0 is never returned.
+ */
 intptr_t list_add(list *L) {
     if (L->lock_add)
         libqb_mutex_lock(L->lock_add);
@@ -82,6 +111,15 @@ intptr_t list_add(list *L) {
     return i;
 } // list_add
 
+/**
+ * @brief Removes a structure from the list
+ * @param L List to remove from
+ * @param i Index of the structure to remove
+ * @return -1 on success, 0 on failure
+ * @note Thread-safe if list was created with list_new_threadsafe().
+ *       The structure is marked as freed and can be reused by future list_add() calls.
+ *       Expands the freed list buffer if needed.
+ */
 intptr_t list_remove(list *L, intptr_t i) { // returns -1 on success, 0 on failure
     if (L->lock_remove)
         libqb_mutex_lock(L->lock_remove);
@@ -122,6 +160,12 @@ intptr_t list_remove(list *L, intptr_t i) { // returns -1 on success, 0 on failu
     return -1;
 };
 
+/**
+ * @brief Destroys a list and frees all resources
+ * @param L List to destroy
+ * @note Frees all structure base blocks, freed list, and the list structure itself.
+ *       Do not use the list after calling this.
+ */
 void list_destroy(list *L) {
     intptr_t i;
     for (i = 1; i <= L->structure_bases; i++) {
@@ -131,6 +175,13 @@ void list_destroy(list *L) {
     free(L);
 }
 
+/**
+ * @brief Gets a pointer to a structure by index
+ * @param L List to query
+ * @param i Index of the structure
+ * @return Pointer to the structure, or NULL if index is invalid or structure is freed
+ * @note The returned pointer is valid until the structure is removed or the list is destroyed.
+ */
 void *list_get(list *L, intptr_t i) { // Returns a pointer to an index's structure
     if ((i < 1) || (i > L->indexes)) {
         return NULL;
@@ -142,6 +193,14 @@ void *list_get(list *L, intptr_t i) { // Returns a pointer to an index's structu
     return (void *)structure;
 }
 
+/**
+ * @brief Gets the index of a structure from its pointer
+ * @param L List to query
+ * @param structure Pointer to the structure
+ * @return Index of the structure, or 0 if invalid
+ * @note Useful for finding the index when you only have a pointer to the structure.
+ *       The index is stored at the end of each structure.
+ */
 intptr_t list_get_index(list *L, void *structure) { // Retrieves the index value of a structure
     intptr_t i = *(intptr_t *)(((uint8_t *)structure) + L->user_structure_size);
     return i;

@@ -15,6 +15,18 @@
 #include "mutex.h"
 #include "thread.h"
 
+/**
+ * @file http.cpp
+ * @brief Implementation of HTTP client functions for QB64-PE
+ * 
+ * This file implements HTTP client functionality using libcurl, providing
+ * asynchronous HTTP operations with thread-safe data access.
+ */
+
+/**
+ * @brief HTTP connection handle structure
+ * @note Contains CURL connection, I/O buffer, status information, and synchronization primitives.
+ */
 struct handle {
     int id = 0;
 
@@ -53,7 +65,10 @@ struct handle {
     }
 };
 
-// Signals the curl thread that a new handle was added, it's CURL connection should be started.
+/**
+ * @brief Message to add a new HTTP handle
+ * @note Signals the curl thread that a new handle was added, its CURL connection should be started.
+ */
 struct add_handle {
     int handle;
     int err;
@@ -61,13 +76,20 @@ struct add_handle {
     struct completion added;
 };
 
-// Signals to the curl thread that a handle is finished and should be closed
+/**
+ * @brief Message to close an HTTP handle
+ * @note Signals to the curl thread that a handle is finished and should be closed.
+ */
 struct close_handle {
     int handle;
 
     struct completion closed;
 };
 
+/**
+ * @brief Global CURL multi-handle state
+ * @note Manages all HTTP connections and handles thread-safe operations.
+ */
 struct curl_state {
     CURLM *multi;
 
@@ -84,10 +106,13 @@ struct curl_state {
     }
 };
 
-// Fills out all of the 'info' fields in the handle, sets the has_info flag,
-// and triggers the response_started completion if it exists.
-//
-// Handle should be locked when calling this function
+/**
+ * @brief Fills out all of the 'info' fields in the handle
+ * @param handle Handle to fill info for
+ * @note Sets the has_info flag and triggers the response_started completion if it exists.
+ *       Handle should be locked when calling this function.
+ *       Extracts content length, URL, and status code from CURL.
+ */
 static void __fillout_curl_info(struct handle *handle) {
     if (handle->has_info)
         return;
@@ -132,7 +157,12 @@ static void __fillout_curl_info(struct handle *handle) {
     }
 }
 
-// Processes the handle addition and deletion lists
+/**
+ * @brief Processes the handle addition and deletion lists
+ * @param state CURL state structure
+ * @note Thread-safe: processes queued handle additions and deletions.
+ *       Removes connections from multi-handle and cleans them up.
+ */
 static void process_handles(struct curl_state *state) {
     std::list<CURL *> connectionsToDrop;
 
@@ -173,6 +203,12 @@ static void process_handles(struct curl_state *state) {
     }
 }
 
+/**
+ * @brief Handles CURL multi-handle messages
+ * @param state CURL state structure
+ * @note Processes completed connections, fills out connection info, and marks handles as closed.
+ *       Thread-safe: uses mutex guards for handle access.
+ */
 static void handle_messages(struct curl_state *state) {
     CURLMsg *msg;
     int left;
@@ -213,25 +249,37 @@ static void handle_messages(struct curl_state *state) {
 }
 
 #if CURL_AT_LEAST_VERSION(7, 68, 0)
+/**
+ * @brief Polls CURL multi-handle for activity (modern libcurl)
+ * @param state CURL state structure
+ * @note Uses curl_multi_poll with a one second timeout to avoid accidental deadlocks.
+ */
 static void curl_state_poll(struct curl_state *state) {
     // We use a one second timeout to avoid any accidental deadlocks if we
     // don't wakeup the thread.
     curl_multi_poll(state->multi, NULL, 0, 1000, NULL);
 }
 
+/**
+ * @brief Wakes up CURL multi-handle (modern libcurl)
+ * @param state CURL state structure
+ * @note Uses curl_multi_wakeup to immediately wake the polling thread.
+ */
 static void curl_state_wakeup(struct curl_state *state) {
     curl_multi_wakeup(state->multi);
 }
 #else
-// This is a workaround for libcurl version lacking the curl_multi_poll() and
-// curl_multi_wakeup() functions.  Unfortunately this old version is on OS X,
-// so we need to support it
-//
-// We use curl_multi_wait() with a small timeout, and don't support wakeup (so
-// commands have to wait for the timeout to trigger).
-//
-// If numfds from curl_multi_wait() is zero, then we have to do the timeout
-// manually via usleep()
+/**
+ * @brief Polls CURL multi-handle for activity (legacy libcurl)
+ * @param state CURL state structure
+ * @note This is a workaround for libcurl version lacking the curl_multi_poll() and
+ *       curl_multi_wakeup() functions. Unfortunately this old version is on OS X,
+ *       so we need to support it.
+ *       We use curl_multi_wait() with a small timeout, and don't support wakeup (so
+ *       commands have to wait for the timeout to trigger).
+ *       If numfds from curl_multi_wait() is zero, then we have to do the timeout
+ *       manually via usleep().
+ */
 static void curl_state_poll(struct curl_state *state) {
     int numfds = 0;
 
@@ -241,11 +289,22 @@ static void curl_state_poll(struct curl_state *state) {
         usleep(50 * 1000);
 }
 
+/**
+ * @brief Wakes up CURL multi-handle (legacy libcurl)
+ * @param state CURL state structure
+ * @note NOP for legacy versions - curl_state_poll will timeout automatically.
+ */
 static void curl_state_wakeup(struct curl_state *state) {
     // NOP, curl_state_poll will timeout automatically
 }
 #endif
 
+/**
+ * @brief Main CURL thread handler
+ * @param arg Pointer to curl_state structure
+ * @note Runs in a separate thread, continuously polling and processing HTTP connections.
+ *       Handles connection lifecycle, data transfer, and cleanup.
+ */
 static void libqb_curl_thread_handler(void *arg) {
     struct curl_state *state = (struct curl_state *)arg;
     int running_transfers = 0;
@@ -267,10 +326,26 @@ static void libqb_curl_thread_handler(void *arg) {
     // downloads at the moment throwing the data away doesn't matter.
 }
 
+/**
+ * @brief Global CURL state
+ */
 static struct curl_state curl_state;
+
+/**
+ * @brief CURL thread handle
+ */
 static struct libqb_thread *curl_thread;
 
-// This callback services the data received from the http connection.
+/**
+ * @brief CURL write callback - services data received from HTTP connection
+ * @param ptr Pointer to received data
+ * @param size Size of each element
+ * @param nmemb Number of elements
+ * @param data User data pointer (handle structure)
+ * @return Number of bytes processed
+ * @note Writes received data to the handle's buffer. Fills out connection info
+ *       on first data received. Thread-safe: uses mutex guard.
+ */
 static size_t receive_http_block(void *ptr, size_t size, size_t nmemb, void *data) {
     struct handle *handle = (struct handle *)data;
     size_t length = size * nmemb;
@@ -286,10 +361,22 @@ static size_t receive_http_block(void *ptr, size_t size, size_t nmemb, void *dat
     return length;
 }
 
+/**
+ * @brief Checks if an HTTP handle ID is valid
+ * @param id Handle ID to check
+ * @return true if handle exists, false otherwise
+ */
 static bool is_valid_http_id(int id) {
     return curl_state.handle_table.find(id) != curl_state.handle_table.end();
 }
 
+/**
+ * @brief Gets the available data length from an HTTP connection
+ * @param id Handle ID
+ * @param[out] length Output length in bytes
+ * @return 0 on success, -1 if handle is invalid
+ * @note Thread-safe: uses mutex guard for buffer access.
+ */
 int libqb_http_get_length(int id, size_t *length) {
     if (!is_valid_http_id(id))
         return -1;
@@ -303,8 +390,12 @@ int libqb_http_get_length(int id, size_t *length) {
     return 0;
 }
 
-// Waits for handle to have valid info, which is available after the
-// connection headers have been received.
+/**
+ * @brief Waits for handle to have valid info
+ * @param handle Handle to wait for
+ * @note Waits for connection headers to be received. Info is available after
+ *       the connection headers have been received. Uses completion for synchronization.
+ */
 static void wait_for_info(struct handle *handle) {
     struct completion comp;
 
@@ -322,6 +413,13 @@ static void wait_for_info(struct handle *handle) {
     completion_clear(&comp);
 }
 
+/**
+ * @brief Gets the content length from HTTP response headers
+ * @param id Handle ID
+ * @param[out] length Output content length
+ * @return 0 on success, -1 if handle is invalid or content length not available
+ * @note Waits for response headers before returning. Thread-safe.
+ */
 int libqb_http_get_content_length(int id, uint64_t *length) {
     if (!is_valid_http_id(id))
         return -1;
@@ -341,6 +439,12 @@ int libqb_http_get_content_length(int id, uint64_t *length) {
     }
 }
 
+/**
+ * @brief Gets the HTTP status code from response headers
+ * @param id Handle ID
+ * @return HTTP status code, or -1 if handle is invalid
+ * @note Waits for response headers before returning. Thread-safe.
+ */
 int libqb_http_get_status_code(int id) {
     if (!is_valid_http_id(id))
         return -1;
@@ -356,6 +460,13 @@ int libqb_http_get_status_code(int id) {
     }
 }
 
+/**
+ * @brief Gets the effective URL from HTTP connection
+ * @param id Handle ID
+ * @return Effective URL string, or NULL if handle is invalid
+ * @note Waits for response headers before returning. Returns the final URL after redirects.
+ *       Thread-safe. The returned pointer is valid until the handle is closed.
+ */
 const char *libqb_http_get_url(int id) {
     if (!is_valid_http_id(id))
         return NULL;
@@ -371,6 +482,15 @@ const char *libqb_http_get_url(int id) {
     }
 }
 
+/**
+ * @brief Reads available data from HTTP connection
+ * @param id Handle ID
+ * @param[out] buf Buffer to read into
+ * @param[in,out] length Input: buffer size, Output: bytes actually read
+ * @return 0 on success, -1 if handle is invalid
+ * @note Reads up to *length bytes. Updates *length with actual bytes read.
+ *       Thread-safe: uses mutex guard.
+ */
 int libqb_http_get(int id, char *buf, size_t *length) {
     if (!is_valid_http_id(id))
         return -1;
@@ -384,6 +504,14 @@ int libqb_http_get(int id, char *buf, size_t *length) {
     return 0;
 }
 
+/**
+ * @brief Reads a fixed amount of data from HTTP connection
+ * @param id Handle ID
+ * @param[out] buf Buffer to read into
+ * @param length Exact number of bytes to read
+ * @return 0 on success, -1 if handle is invalid or insufficient data available
+ * @note Requires exactly 'length' bytes to be available. Thread-safe: uses mutex guard.
+ */
 int libqb_http_get_fixed(int id, char *buf, size_t length) {
     if (!is_valid_http_id(id))
         return -1;
@@ -402,6 +530,12 @@ int libqb_http_get_fixed(int id, char *buf, size_t length) {
     return 0;
 }
 
+/**
+ * @brief Checks if HTTP connection is still connected
+ * @param id Handle ID
+ * @return Non-zero if connected, 0 if closed, -1 if handle is invalid
+ * @note Thread-safe: uses mutex guard.
+ */
 int libqb_http_connected(int id) {
     if (!is_valid_http_id(id))
         return -1;
@@ -413,6 +547,16 @@ int libqb_http_connected(int id) {
     return !handle->closed;
 }
 
+/**
+ * @brief Opens an HTTP connection
+ * @param url URL to connect to
+ * @param id Handle ID to assign
+ * @return 0 on success, -1 on error
+ * @note Creates a new HTTP connection, configures CURL options, and starts the transfer.
+ *       Only allows HTTP and HTTPS protocols. Follows redirects automatically.
+ *       Waits for connection to start and response headers to be received.
+ *       Thread-safe: uses mutex guards and completion synchronization.
+ */
 int libqb_http_open(const char *url, int id) {
     struct handle *handle = new struct handle();
 
@@ -475,6 +619,14 @@ int libqb_http_open(const char *url, int id) {
     return 0;
 }
 
+/**
+ * @brief Closes an HTTP connection
+ * @param id Handle ID to close
+ * @return 0 on success, -1 if handle is invalid
+ * @note Queues a close request and waits for it to complete. Cleans up all
+ *       resources associated with the handle. Thread-safe: uses mutex guards
+ *       and completion synchronization.
+ */
 int libqb_http_close(int id) {
     if (!is_valid_http_id(id))
         return -1;
@@ -499,6 +651,11 @@ int libqb_http_close(int id) {
     return 0;
 }
 
+/**
+ * @brief Initializes the HTTP subsystem
+ * @note Initializes libcurl and starts the CURL thread. Must be called before
+ *       any other HTTP functions. Thread-safe initialization.
+ */
 void libqb_http_init() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
@@ -508,6 +665,11 @@ void libqb_http_init() {
     libqb_thread_start(curl_thread, libqb_curl_thread_handler, &curl_state);
 }
 
+/**
+ * @brief Stops the HTTP subsystem
+ * @note Signals the CURL thread to stop and waits for it to complete.
+ *       Cleans up all CURL resources. Thread-safe shutdown.
+ */
 void libqb_http_stop() {
     {
         libqb_mutex_guard guard(curl_state.lock);

@@ -9,9 +9,22 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <unistd.h>
 
+/**
+ * @file mac-mouse-support.cpp
+ * @brief macOS-specific mouse support implementation for QB64-PE
+ * 
+ * This file implements macOS-specific mouse tracking using CGEventTap to overcome
+ * limitations in macOS GLUT. Provides relative mouse movement and wheel support.
+ */
+
 void qb64_custom_event_relative_mouse_movement(int deltaX, int deltaY);
 void GLUT_MOUSEWHEEL_FUNC(int wheel, int direction, int x, int y);
 
+/**
+ * @brief macOS mouse tracking singleton class
+ * @note Uses CGEventTap to monitor mouse events and provide relative movement tracking.
+ *       Required because macOS GLUT doesn't properly support relative mouse movement.
+ */
 class MacMouse {
   public:
     void UpdatePosition(int x, int y) {
@@ -118,6 +131,13 @@ class MacMouse {
     int y;
 };
 
+/**
+ * @brief Updates the mouse position (macOS only)
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @note Called from GLUT mouse callbacks to track absolute position for wheel events.
+ *       This is a wrapper around the MacMouse singleton.
+ */
 void MacMouse_UpdatePosition(int x, int y) {
     MacMouse::Instance().UpdatePosition(x, y);
 }

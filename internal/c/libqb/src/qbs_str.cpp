@@ -8,8 +8,26 @@
 
 #include "qbs.h"
 
-// STR() functions
-// singed integers
+/**
+ * @file qbs_str.cpp
+ * @brief Implementation of STR$ function for QB64-PE
+ * 
+ * This file implements the STR$ function which converts numeric values to strings
+ * with a leading space for positive numbers (QBASIC compatibility).
+ */
+
+/**
+ * @name STR$ Function Overloads
+ * @brief Convert numeric types to qbs strings with leading space
+ */
+///@{
+/**
+ * @brief Converts a signed 64-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ * @note Adds a leading space for positive numbers (QBASIC compatibility).
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *qbs_str(int64_t value) {
     qbs *tqbs;
     tqbs = qbs_new(20, 1);
@@ -17,6 +35,11 @@ qbs *qbs_str(int64_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a signed 32-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(int32_t value) {
     qbs *tqbs;
     tqbs = qbs_new(11, 1);
@@ -24,6 +47,11 @@ qbs *qbs_str(int32_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a signed 16-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(int16_t value) {
     qbs *tqbs;
     tqbs = qbs_new(6, 1);
@@ -31,6 +59,11 @@ qbs *qbs_str(int16_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a signed 8-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(int8_t value) {
     qbs *tqbs;
     tqbs = qbs_new(4, 1);
@@ -38,7 +71,11 @@ qbs *qbs_str(int8_t value) {
     return tqbs;
 }
 
-// unsigned integers
+/**
+ * @brief Converts an unsigned 64-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(uint64_t value) {
     qbs *tqbs;
     tqbs = qbs_new(21, 1);
@@ -46,6 +83,11 @@ qbs *qbs_str(uint64_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts an unsigned 32-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(uint32_t value) {
     qbs *tqbs;
     tqbs = qbs_new(11, 1);
@@ -53,6 +95,11 @@ qbs *qbs_str(uint32_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts an unsigned 16-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(uint16_t value) {
     qbs *tqbs;
     tqbs = qbs_new(6, 1);
@@ -60,17 +107,42 @@ qbs *qbs_str(uint16_t value) {
     return tqbs;
 }
 
+/**
+ * @brief Converts an unsigned 8-bit integer to string (QB64 STR$ function)
+ * @param value Integer value to convert
+ * @return qbs string containing the string representation with leading space
+ */
 qbs *qbs_str(uint8_t value) {
     qbs *tqbs;
     tqbs = qbs_new(4, 1);
     tqbs->len = sprintf((char *)tqbs->chr, " %u", value);
     return tqbs;
 }
+///@}
 
+/**
+ * @brief Format string buffer for sprintf
+ */
 uint8_t func_str_fmt[7];
+
+/**
+ * @brief String conversion buffer
+ */
 uint8_t qbs_str_buffer[32];
+
+/**
+ * @brief Secondary string conversion buffer
+ */
 uint8_t qbs_str_buffer2[32];
 
+/**
+ * @brief Converts a single-precision float to string (QB64 STR$ function)
+ * @param value Float value to convert
+ * @return qbs string containing the string representation with leading space
+ * @note Uses scientific notation for large/small numbers, decimal notation otherwise.
+ *       Removes trailing zeros and formats according to QBASIC standards.
+ *       Returns " 0" if value is zero.
+ */
 qbs *qbs_str(float value) {
     static qbs *tqbs;
     tqbs = qbs_new(16, 1);
@@ -153,6 +225,15 @@ asdecimal:
     return tqbs;
 }
 
+/**
+ * @brief Converts a double-precision float to string (QB64 STR$ function)
+ * @param value Double value to convert
+ * @return qbs string containing the string representation with leading space
+ * @note Uses scientific notation (with 'D' instead of 'E' for QBASIC compatibility) for
+ *       large/small numbers, decimal notation otherwise. Rounds 16th significant digit if it's 9.
+ *       Removes trailing zeros and formats according to QBASIC standards.
+ *       Returns " 0" if value is zero.
+ */
 qbs *qbs_str(double value) {
     static qbs *tqbs;
     tqbs = qbs_new(32, 1);

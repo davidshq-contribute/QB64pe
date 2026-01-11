@@ -5,10 +5,34 @@
 #include <cstdio>
 #include <type_traits>
 
+/**
+ * @file qbs_val.cpp
+ * @brief Implementation of VAL function for QB64-PE
+ * 
+ * This file implements the VAL function which converts strings to numeric values,
+ * supporting decimal, hexadecimal, binary, and octal formats.
+ */
+
 // Stack-allocating these seems uncomfortable
+/**
+ * @brief Buffer for significant digits during parsing
+ */
 static char qbs_val_significant_digits[256];
+
+/**
+ * @brief Buffer for building normalized number string
+ */
 static char qbs_val_built_number[256];
 
+/**
+ * @brief Converts a string to a numeric value (QB64 VAL function)
+ * @tparam T Numeric type to convert to (int64_t, uint64_t, float, double, long double)
+ * @param s qbs string to convert
+ * @return Converted numeric value
+ * @note Supports decimal, hexadecimal (&H), binary (&B), and octal (&O) formats.
+ *       Handles scientific notation (E, D, F). Skips whitespace. Returns 0 if string is empty
+ *       or contains no valid number. Handles overflow for integers.
+ */
 template <typename T> T qbs_val(qbs *s) {
     if (!s->len) {
         return 0;

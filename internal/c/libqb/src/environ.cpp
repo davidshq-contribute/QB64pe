@@ -8,6 +8,13 @@
 #include "error_handle.h"
 #include "qbs.h"
 
+/**
+ * @file environ.cpp
+ * @brief Implementation of environment variable access for QB64-PE
+ * 
+ * This file implements functions for reading and setting environment variables.
+ */
+
 #ifdef QB64_WINDOWS
 #    define envp _environ
 #else
@@ -15,6 +22,11 @@ extern char **environ;
 #    define envp environ
 #endif
 
+/**
+ * @brief Gets the number of environment variables (QB64 _ENVIRONCOUNT function)
+ * @return Number of environment variables
+ * @note Counts the environment variables by iterating through the environ array.
+ */
 int32_t func__environcount() {
     // count array bound
     char **p = envp;
@@ -23,6 +35,12 @@ int32_t func__environcount() {
     return p - envp;
 }
 
+/**
+ * @brief Gets an environment variable by name (QB64 ENVIRON$ function - name overload)
+ * @param name Environment variable name
+ * @return qbs string containing the variable value, or empty string if not found
+ * @note Uses getenv() to look up the variable. Returns empty string if variable doesn't exist.
+ */
 qbs *func_environ(qbs *name) {
     char *query, *result;
     qbs *tqbs;
@@ -40,6 +58,13 @@ qbs *func_environ(qbs *name) {
     return tqbs;
 }
 
+/**
+ * @brief Gets an environment variable by index (QB64 ENVIRON$ function - index overload)
+ * @param number Environment variable index (1-based)
+ * @return qbs string containing the variable (name=value format), or empty string if out of bounds
+ * @note Returns the environment variable in "name=value" format. Generates error 5 if number <= 0.
+ *       Returns empty string if index is out of bounds.
+ */
 qbs *func_environ(int32_t number) {
     char *result;
     qbs *tqbs;
@@ -64,6 +89,14 @@ qbs *func_environ(int32_t number) {
     return tqbs;
 }
 
+/**
+ * @brief Sets or removes an environment variable (QB64 ENVIRON statement)
+ * @param str String in "name=value" or "name value" format
+ * @note Name and value may be separated by '=' or space, whichever appears first.
+ *       If separator is at the end of the string, the variable is removed.
+ *       Uses platform-specific functions: _putenv/_putenv_s on Windows, setenv/unsetenv on POSIX.
+ *       Generates error 5 if no separator is found.
+ */
 void sub_environ(qbs *str) {
     char *buf;
     char *separator;

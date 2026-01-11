@@ -13,6 +13,22 @@
 #undef min
 #undef max
 
+/**
+ * @file mingw/file.cpp
+ * @brief File I/O implementation for PE file parsing on Windows
+ * 
+ * This file implements buffered file I/O for reading PE format files.
+ * Provides random access with efficient buffering.
+ * 
+ * Copyright Edd Dawson 2012, distributed under Boost Software License.
+ */
+
+/**
+ * @brief Constructs a file handle
+ * @param filename UTF-16 filename
+ * @note Opens the file for reading, gets file size, and initializes buffer.
+ *       Throws file_error on failure.
+ */
 file::file(const wchar_t *filename) :
     h(CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)),
     sz(0),
@@ -38,10 +54,20 @@ file::~file() {
 }
 
 
+/**
+ * @brief Gets the file size
+ * @return File size in bytes
+ */
 uint64_t file::size() const {
     return sz;
 }
 
+/**
+ * @brief Seeks to a position in the file
+ * @param pos Position to seek to
+ * @note If position is in current buffer, adjusts buffer pointer.
+ *       Otherwise, seeks file and refills buffer. Throws file_error on invalid position.
+ */
 void file::go(uint64_t pos) {
     if (pos > sz)
         throw file_error("bad stream cursor position specified");
@@ -64,6 +90,12 @@ void file::go(uint64_t pos) {
     }
 }
 
+/**
+ * @brief Skips forward or backward in the file
+ * @param delta Number of bytes to skip (positive or negative)
+ * @note Validates that skip doesn't go beyond file boundaries.
+ *       Throws file_error on invalid position.
+ */
 void file::skip(int64_t delta) {
     if (delta == 0)
         return;
@@ -79,26 +111,53 @@ void file::skip(int64_t delta) {
     go(cursor + delta);
 }
 
+/**
+ * @brief Gets the current file offset
+ * @return Current offset in bytes
+ */
 uint64_t file::offset() const {
     return buffer_begin_pos + (next - buffer);
 }
 
+/**
+ * @brief Reads a 64-bit unsigned integer
+ * @return 64-bit value
+ */
 uint64_t file::u64() {
     return read_integer<uint64_t>();
 }
 
+/**
+ * @brief Reads a 32-bit unsigned integer
+ * @return 32-bit value
+ */
 uint32_t file::u32() {
     return read_integer<uint32_t>();
 }
 
+/**
+ * @brief Reads a 16-bit unsigned integer
+ * @return 16-bit value
+ */
 uint16_t file::u16() {
     return read_integer<uint16_t>();
 }
 
+/**
+ * @brief Reads an 8-bit unsigned integer
+ * @return 8-bit value
+ */
 uint8_t file::u8() {
     return read_integer<uint8_t>();
 }
 
+/**
+ * @brief Reads bytes from the file
+ * @param bytes Buffer to read into
+ * @param n Number of bytes to read
+ * @note Handles buffering automatically. Reads from buffer if available,
+ *       otherwise refills buffer. Throws file_error on read failure or EOF.
+ */
 void file::read(uint8_t *bytes, std::size_t n) {
     if (n + offset() > sz)
         throw file_error("failed to read from file");
@@ -122,6 +181,11 @@ void file::read(uint8_t *bytes, std::size_t n) {
     }
 }
 
+/**
+ * @brief Checks if a position is in the current buffer
+ * @param pos Position to check
+ * @return true if position is in buffer, false otherwise
+ */
 bool file::position_in_buffer(uint64_t pos) const {
     const uint64_t buffer_end_pos = std::min(buffer_begin_pos + sizeof buffer, sz);
 
@@ -135,6 +199,12 @@ T file::read_integer() {
     return ret;
 }
 
+/**
+ * @brief Refills the read buffer
+ * @param new_begin_pos New buffer start position
+ * @note Reads a new buffer full of data from the file starting at new_begin_pos.
+ *       Throws file_error on read failure.
+ */
 void file::refill(std::size_t new_begin_pos) {
     buffer_begin_pos = new_begin_pos;
     next = buffer;

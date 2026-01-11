@@ -133,6 +133,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced `internal/c/libqb/include/filesystem.h` - Added filesystem operation documentation (108 lines added)
   - Enhanced `internal/c/libqb/include/mem.h` - Added memory management documentation (178 lines added)
   - Enhanced `internal/c/libqb/include/qbs.h` - Added QB64 string system documentation (360 lines added)
+  - **Comprehensive C Header Documentation Expansion** - Added Doxygen-style documentation to 40+ C header files:
+    - `internal/c/libqb/include/audio.h` - Audio functions and playback control documentation
+    - `internal/c/libqb/include/bitops.h` - Bitwise operations documentation
+    - `internal/c/libqb/include/clipboard.h` - Clipboard operations documentation
+    - `internal/c/libqb/include/cmem.h` - Common memory utilities documentation
+    - `internal/c/libqb/include/command.h` - Command processing documentation
+    - `internal/c/libqb/include/completion.h` - Code completion support documentation
+    - `internal/c/libqb/include/compression.h` - Compression utilities documentation
+    - `internal/c/libqb/include/condvar.h` - Condition variable synchronization documentation
+    - `internal/c/libqb/include/encoding.h` - Character encoding utilities documentation
+    - `internal/c/libqb/include/environ.h` - Environment variable operations documentation
+    - `internal/c/libqb/include/event.h` - Event handling documentation
+    - `internal/c/libqb/include/extended_math.h` - Extended mathematical functions documentation
+    - `internal/c/libqb/include/file-fields.h` - File field operations documentation
+    - `internal/c/libqb/include/font.h` - Font rendering and management documentation
+    - `internal/c/libqb/include/game_controller.h` - Game controller input documentation
+    - `internal/c/libqb/include/gfs.h` - Graphics file system documentation
+    - `internal/c/libqb/include/glut-thread.h` - GLUT threading support documentation
+    - `internal/c/libqb/include/graphics.h` - Graphics operations documentation
+    - `internal/c/libqb/include/gui.h` - GUI components documentation
+    - `internal/c/libqb/include/hashing.h` - Hashing algorithms documentation
+    - `internal/c/libqb/include/hexoctbin.h` - Hexadecimal/octal/binary conversion documentation
+    - `internal/c/libqb/include/http.h` - HTTP client functionality documentation
+    - `internal/c/libqb/include/image.h` - Image processing and manipulation documentation
+    - `internal/c/libqb/include/keyhandler.h` - Keyboard input handling documentation
+    - `internal/c/libqb/include/libqb-common.h` - Common library definitions documentation
+    - `internal/c/libqb/include/logging.h` - Logging system documentation
+    - `internal/c/libqb/include/mac-mouse-support.h` - macOS mouse support documentation
+    - `internal/c/libqb/include/mutex.h` - Mutex synchronization documentation
+    - `internal/c/libqb/include/qblist.h` - QB64 list data structure documentation
+    - `internal/c/libqb/include/qbmath.h` - QB64 mathematical functions documentation
+    - `internal/c/libqb/include/qbs-mk-cv.h` - QB64 string conversion utilities documentation
+    - `internal/c/libqb/include/rounding.h` - Rounding functions documentation
+    - `internal/c/libqb/include/shell.h` - Shell command execution documentation
+    - `internal/c/libqb/include/thread.h` - Threading primitives documentation
+  - **C Source File Documentation** - Added comprehensive Doxygen-style documentation to 35+ C source files:
+    - Enhanced documentation in `internal/c/libqb/src/` covering implementation details, function parameters, return values, and usage notes
+    - Key files documented: `bitops.cpp`, `buffer.cpp`, `command.cpp`, `datetime.cpp`, `environ.cpp`, `error_handle.cpp`, `file-fields.cpp`, `filepath.cpp`, `filesystem.cpp`, `gfs.cpp`, `graphics.cpp`, `hexoctbin.cpp`, `http.cpp`, `logging/` directory files, `qbs.cpp`, `qbs_mk_cv.cpp`, `shell.cpp`, `threading.cpp`, and more
+  - Updated `docs/REFACTORING_LOG.md` - Added additional refactoring documentation entries
 
 #### Source Code
 - **Main Compiler**
@@ -235,10 +274,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **All tests now passing**: 73/73 tests pass with 100% assertion success rate
 
 ### Statistics
-- **Total Changes**: 69 files changed (63 in this update)
-- **Additions**: 10,102 insertions (+3,471 in this update)
-- **Deletions**: 2,334 deletions (+4,483 in this update)
-- **Net Change**: +7,768 lines (-1,012 in this update)
+- **Total Changes**: 146 files changed (77 in this update)
+- **Additions**: 15,936 insertions (+5,834 in this update)
+- **Deletions**: 2,724 deletions (+390 in this update)
+- **Net Change**: +13,212 lines (+5,444 in this update)
 
 ---
 
@@ -280,3 +319,11 @@ This changelog entry represents a significant update focusing on:
 - **Code Reviews**: Added documentation code review files tracking documentation additions and updates
 - **Test Infrastructure Cleanup**: Removed obsolete test files and consolidated functionality into component test harness
 - **Net Documentation Change**: -1,012 lines (removed duplicates and consolidated documentation)
+
+### Recent Updates (2026-01-10 - Comprehensive C Codebase Documentation)
+- **C Header Documentation Expansion**: Added comprehensive Doxygen-style documentation to 40+ C header files covering audio, bitops, clipboard, command processing, compression, encoding, environment variables, events, extended math, file operations, fonts, game controllers, graphics, GUI, hashing, HTTP, images, keyboard handling, logging, mutexes, lists, math functions, rounding, shell operations, threading, and more
+- **C Source File Documentation**: Added detailed implementation documentation to 35+ C source files with function descriptions, parameter documentation, return value notes, and usage examples
+- **Documentation Format**: All documentation follows Doxygen conventions with @brief, @param, @return, @note tags, file-level documentation, and grouped macros
+- **Build System**: Updated `.gitignore` to exclude IntelliJ IDEA project files (`.idea/`)
+- **Refactoring Log**: Updated `docs/REFACTORING_LOG.md` with additional refactoring documentation entries
+- **Total Documentation Added**: +5,834 lines of code documentation across 77 files (5,444 net lines after deletions)

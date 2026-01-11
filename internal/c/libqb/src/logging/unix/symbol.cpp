@@ -11,6 +11,21 @@
 #include "logging.h"
 #include "../logging_private.h"
 
+/**
+ * @file unix/symbol.cpp
+ * @brief Unix/Linux implementation of symbol resolution for logging
+ * 
+ * This file implements symbol resolution using dladdr and C++ name demangling
+ * for Unix/Linux platforms.
+ */
+
+/**
+ * @brief Resolves a symbol name from an address (Unix/Linux)
+ * @param addr Memory address to resolve
+ * @return String containing the resolved symbol name, or "none" if not found
+ * @note Uses dladdr to get symbol information, then demangles C++ names using abi::__cxa_demangle.
+ *       Returns the demangled name if available, otherwise the mangled name or filename.
+ */
 std::string libqb_log_resolve_symbol(const void *addr) {
     Dl_info info;
     memset(&info, 0, sizeof(info));

@@ -1,40 +1,133 @@
 #ifndef INCLUDE_LIBQB_GLUT_THREAD_H
 #define INCLUDE_LIBQB_GLUT_THREAD_H
 
-// Called to potentially setup GLUT before starting the program.
+/**
+ * @file glut-thread.h
+ * @brief GLUT thread management for QB64-PE
+ * 
+ * This header provides functions for managing the GLUT (OpenGL Utility Toolkit) thread,
+ * which handles graphics window creation and event processing. GLUT operations must be
+ * performed on a specific thread to avoid threading issues.
+ */
+
+/**
+ * @brief Sets up GLUT before starting the program
+ * @param argc Command-line argument count
+ * @param argv Command-line argument array
+ * @note Called to potentially initialize GLUT before program execution begins
+ */
 void libqb_glut_presetup(int argc, char **argv);
 
-// Starts the "main thread", including handling all the GLUT setup.
+/**
+ * @brief Starts the main thread, including GLUT setup
+ * @param argc Command-line argument count
+ * @param argv Command-line argument array
+ * @note Initializes and starts the main thread with GLUT support
+ */
 void libqb_start_main_thread(int argc, char **argv);
 
-// Used to support _ScreenShow, which can start the GLUT thread after the
-// program is started
+/**
+ * @brief Starts the GLUT thread
+ * @note Used to support _ScreenShow, which can start the GLUT thread after
+ *       the program has already started
+ */
 void libqb_start_glut_thread();
 
-// Indicates whether GLUT is currently running (and thus whether we're able to
-// do any GLUT-related stuff
+/**
+ * @brief Checks if GLUT is currently running
+ * @return true if GLUT is up and running, false otherwise
+ * @note Indicates whether GLUT-related operations can be performed
+ */
 bool libqb_is_glut_up();
 
-// Called at consistent intervals from a GLUT callback
+/**
+ * @brief Processes the GLUT event queue
+ * @note Called at consistent intervals from a GLUT callback to process queued events
+ */
 void libqb_process_glut_queue();
 
-// Called to properly exit the program. Necessary because GLUT requires a
-// special care to not seg-fault when exiting the program.
+/**
+ * @brief Exits the program properly
+ * @param exitcode Exit code to return
+ * @note Called to properly exit the program. GLUT requires special care to avoid
+ *       segfaults when exiting.
+ */
 void libqb_exit(int);
 
-// These functions perform the same actions as their corresponding glut* functions.
-// They tell the GLUT thread to perform the command, returning the result if applicable
+/**
+ * @name GLUT Thread-Safe Wrapper Functions
+ * @brief Functions that perform GLUT operations on the GLUT thread
+ * 
+ * These functions perform the same actions as their corresponding glut* functions,
+ * but they safely communicate with the GLUT thread to perform the command.
+ */
+///@{
+/**
+ * @brief Sets the cursor style (thread-safe GLUT wrapper)
+ * @param style Cursor style to set
+ */
 void libqb_glut_set_cursor(int style);
-void libqb_glut_warp_pointer(int x, int y);
-int libqb_glut_get(int id);
-void libqb_glut_iconify_window();
-void libqb_glut_position_window(int x, int y);
-void libqb_glut_show_window();
-void libqb_glut_hide_window();
-void libqb_glut_set_window_title(const char *title);
-void libqb_glut_exit_program(int exitcode);
 
-// Convenience macros, exists a function depending on the state of GLUT
+/**
+ * @brief Warps the mouse pointer to a position (thread-safe GLUT wrapper)
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void libqb_glut_warp_pointer(int x, int y);
+
+/**
+ * @brief Gets a GLUT state value (thread-safe GLUT wrapper)
+ * @param id GLUT state identifier
+ * @return State value
+ */
+int libqb_glut_get(int id);
+
+/**
+ * @brief Iconifies (minimizes) the window (thread-safe GLUT wrapper)
+ */
+void libqb_glut_iconify_window();
+
+/**
+ * @brief Positions the window (thread-safe GLUT wrapper)
+ * @param x X position
+ * @param y Y position
+ */
+void libqb_glut_position_window(int x, int y);
+
+/**
+ * @brief Shows the window (thread-safe GLUT wrapper)
+ */
+void libqb_glut_show_window();
+
+/**
+ * @brief Hides the window (thread-safe GLUT wrapper)
+ */
+void libqb_glut_hide_window();
+
+/**
+ * @brief Sets the window title (thread-safe GLUT wrapper)
+ * @param title Window title string
+ */
+void libqb_glut_set_window_title(const char *title);
+
+/**
+ * @brief Exits the program through GLUT (thread-safe GLUT wrapper)
+ * @param exitcode Exit code to return
+ */
+void libqb_glut_exit_program(int exitcode);
+///@}
+
+/**
+ * @name GLUT State Checking Macros
+ * @brief Convenience macros for checking GLUT state before operations
+ */
+///@{
+/**
+ * @brief Checks if GLUT is up, errors if not
+ * @param error_result Value to return if GLUT is not up
+ * @note Generates error 5 and returns error_result if GLUT is not running.
+ *       Use this for operations that require GLUT to be active.
+ */
 #define NEEDS_GLUT(error_result)                                                                                                                               \
     do {                                                                                                                                                       \
         if (!libqb_is_glut_up()) {                                                                                                                             \
@@ -43,10 +136,16 @@ void libqb_glut_exit_program(int exitcode);
         }                                                                                                                                                      \
     } while (0)
 
+/**
+ * @brief Returns early if GLUT is not up
+ * @param result Value to return if GLUT is not up
+ * @note Returns result if GLUT is not running. Use this for optional GLUT operations.
+ */
 #define OPTIONAL_GLUT(result)                                                                                                                                  \
     do {                                                                                                                                                       \
         if (!libqb_is_glut_up())                                                                                                                               \
             return result;                                                                                                                                     \
     } while (0)
+///@}
 
 #endif

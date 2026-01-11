@@ -12,20 +12,87 @@
 #include "event.h"
 #include "gui.h"
 
+/**
+ * @file error_handle.cpp
+ * @brief Implementation of error handling functions for QB64-PE
+ * 
+ * This file implements the error handling system, including error reporting,
+ * error recovery, and user interaction for error conditions.
+ */
+
+/**
+ * @brief Flag indicating a new error has occurred
+ * @note Set when error() is called. Checked by error handlers.
+ */
 uint32_t new_error;
+
+/**
+ * @brief Flag indicating an error has occurred
+ * @note Set during error handling to track error state.
+ */
 uint32_t error_occurred;
+
+/**
+ * @brief Flag indicating error retry is requested
+ * @note Set when user chooses to retry after an error.
+ */
 uint32_t error_retry;
+
+/**
+ * @brief Current error code
+ * @note Stores the error number of the current error.
+ */
 uint32_t error_err; //=0;
+
+/**
+ * @brief Line number to goto on error
+ * @note Used by ON ERROR GOTO handlers.
+ */
 uint32_t error_goto_line;
+
+/**
+ * @brief History of error handlers
+ * @note Tracks error handler call stack.
+ */
 qbs *error_handler_history;
+
+/**
+ * @brief Flag indicating error handling is in progress
+ * @note Prevents recursive error handling.
+ */
 uint32_t error_handling;
 
+/**
+ * @brief Error line number (extended, as double)
+ * @note Stores the line number where the error occurred.
+ */
 static double error_erl; //=0;
+
+/**
+ * @brief Error line number in current file
+ * @note Line number where error occurred in the main file.
+ */
 static uint32_t ercl;
+
+/**
+ * @brief Error line number in included file
+ * @note Line number where error occurred in an included file.
+ */
 static uint32_t inclercl;
 
+/**
+ * @brief Filename of included file where error occurred
+ * @note NULL if error occurred in main file.
+ */
 static const char *includedfilename;
 
+/**
+ * @brief Converts an error code to a human-readable message
+ * @param errorcode Error code number
+ * @return Human-readable error message string
+ * @note Returns a static string describing the error. Covers all QB64 error codes
+ *       including memory errors (300-315) and standard QB64 errors (0-76, etc.).
+ */
 static const char *human_error(int32_t errorcode) {
     // clang-format off
     switch (errorcode) {
@@ -111,36 +178,77 @@ static const char *human_error(int32_t errorcode) {
     // clang-format on
 }
 
+/**
+ * @brief Clears the current error state
+ * @note Resets the new_error flag. Use with caution.
+ */
 void clear_error() {
     new_error = 0;
 }
 
+/**
+ * @brief Gets the error line number (extended)
+ * @return Error line number as a double
+ * @note Returns the line number where the error occurred.
+ */
 double get_error_erl() {
     return error_erl;
 }
 
+/**
+ * @brief Gets the current error code
+ * @return Current error code
+ * @note Returns the error number of the current error.
+ */
 uint32_t get_error_err() {
     return error_err;
 }
 
+/**
+ * @brief Gets the error line number (QB64 _ERRORLINE function)
+ * @return Line number where error occurred in main file
+ */
 int32_t func__errorline() {
     return ercl;
 }
 
+/**
+ * @brief Gets the error line number in included file (QB64 _INCLERRORLINE function)
+ * @return Line number where error occurred in included file, or 0 if in main file
+ */
 int32_t func__inclerrorline() {
     return inclercl;
 }
 
+/**
+ * @brief Gets the included filename where error occurred (QB64 _INCLERRORFILE$ function)
+ * @return qbs string containing the included filename, or empty string if in main file
+ * @note Caller must free the returned qbs with qbs_free()
+ */
 qbs *func__inclerrorfile() {
     return qbs_new_txt(includedfilename);
 }
 
+/**
+ * @brief Sets the error line information
+ * @param errorline Line number in main file
+ * @param incerrorline Line number in included file
+ * @param incfilename Filename of included file
+ * @note Called when an error occurs to record location information.
+ */
 void error_set_line(uint32_t errorline, uint32_t incerrorline, const char *incfilename) {
     ercl = errorline;
     inclercl = incerrorline;
     includedfilename = incfilename;
 }
 
+/**
+ * @brief Gets the error message for an error code (QB64 _ERRORMESSAGE$ function)
+ * @param errorcode Error code (uses current error if not provided)
+ * @param passed Flag indicating if errorcode parameter was provided
+ * @return qbs string containing the error message
+ * @note Caller must free the returned qbs with qbs_free()
+ */
 qbs *func__errormessage(int32_t errorcode, int32_t passed) {
     if (!passed)
         errorcode = get_error_err();
@@ -153,6 +261,13 @@ void end();
 
 extern void QBMAIN(void *);
 
+/**
+ * @brief Attempts to fix or recover from the current error
+ * @note Handles error recovery and user interaction. For critical errors (300-315),
+ *       displays an error dialog and exits. For other errors, may allow continuation
+ *       or trigger error handlers. Generates error dialogs with continue/exit options.
+ *       FIXME: Contains suspicious QBMAIN(NULL) call that may need review.
+ */
 void fix_error() {
     char *errtitle = NULL, *errmess = NULL;
     const char *cp;
@@ -219,6 +334,15 @@ void fix_error() {
     return;
 }
 
+/**
+ * @brief Reports an error and initiates error handling
+ * @param error_number Error code (see error code constants)
+ * @note This is the main error reporting function. It:
+ *       - Logs the error
+ *       - Handles critical errors (out of memory, etc.) by displaying dialogs and exiting
+ *       - Sets new_error flag for error handlers
+ *       - May trigger program termination for critical errors
+ */
 void error(int32_t error_number) {
     libqb_log_error("QB64 Error %d reported: %s", error_number, human_error(error_number));
 

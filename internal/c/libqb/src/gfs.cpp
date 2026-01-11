@@ -8,26 +8,82 @@
 #include "filepath.h"
 #include "gfs.h"
 
+/**
+ * @file gfs.cpp
+ * @brief Implementation of Generic File System (GFS) for QB64-PE
+ * 
+ * This file implements cross-platform file I/O operations, providing a unified
+ * interface for file operations across Windows, Linux, and macOS. The GFS system
+ * manages file handles, file numbers, and file operations.
+ */
+
+/**
+ * @brief Next unique file ID to assign
+ * @note Incremented for each new file handle
+ */
 static int64_t gfs_nextid = 1;
 
+/**
+ * @brief Array of file structures
+ * @note Dynamically allocated array of gfs_file_struct entries
+ */
 static gfs_file_struct *gfs_file = (gfs_file_struct *)malloc(1);
 
+/**
+ * @brief Number of file structures allocated
+ */
 static int32_t gfs_n = 0;
+
+/**
+ * @brief Number of freed file handles in the pool
+ */
 static int32_t gfs_freed_n = 0;
+
+/**
+ * @brief Array of freed file handle indices
+ * @note Used for recycling file handles
+ */
 static int32_t *gfs_freed = (int32_t *)malloc(1);
+
+/**
+ * @brief Size of the freed array
+ */
 static int32_t gfs_freed_size = 0;
 
+/**
+ * @brief Mapping from QB64 file numbers to GFS handles
+ * @note QB64 file numbers (1, 2, 3...) map to GFS internal handles
+ */
 static int32_t *gfs_fileno = (int32_t *)malloc(1);
+
+/**
+ * @brief Highest file number in use
+ */
 static int32_t gfs_fileno_n = 0;
 
+/**
+ * @brief Gets the GFS handle for a QB64 file number
+ * @param file_number QB64 file number
+ * @return GFS internal handle, or -1 if invalid
+ */
 int32_t gfs_get_fileno(int file_number) {
     return gfs_fileno[file_number];
 }
 
+/**
+ * @brief Gets the file structure for a GFS handle
+ * @param fileno GFS internal handle
+ * @return Pointer to the file structure
+ */
 gfs_file_struct *gfs_get_file_struct(int fileno) {
     return gfs_file + fileno;
 }
 
+/**
+ * @brief Closes all open files
+ * @note Iterates through all file numbers and closes any open files.
+ *       Called during program shutdown.
+ */
 void gfs_close_all_files() {
     for (int32_t i = 1; i <= gfs_fileno_n; i++) {
         if (gfs_fileno_valid(i) == 1)
@@ -35,6 +91,12 @@ void gfs_close_all_files() {
     }
 }
 
+/**
+ * @brief Creates a new GFS file handle
+ * @return New GFS internal handle, or -1 on failure
+ * @note Reuses freed handles when available, otherwise allocates a new one.
+ *       Assigns a unique ID to the file structure.
+ */
 int32_t gfs_new() {
     int32_t i;
     if (gfs_freed_n) {
@@ -49,6 +111,12 @@ int32_t gfs_new() {
     return i;
 }
 
+/**
+ * @brief Validates a GFS handle
+ * @param i GFS internal handle to validate
+ * @return Non-zero if handle is valid, 0 otherwise
+ * @note Checks if handle is in range and if file is open or is a screen handle.
+ */
 int32_t gfs_validhandle(int32_t i) {
     if ((i < 0) || (i >= gfs_n))
         return 0;
@@ -59,6 +127,12 @@ int32_t gfs_validhandle(int32_t i) {
     return 0;
 }
 
+/**
+ * @brief Checks if a QB64 file number is valid and in use
+ * @param f QB64 file number to check
+ * @return -2 if invalid, 1 if in use, 0 if unused
+ * @note Expands the fileno array if the file number is beyond current size.
+ */
 int32_t gfs_fileno_valid(int32_t f) {
     // returns: -2   invalid handle
     //          1   in use
@@ -78,6 +152,12 @@ int32_t gfs_fileno_valid(int32_t f) {
     return 0;
 }
 
+/**
+ * @brief Finds the lowest available file number (QB64 FREEFILE function)
+ * @return Lowest available file number, or next number if all are in use
+ * @note For QBASIC compatibility, returns the lowest available file number.
+ *       Returns gfs_fileno_n + 1 if all numbers up to gfs_fileno_n are in use.
+ */
 int32_t gfs_fileno_freefile() { // like FREEFILE
     // note: for QBASIC compatibility the lowest available file number is returned
     int32_t x;
@@ -87,16 +167,34 @@ int32_t gfs_fileno_freefile() { // like FREEFILE
     return gfs_fileno_n + 1;
 }
 
+/**
+ * @brief Associates a file number with a GFS handle
+ * @param f QB64 file number
+ * @param i GFS internal handle
+ * @note Assumes both handles are valid. Sets up bidirectional mapping.
+ */
 void gfs_fileno_use(int32_t f, int32_t i) {
     // assumes valid handles
     gfs_fileno[f] = i;
     gfs_file[i].fileno = f;
 }
 
+/**
+ * @brief Frees a file number (internal use only)
+ * @param f QB64 file number to free
+ * @warning Called by gfs_free. DO NOT CALL THIS FUNCTION directly.
+ */
 void gfs_fileno_free(int32_t f) { // note: called by gfs_free (DO NOT CALL THIS FUNCTION)
     gfs_fileno[f] = -1;
 }
 
+/**
+ * @brief Frees a GFS file handle
+ * @param i GFS internal handle to free
+ * @return 0 on success, -2 if handle is invalid
+ * @note Marks the file as closed, frees the file number, and adds handle to freed pool.
+ *       Does not close the underlying file - use gfs_close() for that.
+ */
 int32_t gfs_free(int32_t i) {
 
     if (!gfs_validhandle(i))
@@ -113,6 +211,13 @@ int32_t gfs_free(int32_t i) {
     return 0;
 }
 
+/**
+ * @brief Closes a file and frees its resources
+ * @param i GFS internal handle
+ * @return 0 on success, error code on failure
+ * @note Closes the underlying file handle (platform-specific), frees field buffers,
+ *       and marks the file as closed. Screen handles return immediately without action.
+ */
 int32_t gfs_close(int32_t i) {
     int32_t x;
     if ((x = gfs_free(i)))

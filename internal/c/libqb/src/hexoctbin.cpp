@@ -9,6 +9,22 @@
 #include "qbs.h"
 #include "rounding.h"
 
+/**
+ * @file hexoctbin.cpp
+ * @brief Implementation of number format conversion functions for QB64-PE
+ * 
+ * This file implements functions for converting numbers to binary, octal, and
+ * hexadecimal string representations, with support for negative numbers.
+ */
+
+/**
+ * @brief Converts an integer to binary string (QB64 BIN$ function)
+ * @param value Integer value to convert
+ * @param neg_bits Minimum number of bits for negative numbers
+ * @return qbs string containing binary representation
+ * @note For negative numbers, expands to 16/32/64 bit boundaries if needed.
+ *       Returns "0" if value is zero. Caller must free the returned qbs.
+ */
 qbs *func__bin(int64_t value, int32_t neg_bits) {
     static int32_t i, i2, i3, neg;
     static int64_t value2;
@@ -69,10 +85,15 @@ qbs *func__bin(int64_t value, int32_t neg_bits) {
     return str;
 }
 
-// note: QBASIC doesn't have a BIN$ function
-//      QB64   uses 32 bin digits for SINGLE/DOUBLE/FLOAT but if this range is exceeded
-//      it uses up to 64 bin digits before generating an "OVERFLOW" error
-// performs overflow check before calling func__bin
+/**
+ * @brief Converts a floating-point number to binary string (QB64 BIN$ function for floats)
+ * @param value Floating-point value to convert
+ * @return qbs string containing binary representation
+ * @note QBASIC doesn't have a BIN$ function. QB64 uses 32 bin digits for SINGLE/DOUBLE/FLOAT
+ *       but if this range is exceeded, it uses up to 64 bin digits before generating an "OVERFLOW" error.
+ *       Performs overflow check before calling func__bin. Generates error 6 (Overflow) if value
+ *       is out of int64 range. Caller must free the returned qbs.
+ */
 qbs *func__bin_float(long double value) {
     static qbs *str;
     static int64_t ivalue;
@@ -95,6 +116,14 @@ qbs *func__bin_float(long double value) {
     return func__bin(ivalue, 32);
 }
 
+/**
+ * @brief Converts an integer to octal string (QB64 OCT$ function)
+ * @param value Integer value to convert
+ * @param neg_bits Minimum number of bits for negative numbers
+ * @return qbs string containing octal representation
+ * @note For negative numbers, expands to 16/32/64 bit boundaries if needed.
+ *       Returns "0" if value is zero. Caller must free the returned qbs.
+ */
 qbs *func_oct(int64_t value, int32_t neg_bits) {
 
     static int32_t i, i2, i3, x, x2, neg;
@@ -169,10 +198,16 @@ qbs *func_oct(int64_t value, int32_t neg_bits) {
     return str;
 }
 
-// note: QBASIC uses 11 oct digits for SINGLE/DOUBLE or generates "OVERFLOW" if this range is exceeded
-//      QB64   uses 11 oct digits for SINGLE/DOUBLE/FLOAT but if this range is exceeded
-//      it uses up to 22 oct digits before generating an "OVERFLOW" error
-// performs overflow check before calling func_oct
+/**
+ * @brief Converts a floating-point number to octal string (QB64 OCT$ function for floats)
+ * @param value Floating-point value to convert
+ * @return qbs string containing octal representation
+ * @note QBASIC uses 11 oct digits for SINGLE/DOUBLE or generates "OVERFLOW" if this range is exceeded.
+ *       QB64 uses 11 oct digits for SINGLE/DOUBLE/FLOAT but if this range is exceeded,
+ *       it uses up to 22 oct digits before generating an "OVERFLOW" error.
+ *       Performs overflow check before calling func_oct. Generates error 6 (Overflow) if value
+ *       is out of int64 range. Caller must free the returned qbs.
+ */
 qbs *func_oct_float(long double value) {
     static qbs *str;
     static int64_t ivalue;
@@ -195,6 +230,15 @@ qbs *func_oct_float(long double value) {
     return func_oct(ivalue, 32);
 }
 
+/**
+ * @brief Converts an integer to hexadecimal string (QB64 HEX$ function)
+ * @param value Integer value to convert
+ * @param neg_size Minimum number of hex digits for negative numbers
+ * @return qbs string containing hexadecimal representation
+ * @note Negative int64 values can be treated as positive uint64 values (and vice versa).
+ *       For negative numbers, expands to 4/8/16 hex digit boundaries if needed.
+ *       Returns "0" if value is zero. Caller must free the returned qbs.
+ */
 qbs *func_hex(int64_t value, int32_t neg_size) {
     // note: negative int64 values can be treated as positive uint64 values (and vise versa)
 
@@ -258,10 +302,16 @@ qbs *func_hex(int64_t value, int32_t neg_size) {
     return str;
 }
 
-// note: QBASIC uses 8 hex digits for SINGLE/DOUBLE or generates "OVERFLOW" if this range is exceeded
-//      QB64   uses 8 hex digits for SINGLE/DOUBLE/FLOAT but if this range is exceeded
-//      it uses up to 16 hex digits before generating an "OVERFLOW" error
-// performs overflow check before calling func_hex
+/**
+ * @brief Converts a floating-point number to hexadecimal string (QB64 HEX$ function for floats)
+ * @param value Floating-point value to convert
+ * @return qbs string containing hexadecimal representation
+ * @note QBASIC uses 8 hex digits for SINGLE/DOUBLE or generates "OVERFLOW" if this range is exceeded.
+ *       QB64 uses 8 hex digits for SINGLE/DOUBLE/FLOAT but if this range is exceeded,
+ *       it uses up to 16 hex digits before generating an "OVERFLOW" error.
+ *       Performs overflow check before calling func_hex. Generates error 6 (Overflow) if value
+ *       is out of int64 range. Caller must free the returned qbs.
+ */
 qbs *func_hex_float(long double value) {
     static qbs *str;
     static int64_t ivalue;

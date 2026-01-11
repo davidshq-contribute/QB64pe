@@ -35,6 +35,11 @@ static uint8_t enabled_scopes[static_cast<std::size_t>(logscope::Count)] = {
     [static_cast<std::size_t>(logscope::QB64)] = 1,
 };
 
+/**
+ * @brief Gets the minimum log level as a numeric value
+ * @return Numeric log level: 1=Trace, 2=Information, 3=Warning, 4=Error, 5=Disabled
+ * @note Returns 5 if logging is disabled. Used by QB64 programs to query the current log level.
+ */
 uint32_t func__logminlevel() {
     if (!logging_enabled)
         return 5;
@@ -49,6 +54,11 @@ uint32_t func__logminlevel() {
     return 5;
 }
 
+/**
+ * @brief Gets the name of a log level
+ * @param lvl Log level
+ * @return String name of the log level
+ */
 const char *logLevelName(loglevel lvl) {
     switch (lvl) {
         case loglevel::Trace: return "TRACE";
@@ -59,6 +69,11 @@ const char *logLevelName(loglevel lvl) {
     return "UNKNOWN";
 }
 
+/**
+ * @brief Gets the name of a log scope
+ * @param scope Log scope
+ * @return String name of the log scope, or nullptr if invalid
+ */
 const char *logScopeName(logscope scope) {
     switch (scope) {
         case logscope::QB64: return "QB64";
@@ -71,6 +86,19 @@ const char *logScopeName(logscope scope) {
     return nullptr;
 }
 
+/**
+ * @brief Core logging function with variadic arguments
+ * @param lvl Log level
+ * @param scope Log scope
+ * @param file Source file name
+ * @param func Function name
+ * @param line Line number
+ * @param fmt Format string
+ * @param args Variadic argument list
+ * @param qb64_only If true, only include QB64 stack frames in stack trace
+ * @note Formats the log message, resolves QB64 symbols, optionally generates stack trace,
+ *       and dispatches to all registered handlers. Thread-safe: uses mutex guard.
+ */
 static void libqb_vlog(loglevel lvl, logscope scope, const char *file, const char *func, int line, const char *fmt, va_list args, bool qb64_only)
 {
     if (!logging_enabled)
@@ -110,6 +138,18 @@ static void libqb_vlog(loglevel lvl, logscope scope, const char *file, const cha
         logger->write(&entry);
 }
 
+/**
+ * @brief Logs a message with printf-style formatting
+ * @param lvl Log level (Trace, Information, Warning, Error)
+ * @param scope Log scope (QB64, Runtime, Libqb, Audio, Image)
+ * @param file Source file name (typically __FILE__)
+ * @param func Function name (typically __FUNCTION__ or __func__)
+ * @param line Line number (typically __LINE__)
+ * @param fmt Format string (printf-style)
+ * @param ... Variadic arguments for format string
+ * @note Main logging function. Includes full stack trace for errors. Resolves QB64 symbols.
+ *       Thread-safe. Only logs if logging is enabled and scope is enabled.
+ */
 void libqb_log(loglevel lvl, logscope scope, const char *file, const char *func, int line, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -117,6 +157,18 @@ void libqb_log(loglevel lvl, logscope scope, const char *file, const char *func,
     va_end(args);
 }
 
+/**
+ * @brief Logs a message with printf-style formatting, QB64-only stack traces
+ * @param lvl Log level (Trace, Information, Warning, Error)
+ * @param scope Log scope (QB64, Runtime, Libqb, Audio, Image)
+ * @param file Source file name (typically __FILE__)
+ * @param func Function name (typically __FUNCTION__ or __func__)
+ * @param line Line number (typically __LINE__)
+ * @param fmt Format string (printf-style)
+ * @param ... Variadic arguments for format string
+ * @note Same as libqb_log() but stack traces only include QB64 stack frames, filtering out
+ *       C++ runtime frames. Useful for QB64 program debugging.
+ */
 void libqb_log_qb64(loglevel lvl, logscope scope, const char *file, const char *func, int line, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -124,10 +176,30 @@ void libqb_log_qb64(loglevel lvl, logscope scope, const char *file, const char *
     va_end(args);
 }
 
+/**
+ * @brief Logs a message from a QB64 string (qbs)
+ * @param lvl Log level (Trace, Information, Warning, Error)
+ * @param scope Log scope (QB64, Runtime, Libqb, Audio, Image)
+ * @param file Source file name (typically __FILE__)
+ * @param func Function name (typically __FUNCTION__ or __func__)
+ * @param line Line number (typically __LINE__)
+ * @param str QB64 string to log
+ * @note Convenience function for logging QB64 strings. Converts qbs to C string and logs it.
+ *       Uses QB64-only stack traces.
+ */
 void libqb_log_qbs(loglevel lvl, logscope scope, const char *file, const char *func, int line, qbs *str) {
     libqb_log_qb64(lvl, scope, file, func, line, "%.*s", (int)str->len, (const char *)str->chr);
 }
 
+/**
+ * @brief Initializes the logging system
+ * @note Reads environment variables to configure logging:
+ *       - QB64PE_LOG_HANDLERS: Comma-separated list of handlers ("console", "file")
+ *       - QB64PE_LOG_SCOPES: Comma-separated list of enabled scopes ("qb64", "libqb", "all", etc.)
+ *       - QB64PE_LOG_LEVEL: Minimum log level ("TRACE", "INFORMATION", "WARNING", "ERROR")
+ *       - QB64PE_LOG_FILE_PATH: Path to log file (required for "file" handler)
+ *       Creates mutex for thread safety. Must be called before any logging functions.
+ */
 void libqb_log_init() {
     logging_lock = libqb_mutex_new();
 

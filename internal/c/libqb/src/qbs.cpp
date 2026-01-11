@@ -9,12 +9,59 @@
 #include "file-fields.h"
 #include "qbs.h"
 
-// FIXME: Put in internal header
+/**
+ * @file qbs.cpp
+ * @brief Implementation of QB64 string (qbs) management functions
+ * 
+ * This file implements the qbs (QB64 string) system, including memory management,
+ * string creation, manipulation, and cleanup. The qbs system uses a pool-based
+ * allocator for efficient string handling.
+ */
+
+/**
+ * @name Internal CMEM (Conventional Memory) Functions
+ * @brief Functions for managing strings in conventional memory
+ * @note FIXME: These should be moved to an internal header
+ */
+///@{
+/**
+ * @brief Removes a string from conventional memory tracking
+ * @param str String to remove from cmem tracking
+ */
 void qbs_remove_cmem(qbs *str);
+
+/**
+ * @brief Creates a new fixed string in conventional memory
+ * @param offset Memory offset for the string
+ * @param size Size of the string
+ * @param tmp Temporary flag
+ * @param newstr Output string descriptor
+ * @return true on success, false on failure
+ */
 bool qbs_new_fixed_cmem(uint8_t *offset, uint32_t size, uint8_t tmp, qbs *newstr);
+
+/**
+ * @brief Moves a string from source to destination in conventional memory
+ * @param deststr Destination string
+ * @param srcstr Source string
+ */
 void qbs_move_cmem(qbs *deststr, qbs *srcstr);
+
+/**
+ * @brief Copies a string in conventional memory
+ * @param deststr Destination string
+ * @param srcstr Source string
+ */
 void qbs_copy_cmem(qbs *deststr, qbs *srcstr);
+
+/**
+ * @brief Creates a new string in conventional memory
+ * @param size Size of the string to create
+ * @param tmp Temporary flag
+ * @param newstr Output string descriptor
+ */
 void qbs_create_cmem(int32_t size, uint8_t tmp, qbs *newstr);
+///@}
 
 static qbs *qbs_malloc = (qbs *)calloc(sizeof(qbs) * 65536, 1); //~1MEG
 static uint32_t qbs_malloc_next = 0;                            // the next idex in qbs_malloc to use
@@ -22,6 +69,12 @@ static intptr_t *qbs_malloc_freed = (intptr_t *)malloc(sizeof(*qbs_malloc_freed)
 static uint32_t qbs_malloc_freed_size = 65536;
 static uint32_t qbs_malloc_freed_num = 0; // number of freed qbs descriptors
 
+/**
+ * @brief Allocates a new qbs descriptor from the pool
+ * @return Pointer to a new qbs descriptor, or NULL on failure
+ * @note Uses a pool-based allocator. Reuses freed descriptors when available.
+ *       Allocates new pool blocks of 65536 descriptors when needed.
+ */
 static qbs *qbs_new_descriptor() {
     // MLP //qbshlp1++;
     if (qbs_malloc_freed_num) {
@@ -48,6 +101,12 @@ static qbs *qbs_new_descriptor() {
     return &qbs_malloc[qbs_malloc_next++];
 }
 
+/**
+ * @brief Frees a qbs descriptor back to the pool
+ * @param str String descriptor to free
+ * @note Adds the descriptor to the freed list for reuse. Expands the freed list
+ *       if necessary. Generates error 508 if reallocation fails.
+ */
 static void qbs_free_descriptor(qbs *str) {
     // MLP //qbshlp1--;
     if (qbs_malloc_freed_num == qbs_malloc_freed_size) {
@@ -79,6 +138,15 @@ static uint8_t *qbs_data = (uint8_t *)malloc(1048576);
 static uint32_t qbs_data_size = 1048576;
 static uint32_t qbs_sp = 0;
 
+/**
+ * @brief Frees a qbs string and releases its resources
+ * @param str String to free
+ * @note Handles different string types:
+ *       - Fixed/readonly strings: Just free the descriptor
+ *       - CMEM strings: Remove from cmem tracking
+ *       - Regular strings: Remove from list and update stack pointer
+ *       Also handles field cleanup and temporary string list management.
+ */
 void qbs_free(qbs *str) {
 
     if (str->field)
@@ -115,6 +183,12 @@ void qbs_free(qbs *str) {
     qbs_free_descriptor(str);
 }
 
+/**
+ * @brief Compacts the string list by removing gaps
+ * @note Removes freed entries from the list and updates list indices.
+ *       Expands the list array if it's more than half full.
+ *       Generates error 510 if reallocation fails.
+ */
 static void qbs_concat_list() {
     uint32_t i;
     uint32_t d;
@@ -140,6 +214,11 @@ static void qbs_concat_list() {
     }
 }
 
+/**
+ * @brief Expands the temporary string list if needed
+ * @note Expands the temporary string list array if it's more than half full.
+ *       Generates error 511 if reallocation fails.
+ */
 static void qbs_tmp_concat_list() {
     if (qbs_tmp_list_nexti >= (qbs_tmp_list_lasti / 2)) {
         qbs_tmp_list_lasti *= 2;
@@ -149,6 +228,14 @@ static void qbs_tmp_concat_list() {
     }
 }
 
+/**
+ * @brief Compacts string data and expands the data buffer if needed
+ * @param bytesrequired Minimum number of bytes needed after compaction
+ * @note Compacts string data by moving strings closer together, removing gaps.
+ *       Expands the data buffer if needed. Updates all string pointers after reallocation.
+ *       This does not change indexing, only ->chr pointers and data locations.
+ *       Generates error 512 if reallocation fails.
+ */
 static void qbs_concat(uint32_t bytesrequired) {
     // this does not change indexing, only ->chr pointers and the location of their data
     static uint32_t i;
@@ -188,6 +275,13 @@ static void qbs_concat(uint32_t bytesrequired) {
     }
 }
 
+/**
+ * @brief Creates a new qbs string from a C string (null-terminated)
+ * @param txt C string to create qbs from (can be NULL)
+ * @return New qbs string descriptor
+ * @note Creates a readonly temporary string. NULL pointer is converted to 0-length string.
+ *       The string data is not copied; it references the original C string.
+ */
 qbs *qbs_new_txt(const char *txt) {
     qbs *newstr;
     newstr = qbs_new_descriptor();
@@ -207,6 +301,14 @@ qbs *qbs_new_txt(const char *txt) {
     return newstr;
 }
 
+/**
+ * @brief Creates a new qbs string from a C string with specified length
+ * @param txt C string data
+ * @param len Length of the string
+ * @return New qbs string descriptor
+ * @note Creates a readonly temporary string with the specified length.
+ *       The string data is not copied; it references the original C string.
+ */
 qbs *qbs_new_txt_len(const char *txt, int32_t len) {
     qbs *newstr;
     newstr = qbs_new_descriptor();
@@ -222,7 +324,15 @@ qbs *qbs_new_txt_len(const char *txt, int32_t len) {
     return newstr;
 }
 
-// note: qbs_new_fixed detects if string is in DBLOCK
+/**
+ * @brief Creates a new fixed qbs string at a specific memory offset
+ * @param offset Memory offset for the string data
+ * @param size Size of the string
+ * @param tmp Temporary flag
+ * @return New qbs string descriptor
+ * @note Detects if string is in DBLOCK and handles accordingly.
+ *       Fixed strings cannot be resized or moved.
+ */
 qbs *qbs_new_fixed(uint8_t *offset, uint32_t size, uint8_t tmp) {
     qbs *newstr;
     newstr = qbs_new_descriptor();
@@ -242,6 +352,14 @@ qbs *qbs_new_fixed(uint8_t *offset, uint32_t size, uint8_t tmp) {
     return newstr;
 }
 
+/**
+ * @brief Creates a new qbs string with allocated storage
+ * @param size Size of the string to allocate
+ * @param tmp Temporary flag (1 for temporary strings)
+ * @return New qbs string descriptor with allocated storage
+ * @note Allocates storage from the qbs_data pool. Compacts and expands the pool
+ *       as needed. Temporary strings are automatically cleaned up when out of scope.
+ */
 qbs *qbs_new(int32_t size, uint8_t tmp) {
     static qbs *newstr;
     if ((qbs_sp + size + 32) > qbs_data_size)
@@ -276,6 +394,12 @@ qbs *qbs_new_cmem(int32_t size, uint8_t tmp) {
     return newstr;
 }
 
+/**
+ * @brief Marks a string as temporary
+ * @param str String to mark as temporary
+ * @warning Assumes str is a non-tmp string in non-cmem
+ * @note Temporary strings are automatically cleaned up when they fall out of scope.
+ */
 void qbs_maketmp(qbs *str) {
     // WARNING: assumes str is a non-tmp string in non-cmem
     if (qbs_tmp_list_nexti > qbs_tmp_list_lasti)
@@ -286,6 +410,15 @@ void qbs_maketmp(qbs *str) {
     str->tmp = 1;
 }
 
+/**
+ * @brief Sets destination string to source string value
+ * @param deststr Destination string (will be modified)
+ * @param srcstr Source string
+ * @return Pointer to deststr
+ * @note Optimizes by reusing srcstr's storage when possible (if srcstr is temporary).
+ *       Handles fixed strings, cmem strings, and regular strings differently.
+ *       For fixed strings, pads with spaces if source is shorter.
+ */
 qbs *qbs_set(qbs *deststr, qbs *srcstr) {
     uint32_t i;
     qbs *tqbs;

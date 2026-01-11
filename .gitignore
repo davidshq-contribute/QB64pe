@@ -24,3 +24,4 @@ source/qb64pe_start.command
 *.tmp
 /tests/tests/coverage_data/*
 /tests/coverage_data/*
+/.idea/

@@ -9,6 +9,21 @@
 #include "filepath.h"
 #include "qbs.h"
 
+/**
+ * @file filepath.cpp
+ * @brief Implementation of file path manipulation functions for QB64-PE
+ * 
+ * This file implements cross-platform file path utilities including filename extraction,
+ * extension handling, and path normalization. Some functions are based on miniaudio.h (MIT).
+ */
+
+/**
+ * @brief Extracts the filename from a file path
+ * @param path File path string
+ * @return Pointer to the filename portion of the path, or NULL if path is NULL
+ * @note Finds the last occurrence of '/' or '\\' and returns the portion after it.
+ *       Returns the original path if no separator is found.
+ */
 const char *filepath_get_filename(const char *path) {
     const char *fileName;
 
@@ -35,6 +50,13 @@ const char *filepath_get_filename(const char *path) {
     return fileName;
 }
 
+/**
+ * @brief Extracts the file extension from a file path
+ * @param path File path string
+ * @return Pointer to the extension (without the dot), or pointer to end of string if no extension
+ * @note Finds the last '.' in the filename and returns the portion after it.
+ *       If path is NULL, treats it as empty string.
+ */
 const char *filepath_get_extension(const char *path) {
     const char *extension;
     const char *lastOccurance;
@@ -59,6 +81,13 @@ const char *filepath_get_extension(const char *path) {
     return (lastOccurance != NULL) ? lastOccurance : extension;
 }
 
+/**
+ * @brief Checks if a file path has a specific extension
+ * @param path File path to check
+ * @param extension Extension to check for (without the dot)
+ * @return true if the path has the specified extension, false otherwise
+ * @note Case-insensitive comparison. Returns false if either parameter is NULL.
+ */
 bool filepath_has_extension(const char *path, const char *extension) {
     const char *ext1;
     const char *ext2;
@@ -77,9 +106,12 @@ bool filepath_has_extension(const char *path, const char *extension) {
 #endif
 }
 
-/// @brief Changes the slashes in a file name / path to make it compatible with the OS
-/// @param path The path to fix (contents may be changed)
-/// @return Returns the C-string for convenience
+/**
+ * @brief Normalizes path separators for the current OS (char* overload)
+ * @param path Path to normalize (contents may be modified)
+ * @return Pointer to the modified path string
+ * @note On Windows, converts '/' to '\\'. On POSIX, converts '\\' to '/'.
+ */
 const char *filepath_fix_directory(char *path) {
     auto len = strlen(path);
 
@@ -96,9 +128,12 @@ const char *filepath_fix_directory(char *path) {
     return path;
 }
 
-/// @brief Changes the slashes in a file name / path to make it compatible with the OS
-/// @param path The path to fix (contents may be changed)
-/// @return Returns the C-string for convenience
+/**
+ * @brief Normalizes path separators for the current OS (qbs* overload)
+ * @param path Path to normalize (contents may be modified)
+ * @return Pointer to the modified path string
+ * @note On Windows, converts '/' to '\\'. On POSIX, converts '\\' to '/'.
+ */
 const char *filepath_fix_directory(qbs *path) {
     for (size_t i = 0; i < size_t(path->len); i++) {
 #ifdef QB64_WINDOWS
@@ -113,9 +148,12 @@ const char *filepath_fix_directory(qbs *path) {
     return reinterpret_cast<char *>(path->chr);
 }
 
-/// @brief Changes the slashes in a file name / path to make it compatible with the OS
-/// @param path The path to fix (contents may be changed)
-/// @return Returns the C-string for convenience
+/**
+ * @brief Normalizes path separators for the current OS (std::string overload)
+ * @param path Path to normalize (contents may be modified)
+ * @return Pointer to the modified path string
+ * @note On Windows, converts '/' to '\\'. On POSIX, converts '\\' to '/'.
+ */
 const char *filepath_fix_directory(std::string &path) {
     std::transform(path.begin(), path.end(), path.begin(), [](unsigned char c) {
 #ifdef QB64_WINDOWS
@@ -128,7 +166,14 @@ const char *filepath_fix_directory(std::string &path) {
     return path.c_str();
 }
 
-// Splits a file path into directory and file name
+/**
+ * @brief Splits a file path into directory and filename components
+ * @param filePath Full file path to split
+ * @param[out] directory Output directory path (includes trailing separator)
+ * @param[out] fileName Output filename
+ * @note Finds the last occurrence of '/' or '\\' and splits the path at that point.
+ *       If no separator is found, directory is empty and fileName is the full path.
+ */
 void filepath_split(const std::string &filePath, std::string &directory, std::string &fileName) {
     // Find the last occurrence of either '/' or '\\'
     size_t lastSlash = filePath.find_last_of("/\\");
@@ -143,7 +188,14 @@ void filepath_split(const std::string &filePath, std::string &directory, std::st
     }
 }
 
-// Joins a directory and file name into a file path
+/**
+ * @brief Joins a directory and filename into a complete file path
+ * @param[out] filePath Output complete file path
+ * @param directory Directory path
+ * @param fileName Filename
+ * @note Adds a trailing separator to directory if it doesn't have one.
+ *       Uses platform-appropriate separator (\\ on Windows, / on POSIX).
+ */
 void filepath_join(std::string &filePath, const std::string &directory, const std::string &fileName) {
     // Check if the directory has a trailing separator, and add one if not
     filePath = directory;

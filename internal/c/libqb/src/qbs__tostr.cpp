@@ -9,8 +9,27 @@
 #include "error_handle.h"
 #include "qbs.h"
 
-// modern _TOSTR() functions (no leading space and no QB4.5 compatible rounding)
-// signed integers
+/**
+ * @file qbs__tostr.cpp
+ * @brief Implementation of _TOSTR$ function for QB64-PE
+ * 
+ * This file implements the modern _TOSTR$ function which converts numeric values
+ * to strings without a leading space (unlike STR$) and without QB4.5 compatible rounding.
+ */
+
+/**
+ * @name _TOSTR$ Function Overloads
+ * @brief Convert numeric types to qbs strings (modern format, no leading space)
+ */
+///@{
+/**
+ * @brief Converts a signed 64-bit integer to string (QB64 _TOSTR$ function)
+ * @param value Integer value to convert
+ * @param digits Number of digits (unused for integers)
+ * @param passed Flag indicating if digits parameter was provided (unused for integers)
+ * @return qbs string containing the string representation
+ * @note Modern format: no leading space. Caller must free the returned qbs with qbs_free().
+ */
 qbs *qbs__tostr(int64_t value, int32_t digits, int32_t passed) {
     (void)digits;
     (void)passed;
@@ -131,6 +150,16 @@ qbs *qbs__tostr(float value, int32_t digits, int32_t passed) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a double-precision float to string (QB64 _TOSTR$ function)
+ * @param value Double value to convert
+ * @param digits Number of significant digits (1-16, default 16)
+ * @param passed Flag indicating if digits parameter was provided
+ * @return qbs string containing the string representation
+ * @note Modern format: no leading space. Uses 'G' format, converts 'E' to 'D' for QBASIC compatibility.
+ *       Generates error 5 if digits < 0. Clamps digits to 1-16 range.
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *qbs__tostr(double value, int32_t digits, int32_t passed) {
     if (passed) {
         if (digits < 0) {
@@ -157,6 +186,16 @@ qbs *qbs__tostr(double value, int32_t digits, int32_t passed) {
     return tqbs;
 }
 
+/**
+ * @brief Converts a long double to string (QB64 _TOSTR$ function)
+ * @param value Long double value to convert
+ * @param digits Number of significant digits (1-19, default 19)
+ * @param passed Flag indicating if digits parameter was provided
+ * @return qbs string containing the string representation
+ * @note Modern format: no leading space. Uses 'LG' format, converts 'E' to 'F' for QBASIC compatibility.
+ *       Generates error 5 if digits < 0. Clamps digits to 1-19 range.
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *qbs__tostr(long double value, int32_t digits, int32_t passed) {
     if (passed) {
         if (digits < 0) {

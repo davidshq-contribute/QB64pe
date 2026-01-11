@@ -10,6 +10,23 @@
 #include <cstring>
 #include <vector>
 
+/**
+ * @file mingw/pe.cpp
+ * @brief PE (Portable Executable) format parsing for Windows symbol resolution
+ * 
+ * This file implements parsing of PE format files to extract symbol information
+ * from COFF symbol tables. Used for stack trace symbol resolution on Windows.
+ * 
+ * Copyright Edd Dawson 2012, distributed under Boost Software License.
+ */
+
+/**
+ * @brief Reads the COFF string table from a PE file
+ * @param pe File handle
+ * @param tabpos Position of string table
+ * @param[out] strtab Output string table vector
+ * @note Reads the string table used for symbol names longer than 8 characters.
+ */
 static void read_string_table(file &pe, uint64_t tabpos, std::vector<char> &strtab)
 {
     const uint64_t old_pos = pe.offset();
@@ -27,6 +44,14 @@ static void read_string_table(file &pe, uint64_t tabpos, std::vector<char> &strt
     pe.go(old_pos);
 }
 
+/**
+ * @brief Reads section offsets from PE file
+ * @param pe File handle
+ * @param tabpos Position of section table
+ * @param number_of_sections Number of sections
+ * @param[out] section_offsets Output vector of section offsets
+ * @note Reads section virtual addresses for calculating symbol addresses.
+ */
 static void read_section_offsets(file &pe, uint64_t tabpos, uint16_t number_of_sections, std::vector<uint32_t> &section_offsets)
 {
     section_offsets.reserve(number_of_sections);
@@ -45,7 +70,15 @@ static void read_section_offsets(file &pe, uint64_t tabpos, uint16_t number_of_s
     pe.go(old_pos);
 }
 
-// Returns the number of aux. symbols
+/**
+ * @brief Reads a symbol from the COFF symbol table
+ * @param pe File handle
+ * @param sink Sink to receive symbol information
+ * @param section_offsets Vector of section offsets
+ * @param strtab String table for long symbol names
+ * @return Number of auxiliary symbols following this symbol
+ * @note Processes function symbols (type 0x20) and reports them to the sink with calculated addresses.
+ */
 static uint8_t read_symbol(file &pe, pe_sink &sink, const std::vector<uint32_t> &section_offsets, const std::vector<char> &strtab)
 {
     const uint64_t short_name = pe.u64();
@@ -81,6 +114,16 @@ static uint8_t read_symbol(file &pe, pe_sink &sink, const std::vector<uint32_t> 
     return aux_symbols;
 }
 
+/**
+ * @brief Reads the COFF symbol table from a PE file
+ * @param pe File handle
+ * @param sink Sink to receive symbol information
+ * @param tabpos Position of symbol table
+ * @param number_of_symbols Number of symbols in table
+ * @param section_offsets Vector of section offsets
+ * @param strtab String table for long symbol names
+ * @note Iterates through all symbols, processing function symbols and skipping auxiliary symbols.
+ */
 static void read_symbol_table(file &pe,
                        pe_sink &sink,
                        uint64_t tabpos,
@@ -109,6 +152,13 @@ static void read_symbol_table(file &pe,
     pe.go(old_pos);
 }
 
+/**
+ * @brief Scans a MinGW PE file for symbols
+ * @param pe File handle
+ * @param sink Sink to receive symbol information
+ * @note Parses PE format, reads COFF header, optional header, section table, and symbol table.
+ *       Validates PE signature and magic number. Throws file_error on invalid format.
+ */
 void scan_mingw_pe_file(file &pe, pe_sink &sink)
 {
     pe.go(0x3C);

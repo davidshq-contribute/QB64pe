@@ -8,8 +8,26 @@
 #include "file-fields.h"
 #include "qbs.h"
 
+/**
+ * @file string_functions.cpp
+ * @brief Implementation of string manipulation functions for QB64-PE
+ * 
+ * This file implements QB64 string manipulation functions including LSET, RSET,
+ * SPACE$, STRING$, INSTR, and other string operations.
+ */
+
+/**
+ * @brief Empty string constant
+ */
 extern qbs *nothingstring;
 
+/**
+ * @brief Left-aligns a string (QB64 LSET statement)
+ * @param dest Destination string
+ * @param source Source string
+ * @note Copies source to dest, left-aligned. Pads with spaces if source is shorter.
+ *       Truncates if source is longer. Updates field if dest is a field string.
+ */
 void sub_lset(qbs *dest, qbs *source) {
     if (is_error_pending())
         return;
@@ -26,6 +44,13 @@ field_check:
         lrset_field(dest);
 }
 
+/**
+ * @brief Right-aligns a string (QB64 RSET statement)
+ * @param dest Destination string
+ * @param source Source string
+ * @note Copies source to dest, right-aligned. Pads with spaces on the left if source is shorter.
+ *       Truncates if source is longer. Updates field if dest is a field string.
+ */
 void sub_rset(qbs *dest, qbs *source) {
     if (is_error_pending())
         return;
@@ -42,6 +67,12 @@ field_check:
         lrset_field(dest);
 }
 
+/**
+ * @brief Creates a string of spaces (QB64 SPACE$ function)
+ * @param spaces Number of spaces
+ * @return qbs string containing the specified number of spaces
+ * @note If spaces < 0, treats as 0. Caller must free the returned qbs with qbs_free().
+ */
 qbs *func_space(int32_t spaces) {
     static qbs *tqbs;
     if (spaces < 0)
@@ -52,6 +83,14 @@ qbs *func_space(int32_t spaces) {
     return tqbs;
 }
 
+/**
+ * @brief Creates a string of repeated characters (QB64 STRING$ function)
+ * @param characters Number of characters
+ * @param asciivalue ASCII value of the character to repeat
+ * @return qbs string containing the specified number of characters
+ * @note If characters < 0, treats as 0. Only uses lower 8 bits of asciivalue.
+ *       Caller must free the returned qbs with qbs_free().
+ */
 qbs *func_string(int32_t characters, int32_t asciivalue) {
     static qbs *tqbs;
     if (characters < 0)
@@ -62,6 +101,16 @@ qbs *func_string(int32_t characters, int32_t asciivalue) {
     return tqbs;
 }
 
+/**
+ * @brief Finds a substring in a string (QB64 INSTR function)
+ * @param start Starting position (1-based, or 1 if not provided)
+ * @param str String to search in
+ * @param substr Substring to search for
+ * @param passed Flag indicating if start parameter was provided
+ * @return Position of substring (1-based), or 0 if not found
+ * @note QB64 difference: start can be 0 or negative (treated as 1).
+ *       Returns start if substr is empty. Uses memchr for efficient searching.
+ */
 int32_t func_instr(int32_t start, qbs *str, qbs *substr, int32_t passed) {
     // QB64 difference: start can be 0 or negative
     // justification-start could be larger than the length of string to search in QBASIC
@@ -99,6 +148,16 @@ nextchar:
     goto nextchar;
 }
 
+/**
+ * @brief Finds a substring in a string, searching backwards (QB64 _INSTRREV function)
+ * @param start Starting position (1-based, or end if not provided)
+ * @param str String to search in
+ * @param substr Substring to search for
+ * @param passed Flag indicating if start parameter was provided
+ * @return Position of last occurrence before or at start (1-based), or 0 if not found
+ * @note Searches backwards from start position. If start not provided, searches from end.
+ *       Returns 0 if substr is longer than str or if str is empty.
+ */
 int32_t func__instrrev(int32_t start, qbs *str, qbs *substr, int32_t passed) {
     if (!str->len)
         return 0;
@@ -136,6 +195,17 @@ int32_t func__instrrev(int32_t start, qbs *str, qbs *substr, int32_t passed) {
     return result;
 }
 
+/**
+ * @brief Assigns a substring to a destination (QB64 MID$ statement)
+ * @param dest Destination string
+ * @param start Starting position (1-based)
+ * @param l Length to assign
+ * @param src Source string
+ * @param passed Flag indicating if l parameter was provided
+ * @note If l not provided, uses remaining length of src. Handles negative start by
+ *       adjusting offset. Uses memmove if dest == src to handle overlap correctly.
+ *       Does nothing if dest is nothingstring.
+ */
 void sub_mid(qbs *dest, int32_t start, int32_t l, qbs *src, int32_t passed) {
     if (is_error_pending())
         return;
@@ -170,6 +240,17 @@ void sub_mid(qbs *dest, int32_t start, int32_t l, qbs *src, int32_t passed) {
     }
 }
 
+/**
+ * @brief Extracts a substring from a string (QB64 MID$ function)
+ * @param str Source string
+ * @param start Starting position (1-based)
+ * @param l Length to extract
+ * @param passed Flag indicating if l parameter was provided
+ * @return qbs string containing the substring, or the original string if entire string is extracted
+ * @note If l not provided, extracts from start to end. Returns original string if entire
+ *       string is extracted (optimization). Handles negative start. Caller must free
+ *       the returned qbs with qbs_free() unless it's the original string.
+ */
 qbs *func_mid(qbs *str, int32_t start, int32_t l, int32_t passed) {
     static qbs *tqbs;
     if (passed) {

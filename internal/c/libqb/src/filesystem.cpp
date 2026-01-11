@@ -21,6 +21,14 @@
 #    include <sys/statvfs.h>
 #endif
 
+/**
+ * @file filesystem.cpp
+ * @brief Implementation of filesystem operations for QB64-PE
+ * 
+ * This file implements cross-platform filesystem operations including directory
+ * navigation, file existence checks, and directory listing.
+ */
+
 #ifdef QB64_BACKSLASH_FILESYSTEM
 #    define FS_PATH_SEPARATOR '\\'
 #else
@@ -33,11 +41,18 @@
 #    define FS_PATHNAME_LENGTH_MAX 4096
 #endif
 
-/// @brief This is a global variable that is set on startup and holds the directory that was current when the program was loaded
+/**
+ * @brief Global variable holding the startup directory
+ * @note Set on program startup to remember the directory where the program was loaded.
+ */
 static qbs *g_startDir = nullptr;
 
-/// @brief Gets the current working directory.
-/// @return A qbs containing the current working directory or an empty string on error.
+/**
+ * @brief Gets the current working directory (QB64 _CWD$ function)
+ * @return qbs containing the current working directory, or empty string on error
+ * @note Dynamically resizes buffer if path is longer than FILENAME_MAX.
+ *       Always appends path separator. Generates internal error on failure.
+ */
 qbs *func__cwd() {
     if (is_error_pending()) {
         return qbs_new(0, 1);
@@ -75,9 +90,12 @@ qbs *func__cwd() {
     return qbsFinal;
 }
 
-/// @brief Returns true if the specified directory exists.
-/// @param path The directory to check for.
-/// @return True if the directory exists.
+/**
+ * @brief Checks if a directory exists
+ * @param path Directory path to check
+ * @return true if directory exists, false otherwise
+ * @note Uses platform-specific APIs: GetFileAttributesA on Windows, stat on POSIX.
+ */
 bool FS_DirectoryExists(const char *path) {
 #ifdef QB64_WINDOWS
     auto x = GetFileAttributesA(path);

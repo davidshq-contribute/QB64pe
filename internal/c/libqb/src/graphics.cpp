@@ -9,11 +9,24 @@
 #include "rounding.h"
 #include <cstring>
 
-// External functions. These should be moved here in the future.
+/**
+ * @file graphics.cpp
+ * @brief Implementation of graphics color conversion functions for QB64-PE
+ * 
+ * This file implements HSB (Hue, Saturation, Brightness) to RGB color conversion
+ * functions and related graphics utilities.
+ * 
+ * External functions. These should be moved here in the future.
+ */
 void flush_old_hardware_commands();
 void validatepage(int32_t pageNumber);
 
-// Global variables. These should be cleaned up and moved here in the future.
+/**
+ * @name External Graphics Variables
+ * @brief Global graphics state variables
+ * @note These should be cleaned up and moved here in the future.
+ */
+///@{
 extern list *hardware_img_handles;
 extern int32_t HARDWARE_IMG_HANDLE_OFFSET;
 extern list *hardware_graphics_command_handles;
@@ -30,11 +43,25 @@ extern uint8_t *cblend;
 extern uint8_t *ablend;
 extern uint8_t *ablend127;
 extern uint8_t *ablend128;
+///@}
 
-// Module-level global variables
+/**
+ * @brief Depth buffer mode for page 0
+ */
 static int32_t depthbuffer_mode0 = DEPTHBUFFER_MODE__ON;
+
+/**
+ * @brief Depth buffer mode for page 1
+ */
 static int32_t depthbuffer_mode1 = DEPTHBUFFER_MODE__ON;
 
+/**
+ * @brief Converts HSB color to RGB color
+ * @param hsb Input HSB color structure
+ * @param[out] rgb Output RGB color structure
+ * @note Hue is in degrees [0,360), saturation and brightness are in [0,1].
+ *       Handles grayscale case (saturation = 0). Uses standard HSB to RGB conversion algorithm.
+ */
 void hsb2rgb(hsb_color *hsb, rgb_color *rgb) {
     double hu, hi, hf, pv, qv, tv;
 
@@ -58,6 +85,13 @@ void hsb2rgb(hsb_color *hsb, rgb_color *rgb) {
     }
 }
 
+/**
+ * @brief Converts RGB color to HSB color
+ * @param rgb Input RGB color structure
+ * @param[out] hsb Output HSB color structure
+ * @note RGB values are in [0,1]. Output hue is in degrees [0,360),
+ *       saturation and brightness are in [0,1]. Handles grayscale case.
+ */
 void rgb2hsb(rgb_color *rgb, hsb_color *hsb) {
     double mini, maxi, diff, hu;
     // --- find min/max and difference ---
@@ -84,6 +118,14 @@ void rgb2hsb(rgb_color *rgb, hsb_color *hsb) {
     }
 }
 
+/**
+ * @brief Creates a 32-bit RGB color from HSB values (QB64 _HSB32 function)
+ * @param hue Hue in degrees [0,360]
+ * @param sat Saturation in percent [0,100]
+ * @param bri Brightness in percent [0,100]
+ * @return 32-bit ARGB color value (0xFFRRGGBB format)
+ * @note Clamps hue to [0,360], sat and bri to [0,100]. Always sets alpha to 0xFF (opaque).
+ */
 uint32_t func__hsb32(double hue, double sat, double bri) {
     hsb_color hsb; rgb_color rgb;
     // --- prepare values for conversion ---
@@ -97,6 +139,15 @@ uint32_t func__hsb32(double hue, double sat, double bri) {
     return ((lround(rgb.r * 255.0) << 16) + (lround(rgb.g * 255.0) << 8) + lround(rgb.b * 255.0)) | 0xFF000000;
 }
 
+/**
+ * @brief Creates a 32-bit ARGB color from HSBA values (QB64 _HSBA32 function)
+ * @param hue Hue in degrees [0,360]
+ * @param sat Saturation in percent [0,100]
+ * @param bri Brightness in percent [0,100]
+ * @param alf Alpha (transparency) in percent [0,100]
+ * @return 32-bit ARGB color value (0xAARRGGBB format)
+ * @note Clamps all parameters to their valid ranges. Converts percentages to [0,1] range.
+ */
 uint32_t func__hsba32(double hue, double sat, double bri, double alf) {
     hsb_color hsb; rgb_color rgb; double alpha;
     // --- prepare values for conversion ---

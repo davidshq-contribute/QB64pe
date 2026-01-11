@@ -10,11 +10,42 @@
 #include "gfs.h"
 #include "qbs.h"
 
+/**
+ * @file file-fields.cpp
+ * @brief Implementation of file field operations for QB64-PE
+ * 
+ * This file implements FIELD operations for RANDOM access files, allowing
+ * structured access to file records through field definitions.
+ */
+
+/**
+ * @brief Flag indicating if field operations failed
+ */
 static int32_t field_failed = 1;
+
+/**
+ * @brief Current file number for field operations
+ */
 static int32_t field_fileno;
+
+/**
+ * @brief Total size of fields defined so far
+ */
 static int32_t field_totalsize;
+
+/**
+ * @brief Maximum allowed field size (record length)
+ */
 static int32_t field_maxsize;
 
+/**
+ * @brief Initializes a new FIELD statement (QB64 FIELD statement)
+ * @param fileno File number to create fields for
+ * @note Validates the file and prepares for field definitions. The file must be
+ *       open in RANDOM mode. Generates errors:
+ *       - 54: Bad file mode (if not RANDOM or TCP/IP)
+ *       - 52: Bad file name or number
+ */
 void field_new(int32_t fileno) {
     field_failed = 1;
     if (is_error_pending())
@@ -45,6 +76,13 @@ void field_new(int32_t fileno) {
     return;
 }
 
+/**
+ * @brief Updates field strings from the field buffer
+ * @param fileno File number to update
+ * @note Copies data from the field buffer into all associated field strings.
+ *       Adjusts string lengths to match field sizes. Called after reading from file.
+ *       Uses exit() for errors (should be error() calls).
+ */
 void field_update(int32_t fileno) {
 
     // validate file
@@ -83,6 +121,12 @@ void field_update(int32_t fileno) {
     } // i
 }
 
+/**
+ * @brief Sets a field value from a string (QB64 LSET/RSET statement)
+ * @param str String containing the value to set
+ * @note Copies string data into the field buffer, padding with spaces or truncating as needed.
+ *       Updates all field strings for the file. Removes field association if file is invalid.
+ */
 void lrset_field(qbs *str) {
     // validate file
     static int32_t i;
@@ -117,6 +161,12 @@ remove:;
     str->field = NULL;
 }
 
+/**
+ * @brief Frees a field association from a string
+ * @param str String to remove field association from
+ * @note Removes the string from the file's field strings list and frees the field structure.
+ *       Removes field association if file is invalid.
+ */
 void field_free(qbs *str) {
 
     // validate file
@@ -149,6 +199,17 @@ remove:
     str->field = NULL;
 }
 
+/**
+ * @brief Adds a field definition (QB64 FIELD statement - field definition)
+ * @param str String to associate with the field
+ * @param size Size of the field in bytes
+ * @note Associates a string with a field in the current FIELD statement. The field
+ *       is allocated at the current offset. Generates errors:
+ *       - 5: Illegal function call (if size < 0)
+ *       - 50: FIELD overflow (if total size exceeds record length)
+ *       - 54: Bad file mode
+ *       - 52: Bad file name or number
+ */
 void field_add(qbs *str, int64_t size) {
     if (field_failed)
         return;
@@ -215,6 +276,20 @@ fail:
     return;
 }
 
+/**
+ * @brief Gets field data from a file (QB64 FIELD GET statement)
+ * @param fileno File number
+ * @param offset Record number (1-based, or -1 for current position)
+ * @param passed Flag indicating if offset parameter was provided
+ * @note Reads a record from the file into the field buffer and updates all field strings.
+ *       Generates errors:
+ *       - 54: Bad file mode
+ *       - 52: Bad file name or number
+ *       - 75: Path/file access error (if file not readable)
+ *       - 63: Bad record number (if offset < 1)
+ *       - 258: Invalid handle
+ *       - 70: Permission denied
+ */
 void field_get(int32_t fileno, int64_t offset, int32_t passed) {
     if (is_error_pending())
         return;
@@ -282,6 +357,19 @@ void field_get(int32_t fileno, int64_t offset, int32_t passed) {
     field_update(fileno);
 }
 
+/**
+ * @brief Puts field data into a file (QB64 FIELD PUT statement)
+ * @param fileno File number
+ * @param offset Record number (1-based, or -1 for current position)
+ * @param passed Flag indicating if offset parameter was provided
+ * @note Writes the field buffer to a record in the file. Generates errors:
+ *       - 54: Bad file mode
+ *       - 52: Bad file name or number
+ *       - 75: Path/file access error (if file not writable)
+ *       - 63: Bad record number (if offset < 1)
+ *       - 258: Invalid handle
+ *       - 70: Permission denied
+ */
 void field_put(int32_t fileno, int64_t offset, int32_t passed) {
     if (is_error_pending())
         return;

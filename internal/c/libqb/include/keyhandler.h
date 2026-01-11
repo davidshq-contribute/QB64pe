@@ -3,33 +3,62 @@
 
 #include <stdint.h>
 
+/**
+ * @file keyhandler.h
+ * @brief Keyboard input handling functions and key code definitions for QB64-PE
+ * 
+ * This header provides functions for checking key states and virtual key code
+ * definitions for keyboard input handling.
+ */
+
+/**
+ * @brief Checks if a key is currently held down
+ * @param x Key code to check
+ * @return Non-zero if key is held, 0 otherwise
+ * @note Returns true if the specified key is currently being pressed
+ */
 int32_t keyheld(uint32_t x);
 
+/**
+ * @brief Simulates a key press (virtual key down)
+ * @param key Virtual key code to press
+ * @note Synthetically generates a key down event
+ */
 void keydown_vk(uint32_t key);
+
+/**
+ * @brief Simulates a key release (virtual key up)
+ * @param key Virtual key code to release
+ * @note Synthetically generates a key up event
+ */
 void keyup_vk(uint32_t key);
 
-#define QBK 200000
-#define VK 100000
-#define UC 1073741824
-/* QBK codes:
-    200000-200010: Numpad keys with Num-Lock off
-    NO_NUMLOCK_KP0=INSERT
-    NO_NUMLOCK_KP1=END
-    NO_NUMLOCK_KP2=DOWN
-    NO_NUMLOCK_KP3=PGDOWN
-    NO_NUMLOCK_KP4...
-    NO_NUMLOCK_KP5
-    NO_NUMLOCK_KP6
-    NO_NUMLOCK_KP7
-    NO_NUMLOCK_KP8
-    NO_NUMLOCK_KP9
-    NO_NUMLOCK_KP_PERIOD=DEL
-    200011: SCROLL_LOCK_ON
-    200012: INSERT_MODE_ON
-*/
-#define QBK_SCROLL_LOCK_MODE 11
-#define QBK_INSERT_MODE 12
-#define QBK_CHR0 13
+/**
+ * @name Key Code Base Values
+ * @brief Base values for different key code ranges
+ */
+///@{
+#define QBK 200000      ///< Base value for QB64 key codes
+#define VK 100000       ///< Base value for virtual key codes
+#define UC 1073741824   ///< Base value for Unicode character codes
+///@}
+/**
+ * @name QBK Special Key Codes
+ * @brief Special QB64 key codes
+ * 
+ * QBK codes (200000-200010): Numpad keys with Num-Lock off
+ * - NO_NUMLOCK_KP0 = INSERT
+ * - NO_NUMLOCK_KP1 = END
+ * - NO_NUMLOCK_KP2 = DOWN
+ * - NO_NUMLOCK_KP3 = PGDOWN
+ * - NO_NUMLOCK_KP4 through NO_NUMLOCK_KP9
+ * - NO_NUMLOCK_KP_PERIOD = DEL
+ */
+///@{
+#define QBK_SCROLL_LOCK_MODE 11  ///< Scroll lock mode indicator
+#define QBK_INSERT_MODE 12       ///< Insert mode indicator
+#define QBK_CHR0 13              ///< Character code base
+///@}
 
 typedef enum {
     QBVK_UNKNOWN = 0,
@@ -277,26 +306,38 @@ typedef enum {
     QBVK_LAST
 } QBVKs;
 
-// Enumeration of valid key mods (possibly OR'd together)
+/**
+ * @enum KMODs
+ * @brief Keyboard modifier key flags (can be OR'd together)
+ * 
+ * These flags represent modifier keys that can be pressed simultaneously.
+ * Multiple flags can be combined using bitwise OR.
+ */
 typedef enum {
-    KMOD_NONE = 0x0000,
-    KMOD_LSHIFT = 0x0001,
-    KMOD_RSHIFT = 0x0002,
-    KMOD_LCTRL = 0x0040,
-    KMOD_RCTRL = 0x0080,
-    KMOD_LALT = 0x0100,
-    KMOD_RALT = 0x0200,
-    KMOD_LMETA = 0x0400,
-    KMOD_RMETA = 0x0800,
-    KMOD_NUM = 0x1000,
-    KMOD_CAPS = 0x2000,
-    KMOD_MODE = 0x4000,
-    KMOD_RESERVED = 0x8000
+    KMOD_NONE = 0x0000,      ///< No modifiers
+    KMOD_LSHIFT = 0x0001,    ///< Left Shift key
+    KMOD_RSHIFT = 0x0002,    ///< Right Shift key
+    KMOD_LCTRL = 0x0040,     ///< Left Control key
+    KMOD_RCTRL = 0x0080,     ///< Right Control key
+    KMOD_LALT = 0x0100,      ///< Left Alt key
+    KMOD_RALT = 0x0200,       ///< Right Alt key
+    KMOD_LMETA = 0x0400,     ///< Left Meta key
+    KMOD_RMETA = 0x0800,     ///< Right Meta key
+    KMOD_NUM = 0x1000,       ///< Num Lock key
+    KMOD_CAPS = 0x2000,      ///< Caps Lock key
+    KMOD_MODE = 0x4000,      ///< Mode key (Alt Gr)
+    KMOD_RESERVED = 0x8000   ///< Reserved for future use
 } KMODs;
 
-#define KMOD_CTRL (KMOD_LCTRL | KMOD_RCTRL)
-#define KMOD_SHIFT (KMOD_LSHIFT | KMOD_RSHIFT)
-#define KMOD_ALT (KMOD_LALT | KMOD_RALT)
-#define KMOD_META (KMOD_LMETA | KMOD_RMETA)
+/**
+ * @name Combined Modifier Macros
+ * @brief Convenience macros for checking either left or right modifier keys
+ */
+///@{
+#define KMOD_CTRL (KMOD_LCTRL | KMOD_RCTRL)   ///< Either Control key
+#define KMOD_SHIFT (KMOD_LSHIFT | KMOD_RSHIFT) ///< Either Shift key
+#define KMOD_ALT (KMOD_LALT | KMOD_RALT)      ///< Either Alt key
+#define KMOD_META (KMOD_LMETA | KMOD_RMETA)   ///< Either Meta key
+///@}
 
 #endif

@@ -14,6 +14,21 @@
 #include "logging.h"
 #include "../logging_private.h"
 
+/**
+ * @file mingw/symbol.cpp
+ * @brief MinGW/Windows implementation of symbol resolution for logging
+ * 
+ * This file implements symbol resolution using Windows PE (Portable Executable)
+ * format parsing and symbol table lookup for MinGW-compiled executables.
+ */
+
+/**
+ * @brief Resolves a symbol name from an address (Windows/MinGW)
+ * @param addr Memory address to resolve
+ * @return String containing the resolved symbol name, or module filename if symbol not found
+ * @note Uses VirtualQuery to find the module containing the address, then loads PE symbol table
+ *       to resolve function names. Returns UTF-8 encoded module filename if symbol resolution fails.
+ */
 std::string libqb_log_resolve_symbol(const void *addr) {
     char utf8_name[4 * 1024] = { 0 };
 

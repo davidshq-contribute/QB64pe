@@ -15,13 +15,33 @@
 #include "qbs.h"
 #include "rounding.h"
 
+/**
+ * @file datetime.cpp
+ * @brief Implementation of date and time functions for QB64-PE
+ * 
+ * This file implements platform-specific timing functions and date/time operations,
+ * including timer functions, delays, and date/time string formatting.
+ */
+
 #ifdef QB64_MACOSX
 #    include <mach/mach_time.h>
 #    define ORWL_NANO (+1.0E-9)
 #    define ORWL_GIGA UINT64_C(1000000000)
+/**
+ * @brief macOS timebase for high-resolution timing
+ */
 static double orwl_timebase = 0.0;
+
+/**
+ * @brief macOS initial timestamp
+ */
 static uint64_t orwl_timestart = 0;
 
+/**
+ * @brief Gets high-resolution time on macOS
+ * @return Milliseconds since program start
+ * @note Uses mach_absolute_time() for high-resolution timing on macOS.
+ */
 static int64_t orwl_gettime(void) {
     if (!orwl_timestart) {
         mach_timebase_info_data_t tb{};
@@ -39,23 +59,48 @@ static int64_t orwl_gettime(void) {
 #endif
 
 #if defined(QB64_LINUX)
+/**
+ * @brief Initial tick value for Linux timing
+ */
 static int64_t initial_tick = 0;
 
+/**
+ * @brief Initializes the clock system (Linux)
+ * @note Called at program startup. Records initial tick value so GetTicks()
+ *       returns 0 at program start.
+ */
 void clock_init() {
     // When GetTicks() is called here initial_tick is zero, so as a result
     // GetTicks() returns the original value of the clock.
     initial_tick = GetTicks();
 }
 
+/**
+ * @brief Gets milliseconds since program start (Linux)
+ * @return Milliseconds since program start
+ * @note Uses CLOCK_MONOTONIC for reliable timing that doesn't jump with system clock changes.
+ */
 int64_t GetTicks() {
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return (tp.tv_sec * 1000 + tp.tv_nsec / 1000000) - initial_tick;
 }
 #elif defined QB64_WINDOWS
+/**
+ * @brief Initial tick value for Windows timing
+ */
 static int64_t initial_tick = 0;
+
+/**
+ * @brief Performance counter frequency for Windows
+ */
 static LARGE_INTEGER tick_freq;
 
+/**
+ * @brief Initializes the clock system (Windows)
+ * @note Called at program startup. Queries performance counter frequency and
+ *       records initial tick value so GetTicks() returns 0 at program start.
+ */
 void clock_init() {
     QueryPerformanceFrequency(&tick_freq);
 
@@ -64,6 +109,11 @@ void clock_init() {
     initial_tick = GetTicks();
 }
 
+/**
+ * @brief Gets milliseconds since program start (Windows)
+ * @return Milliseconds since program start
+ * @note Uses QueryPerformanceCounter for high-resolution timing on Windows.
+ */
 int64_t GetTicks() {
     LARGE_INTEGER count;
 
@@ -75,11 +125,21 @@ int64_t GetTicks() {
     return sec * 1000 + milli - initial_tick;
 }
 #elif defined QB64_MACOSX
+/**
+ * @brief Gets milliseconds since program start (macOS)
+ * @return Milliseconds since program start
+ * @note Uses mach_absolute_time() via orwl_gettime() for high-resolution timing.
+ */
 int64_t GetTicks() {
     return orwl_gettime();
 }
 #endif
 
+/**
+ * @brief Calculates milliseconds since midnight
+ * @return Number of milliseconds since midnight in local time
+ * @note Uses system clock and local timezone. Includes fractional seconds.
+ */
 static uint64_t millis_since_midnight() {
     auto currenttime = std::chrono::system_clock::now();
 
@@ -97,6 +157,15 @@ static uint64_t millis_since_midnight() {
     return seconds * 1000 + millis_only;
 }
 
+/**
+ * @brief Gets the current time (QB64 TIMER function)
+ * @param accuracy Timer accuracy (ticks per second). Defaults to 18.2 if not provided.
+ * @param passed Flag indicating if accuracy parameter was provided
+ * @return Current time in seconds since midnight, rounded to specified accuracy
+ * @note Default accuracy is 18.2 ticks/second (QBASIC compatibility).
+ *       Generates error 5 if accuracy <= 0.
+ *       Returns 0 if an error is pending.
+ */
 double func_timer(double accuracy, int32_t passed) {
     if (new_error)
         return 0;
@@ -125,6 +194,11 @@ double func_timer(double accuracy, int32_t passed) {
 }
 
 #ifndef QB64_WINDOWS
+/**
+ * @brief Sleeps for the specified number of milliseconds (non-Windows)
+ * @param milliseconds Number of milliseconds to sleep
+ * @note Uses nanosleep() for precise timing on POSIX systems.
+ */
 void Sleep(uint32_t milliseconds) {
     static uint64_t sec, nsec;
     sec = milliseconds / 1000;
@@ -136,6 +210,12 @@ void Sleep(uint32_t milliseconds) {
 }
 #endif
 
+/**
+ * @brief Delays execution for the specified number of seconds (QB64 _DELAY statement)
+ * @param seconds Number of seconds to delay
+ * @note Uses GetTicks() for precise timing. Generates error 5 if seconds < 0 or > 2147483.647.
+ *       Returns immediately if an error is pending.
+ */
 void sub__delay(double seconds) {
     double ms, base, elapsed, prev_now, now; // cannot be static
     base = GetTicks();

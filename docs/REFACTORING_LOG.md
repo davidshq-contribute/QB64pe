@@ -1272,6 +1272,19 @@ SOME TESTS FAILED
 - **Windows (With User Interaction):** `./tests/unit/run_tests.sh` or `tests\unit\run_tests.bat`
 - **Linux/Mac (Native):** `./tests/unit/run_tests.sh`
 
+**WSL Verification (2026-01-10):**
+- ✅ QB64-PE successfully built for Linux in WSL
+- ✅ Test runner compiled in WSL environment
+- ✅ All 73 tests passing (73 assertions)
+- ✅ No Windows GUI dialogs during test execution
+- ✅ Clean, automated test workflow confirmed
+
+**WSL Build Details:**
+- Location: `/mnt/c/code/qb64contain/QB64pe/qb64pe` (Linux binary)
+- Build method: `./setup_lnx.sh lnx`
+- Test compilation: `./qb64pe -x tests/unit/test_runner.bas -o test_runner`
+- Test execution: `./test_runner` (outputs to test_results.txt)
+
 ### Priority 4: Additional Test Coverage (Future Work)
 
 Currently enabled but not fully validated:

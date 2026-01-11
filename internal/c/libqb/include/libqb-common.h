@@ -1,20 +1,36 @@
 #ifndef INCLUDE_LIBQB_LIBQB_COMMON_H
 #define INCLUDE_LIBQB_LIBQB_COMMON_H
-// Should be included at the top of every .cpp file
 
-/* Provide some OS/compiler macros.
- * QB64_WINDOWS: Is this a Windows system?
- * QB64_LINUX: Is this a Linux system?
- * QB64_MACOSX: Is this MacOSX, or MacOS or whatever Apple calls it now?
- * QB64_UNIX: Is this a Unix-flavoured system?
- *
- * QB64_BACKSLASH_FILESYSTEM: Does this system use \ for file paths (as opposed to /)?
- * QB64_MICROSOFT: Are we compiling with Visual Studio?
- * QB64_GCC: Are we compiling with gcc?
- * QB64_MINGW: Are we compiling with MinGW, specifically? (Set in addition to QB64_GCC)
- *
- * QB64_32: A 32bit system (the default)
- * QB64_64: A 64bit system (assumes all Macs are 64 bit)
+/**
+ * @file libqb-common.h
+ * @brief Common platform and compiler detection macros for QB64-PE
+ * 
+ * This header should be included at the top of every .cpp file.
+ * It provides platform and compiler detection macros for cross-platform compatibility.
+ * 
+ * @name Platform Detection Macros
+ * @brief Macros identifying the target platform
+ * 
+ * - QB64_WINDOWS: Windows system
+ * - QB64_LINUX: Linux system
+ * - QB64_MACOSX: macOS system
+ * - QB64_UNIX: Unix-flavored system (Linux, macOS, etc.)
+ * 
+ * @name Compiler Detection Macros
+ * @brief Macros identifying the compiler
+ * 
+ * - QB64_MICROSOFT: Visual Studio compiler
+ * - QB64_GCC: GCC compiler
+ * - QB64_MINGW: MinGW compiler (set in addition to QB64_GCC)
+ * 
+ * @name System Configuration Macros
+ * @brief Macros for system configuration
+ * 
+ * - QB64_BACKSLASH_FILESYSTEM: System uses \ for file paths (Windows)
+ * - QB64_32: 32-bit system (default)
+ * - QB64_64: 64-bit system
+ * - QB64_NOT_X86: Not an x86/x64 architecture
+ * - QB64_ARM: ARM architecture
  */
 #ifdef WIN32
 #    define QB64_WINDOWS
@@ -57,13 +73,32 @@
 #    endif
 #endif
 
-#define QB_FALSE 0
-#define QB_TRUE -1
+/**
+ * @name QB64 Boolean Constants
+ * @brief Boolean values used in QB64
+ */
+///@{
+#define QB_FALSE 0   ///< QB64 false value
+#define QB_TRUE -1   ///< QB64 true value
+///@}
 
+/**
+ * @brief Count of array elements
+ * @param Array_ Array to count elements of
+ * @return Number of elements in the array
+ * @note Provides a safe way to get array size. Works for both C and C++.
+ */
 #ifndef _countof
 #    ifdef __cplusplus
 #        include <cstddef>
 
+/**
+ * @brief C++ template version of _countof
+ * @tparam T Array element type
+ * @tparam N Array size
+ * @param Array Array reference
+ * @return Number of elements
+ */
 template <typename T, size_t N> static inline constexpr size_t _countof(T const (&)[N]) noexcept {
     return N;
 }

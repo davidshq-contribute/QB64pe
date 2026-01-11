@@ -6,6 +6,14 @@
 
 #include <stdint.h>
 
+/**
+ * @file graphics.h
+ * @brief Graphics structures and functions for QB64-PE
+ * 
+ * This header provides structures and functions for 2D and 3D graphics rendering,
+ * including image structures, render state management, and graphics commands.
+ */
+
 struct img_struct {
     void *lock_offset;
     int64_t lock_id;
@@ -190,12 +198,74 @@ struct hardware_graphics_command_struct {
 #define HARDWARE_GRAPHICS_COMMAND__MAPTRIANGLE3D 5
 #define HARDWARE_GRAPHICS_COMMAND__CLEAR_DEPTHBUFFER 6
 
+/**
+ * @name HSB Color Functions (QB64 _HSB32, _HSBA32, _HUE32, _SAT32, _BRI32)
+ * @brief HSB (Hue, Saturation, Brightness) color conversion functions
+ */
+///@{
+/**
+ * @brief Creates an RGB32 color from HSB values (QB64 _HSB32 function)
+ * @param hue Hue value (0-360 degrees)
+ * @param sat Saturation value (0.0-1.0)
+ * @param bri Brightness value (0.0-1.0)
+ * @return 32-bit RGB color value (opaque)
+ */
 uint32_t func__hsb32(double hue, double sat, double bri);
-uint32_t func__hsba32(double hue, double sat, double bri, double alf);
-double func__hue32(uint32_t argb);
-double func__sat32(uint32_t argb);
-double func__bri32(uint32_t argb);
 
+/**
+ * @brief Creates an RGB32 color from HSBA values (QB64 _HSBA32 function)
+ * @param hue Hue value (0-360 degrees)
+ * @param sat Saturation value (0.0-1.0)
+ * @param bri Brightness value (0.0-1.0)
+ * @param alf Alpha value (0.0-1.0)
+ * @return 32-bit RGBA color value
+ */
+uint32_t func__hsba32(double hue, double sat, double bri, double alf);
+
+/**
+ * @brief Extracts hue from an RGB32 color (QB64 _HUE32 function)
+ * @param argb 32-bit RGB color value
+ * @return Hue value (0-360 degrees)
+ */
+double func__hue32(uint32_t argb);
+
+/**
+ * @brief Extracts saturation from an RGB32 color (QB64 _SAT32 function)
+ * @param argb 32-bit RGB color value
+ * @return Saturation value (0.0-1.0)
+ */
+double func__sat32(uint32_t argb);
+
+/**
+ * @brief Extracts brightness from an RGB32 color (QB64 _BRI32 function)
+ * @param argb 32-bit RGB color value
+ * @return Brightness value (0.0-1.0)
+ */
+double func__bri32(uint32_t argb);
+///@}
+
+/**
+ * @brief Configures the depth buffer (QB64 _DEPTHBUFFER statement)
+ * @param options Depth buffer options
+ * @param dst Destination image handle
+ * @param passed Number of parameters provided
+ * @note Configures depth buffer settings for 3D rendering
+ */
 void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed);
+
+/**
+ * @brief Maps a triangle from source to destination (QB64 _MAPTRIANGLE statement)
+ * @param cull_options Culling options for backface culling
+ * @param sx1-sx3 Source triangle X coordinates
+ * @param sy1-sy3 Source triangle Y coordinates
+ * @param si Source image handle
+ * @param dx1-dx3 Destination triangle X coordinates
+ * @param dy1-dy3 Destination triangle Y coordinates
+ * @param dz1-dz3 Destination triangle Z coordinates
+ * @param di Destination image handle
+ * @param smooth_options Smoothing/filtering options
+ * @param passed Number of parameters provided
+ * @note Maps a triangular region from a source image to a destination with 3D coordinates
+ */
 void sub__maptriangle(int32_t cull_options, float sx1, float sy1, float sx2, float sy2, float sx3, float sy3, int32_t si, float dx1, float dy1, float dz1,
                       float dx2, float dy2, float dz2, float dx3, float dy3, float dz3, int32_t di, int32_t smooth_options, int32_t passed);
