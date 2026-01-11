@@ -453,6 +453,19 @@ DIM SHARED linecontinuation
 DIM SHARED dim2typepassback AS STRING 'passes back correct case sensitive version of type
 
 
+'=== Include File Tracking Variables ===
+' These variables track the current include nesting level and file information
+' for each level of nested includes (up to 100 levels deep).
+'
+' inclevel: Current include nesting depth (0 = main source file, 1 = first include, etc.)
+' incname(level): Full path of the file being included at each level
+' inclinenumber(level): Current line number within the included file at each level
+'
+' USAGE:
+' When a $INCLUDE directive is processed, inclevel is incremented and the file
+' information is stored. When the include file is finished, inclevel is decremented.
+' This allows proper error reporting with file names and line numbers for nested includes.
+'
 DIM SHARED inclevel
 DIM SHARED incname(100) AS STRING 'must be full path as given
 DIM SHARED inclinenumber(100) AS LONG
@@ -1539,6 +1552,24 @@ SetPreLET "_DEBUG_", _TOSTR$(GetRCStateVar(vWatchOn))
 SetPreLET "_SOCKETS_", _TOSTR$(GetRCStateVar(SockDepOn))
 RETURN
 
+'=== Auto-Include Manager ===
+'
+' This function manages the automatic inclusion of support files and library files
+' at three strategic positions in the program:
+'   1. AtTop (firstLine=1): Before the first line of user code
+'   2. AfterMain (mainEndLine=1): After main program code, before first SUB/FUNCTION
+'   3. AtBottom (lastLine=1): After the last line of user code
+'
+' STATE VARIABLES:
+' - firstLine: 0=inactive, 1=triggered, 2=in progress, 3=done
+' - mainEndLine: 0=inactive, 1=triggered, 2=in progress, 3=done
+' - lastLine: 0=inactive, 1=triggered, 2=in progress, 3=done
+'
+' PROCESSING:
+' Files are written to autoIncludeBuffer, then processed by Include Manager #1/#2
+' Library files are included in reverse order (AtTop) or normal order (AfterMain/AtBottom)
+' to ensure dependencies are included before the libraries that need them.
+'
 autoIncludeManager:
 autoIncludeBuffer = OpenBuffer%("O", tmpdir$ + "autoinc.txt")
 'following IF blocks must be independent, don't connect them using ELSEIF
@@ -1626,6 +1657,26 @@ DO
         wholeline$ = lineinput3$ 'otherwise read from source
         IF wholeline$ = CHR$(13) THEN EXIT DO 'check for end
     END IF
+    '=== Main Program Structure Detection ===
+    '
+    ' QB64 programs have a unique structure:
+    ' - Main program code: Executes first (before any SUB/FUNCTION definitions)
+    ' - SUB/FUNCTION definitions: Available to be called, but don't execute automatically
+    ' - Implicit END: Automatically injected before first SUB/FUNCTION
+    '
+    ' The compiler tracks three key positions:
+    ' - firstLine: Start of program (triggers AtTop auto-includes)
+    ' - mainEndLine: End of main program code (triggers AfterMain auto-includes)
+    ' - lastLine: End of program (triggers AtBottom auto-includes)
+    '
+    ' DETECTION OF MAIN END:
+    ' Main program ends when:
+    ' 1. First SUB or FUNCTION definition is encountered (implicit detection)
+    ' 2. Explicit lastLine trigger (explicit detection, e.g., end of file)
+    '
+    ' Note: mainEndLine detection only happens at ExecLevel 0 (not inside $IF blocks)
+    ' and not when declaring library functions (DECLARE LIBRARY blocks)
+    '
     'detection of main end (implicit by 1st SUB/FUNC or explicit by lastLine = 1)
     IF ExecLevel(ExecCounter) = 0 _ANDALSO declaringlibrary = 0 _ANDALSO mainEndLine = 0 THEN
         tmp$ = UCASE$(LEFT$(LTRIM$(wholeline$), 9))
@@ -1633,6 +1684,10 @@ DO
     END IF
     IF lastLine = 1 AND mainEndLine = 0 THEN mainEndLine = 1
     'perform auto-including according to code position
+    ' Auto-includes are triggered at:
+    ' - firstLine=1: Start of program (AtTop)
+    ' - mainEndLine=1 AND firstLine=3: End of main program (AfterMain, only if AtTop is done)
+    ' - lastLine=1: End of program (AtBottom)
     IF firstLine = 1 OR (mainEndLine = 1 AND firstLine = 3) OR lastLine = 1 THEN
         lineBackup$ = wholeline$ 'backup the real line
         GOSUB setPrecompFlags
@@ -2741,9 +2796,31 @@ DO
         END IF 'wholelinen
     END IF 'len(wholeline$)
 
-    'Include Manager #1
-
-
+    '=== Include Manager #1: Process $INCLUDE and $INCLUDEONCE directives ===
+    '
+    ' This section handles manual include directives ($INCLUDE and $INCLUDEONCE)
+    ' that appear in the source code. Auto-includes are handled separately by
+    ' autoIncludeManager.
+    '
+    ' PROCESSING FLOW:
+    ' 1. Check if addmetainclude$ contains a file to include (set by preprocessor)
+    ' 2. If skip includes mode is enabled (for unit testing), skip the include
+    ' 3. Resolve file path (relative to including file or absolute)
+    ' 4. Check for $INCLUDEONCE and skip if already included
+    ' 5. Open file using IncludeProvider system
+    ' 6. Increment include level and track file name/line number
+    '
+    ' NESTED INCLUDES:
+    ' Each nested include increments inclevel (0=main file, 1=first include, etc.)
+    ' File handles are allocated as #(199 + inclevel + 1) to ensure uniqueness.
+    ' Maximum nesting depth is 100 levels.
+    '
+    ' PATH RESOLUTION:
+    ' - Relative paths are resolved relative to the directory of the file containing
+    '   the $INCLUDE directive (or main source file for level 0)
+    ' - Absolute paths are used as-is
+    ' - Auto-included files from root use absolute paths (try=2)
+    '
 
     IF LEN(addmetainclude$) THEN
         ' Check if skip includes mode is enabled (for unit testing)
@@ -2795,8 +2872,20 @@ DO
                         qberrorhappened = 0
                     ELSE
                         '=== BEGIN: handling $INCLUDEONCE ===
+                        ' $INCLUDEONCE prevents a file from being included multiple times
+                        ' even if multiple $INCLUDE statements reference it.
+                        '
+                        ' CHECKING LOGIC:
+                        ' 1. Read entire file content to search for $INCLUDEONCE directive
+                        ' 2. Look for $INCLUDEONCE at start of file or after newline
+                        ' 3. If found, check IncOneBuf (buffer of already-included files)
+                        ' 4. If file path already in buffer, skip inclusion (close and exit)
+                        ' 5. Otherwise, add file path to buffer and continue with inclusion
+                        '
+                        ' NOTE: File is opened once to read content, then reopened for line-by-line reading
                         incDAT$ = IncludeProvider_ReadAll$(f$)
                         incDAT$ = UCASE$(incDAT$)
+                        ' Search for $INCLUDEONCE at various positions (start, after CRLF, after LF)
                         incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + MKI$(&H0A0D))
                         IF incPOS& = 0 OR incPOS& > 1 THEN
                             IF incPOS& = 0 THEN incPOS& = INSTR(incDAT$, "$INCLUDEONCE" + CHR$(10))
@@ -2806,15 +2895,18 @@ DO
                             END IF
                         END IF
                         IF incPOS& > 0 THEN
+                            ' Check if this file was already included
                             nul& = SeekBuf&(IncOneBuf, 0, SBM_BufStart)
                             WHILE NOT EndOfBuf%(IncOneBuf)
                                 IF _FULLPATH$(f$) = ReadBufLine$(IncOneBuf) THEN
+                                    ' Already included, skip it
                                     IncludeProvider_Close inclevel
                                     qberrorhappened = 0
                                     GOTO skipInc1
                                 END IF
                             WEND
                         END IF
+                        ' Add to included files list
                         WriteBufLine IncOneBuf, _FULLPATH$(f$)
                         ' Reopen file for reading (provider handles this)
                         IF IncludeProvider_Open&(f$, inclevel) = 0 THEN
@@ -2831,19 +2923,40 @@ DO
         END IF 'end of skip includes check
     END IF 'fall through to next section...
     '--------------------
+    '=== Include Reading Loop ===
+    '
+    ' This loop processes all open include files, reading them line by line.
+    ' It handles nested includes by maintaining a stack (via inclevel).
+    '
+    ' PROCESSING FLOW:
+    ' 1. While there are open includes (inclevel > 0):
+    '    a. Read next line from current include file
+    '    b. Update line number tracking
+    '    c. Build error message with file path and line number
+    '    d. Feed line to compiler (prepass or main compilation)
+    ' 2. When include file reaches EOF:
+    '    a. Close the include file
+    '    b. Decrement inclevel (return to previous include or main file)
+    '    c. Check if auto-include buffer has more files to process
+    '
+    ' ERROR REPORTING:
+    ' For nested includes, error messages show the full include chain:
+    '   "in line X of file.bas included (through parent.bas, grandparent.bas)"
+    '
     DO WHILE inclevel
 
         fh = 199 + inclevel
-        '2. Feed next line
+        '2. Feed next line from current include file
         IF IncludeProvider_EOF&(inclevel) = 0 THEN
             x$ = IncludeProvider_ReadLine$(inclevel)
 
             wholeline$ = x$
             inclinenumber(inclevel) = inclinenumber(inclevel) + 1
-            'create extended error string 'incerror$'
+            'create extended error string 'incerror$' for error reporting
             errorLineInInclude = inclinenumber(inclevel)
             e$ = " in line " + _TOSTR$(inclinenumber(inclevel)) + " of " + incname$(inclevel)
             IF autoIncludingFile <> 0 THEN e$ = e$ + " auto-included" ELSE e$ = e$ + " included"
+            ' Build include chain for nested includes
             IF inclevel > 1 THEN
                 e$ = e$ + " (through "
                 FOR x = 1 TO inclevel - 1 STEP 1
@@ -2866,10 +2979,11 @@ DO
             IF idemode THEN sendc$ = CHR$(10) + wholeline$: GOTO sendcommand 'passback
             GOTO ideprepass
         END IF
-        '3. Close & return control
+        '3. Close & return control (include file finished)
         IncludeProvider_Close inclevel
         inclevel = inclevel - 1
         skipInc1:
+        ' Check if there are more auto-include files to process
         IF autoIncludingFile <> 0 AND (inclevel = 0 OR mainEndLine = 2) THEN
             IF NOT EndOfBuf%(autoIncludeBuffer) GOTO autoInclude_prepass
             autoIncludingFile = 0

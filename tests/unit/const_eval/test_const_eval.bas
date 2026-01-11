@@ -5,12 +5,11 @@
 ' Uses component test harness for isolated testing.
 '
 ' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
-'$INCLUDE:'../../source/global/constants.bas'
-'$INCLUDE:'../../source/utilities/type.bi'
-'$INCLUDE:'../../source/utilities/hash.bi'
-'$INCLUDE:'../../source/utilities/elements.bas'
-'$INCLUDE:'../../source/utilities/const_eval.bi'
-'$INCLUDE:'../../source/utilities/const_eval.bas'
+'$INCLUDE:'../../../source/global/constants.bas'
+''$INCLUDE:'../../../source/utilities/type.bi'  ' Now included globally in test_runner.bas
+' Note: hash.bi and const_eval.bi are already included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/elements.bas'
+'$INCLUDE:'../../../source/utilities/const_eval.bas'
 
 SUB Test_ConstantFolding
     Test_Start "Constant folding"

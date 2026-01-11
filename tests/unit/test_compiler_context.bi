@@ -6,7 +6,7 @@
 ' without requiring full compiler initialization.
 '
 
-'$INCLUDE:'test_state_manager.bi'
+'$INCLUDE:'test_state_manager_declarations.bi'
 '$INCLUDE:'../../source/utilities/include_provider.bi'
 
 ' Minimal compiler context structure

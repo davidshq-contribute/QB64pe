@@ -5,8 +5,30 @@
 ' enabling testability by allowing different implementations (file system,
 ' in-memory, etc.) to be swapped in.
 '
+' OVERVIEW:
+' The include provider system abstracts file I/O operations for $INCLUDE
+' directive processing. This allows the compiler to use different backends:
+'   - Filesystem provider: Normal file I/O (default, production use)
+'   - Memory provider: In-memory file content (for testing)
+'   - Test provider: Extended memory provider with call tracking and mocking
+'
+' USAGE:
+' The compiler uses this system when processing $INCLUDE and $INCLUDEONCE
+' directives. The provider is set via IncludeProvider_SetType() and all
+' include operations go through the abstracted interface functions.
+'
+' STATE MANAGEMENT:
+' Each include level (nested includes) has its own state tracked in
+' includeProviderStates(). The level parameter (0-based) indicates which
+' include file is being accessed. Level 0 is the main source file.
+'
+' SKIP INCLUDES MODE:
+' For unit testing, skipIncludes can be enabled to ignore all $INCLUDE
+' directives. This allows testing individual functions without processing
+' their include dependencies.
+'
 
-' Include provider type constants
+' Include provider type constants (must be declared before any SUB/FUNCTION)
 CONST INCLUDE_PROVIDER_FILESYSTEM = 0
 CONST INCLUDE_PROVIDER_MEMORY = 1
 CONST INCLUDE_PROVIDER_TEST = 2
@@ -18,18 +40,64 @@ DIM SHARED includeProviderType AS LONG
 DIM SHARED skipIncludes AS LONG
 
 ' Include provider state structure
-' This tracks the state of an open include file
+' This tracks the state of an open include file at each include level
+' Each nested include has its own state entry (indexed by include level)
 TYPE IncludeProviderState
-    providerType AS LONG      ' Type of provider (FILESYSTEM, MEMORY, etc.)
-    fileHandle AS LONG        ' File handle for filesystem provider
-    content AS STRING         ' Content for memory provider
-    currentLine AS LONG       ' Current line number in content
-    fileName AS STRING        ' File name/path
-    isOpen AS LONG            ' Whether this state is active
+    providerType AS LONG      ' Type of provider (FILESYSTEM, MEMORY, TEST)
+    fileHandle AS LONG        ' File handle for filesystem provider (file #199+level+1)
+    content AS STRING         ' Content for memory/test providers
+    currentLine AS LONG       ' Current line position in content (for memory/test providers)
+    fileName AS STRING        ' Full file name/path being included
+    isOpen AS LONG            ' Whether this state is active (-1=open, 0=closed)
 END TYPE
 
 ' Array to track include provider states (one per include level)
 DIM SHARED includeProviderStates(100) AS IncludeProviderState
+
+' ============================================
+' Memory Provider Type Definitions
+' ============================================
+' These must be declared before any SUB/FUNCTION declarations
+
+' In-memory file storage for testing
+TYPE MemoryFile
+    fileName AS STRING
+    content AS STRING
+END TYPE
+
+DIM SHARED memoryFiles(1000) AS MemoryFile
+DIM SHARED memoryFileCount AS LONG
+
+' Test provider call tracking type
+TYPE TestProviderCall
+    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
+    fileName AS STRING
+    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
+END TYPE
+
+DIM SHARED testProviderCalls(1000) AS TestProviderCall
+DIM SHARED testProviderCallCount AS LONG
+DIM SHARED testProviderErrorFile$
+DIM SHARED testProviderErrorType AS LONG  ' 0 = none, 1 = file not found, 2 = read error
+
+' Path mapping for test scenarios
+TYPE TestProviderPathMap
+    fromPath AS STRING
+    toPath AS STRING
+END TYPE
+
+DIM SHARED testProviderPathMaps(100) AS TestProviderPathMap
+DIM SHARED testProviderPathMapCount AS LONG
+
+' Runtime function stub registry
+TYPE RuntimeStub
+    functionName AS STRING * 50
+    returnValue AS STRING
+    callCount AS LONG
+END TYPE
+
+DIM SHARED runtimeStubs(100) AS RuntimeStub
+DIM SHARED runtimeStubCount AS LONG
 
 ' Initialize include provider system
 ' Sets default provider to filesystem
@@ -184,46 +252,7 @@ END FUNCTION
 ' ============================================
 ' Test Provider Extended Functions
 ' ============================================
+' Note: TestProviderCall TYPE and DIM SHARED declarations moved to top of file
 
-' Test provider call tracking type
-TYPE TestProviderCall
-    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
-    fileName AS STRING
-    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
-END TYPE
-
-' Clear test provider state
-SUB IncludeProvider_Test_Clear
-
-' Track a provider call (internal use)
-SUB IncludeProvider_Test_TrackCall (callType$, fileName$)
-
-' Get call history count
-FUNCTION IncludeProvider_Test_GetCallCount&
-
-' Get a specific call from history
-FUNCTION IncludeProvider_Test_GetCall$ (index AS LONG, callType AS TestProviderCall)
-
-' Set error injection for testing error handling
-SUB IncludeProvider_Test_SetError (fileName$, errorType AS LONG)
-
-' Clear error injection
-SUB IncludeProvider_Test_ClearError
-
-' Add path mapping for testing include resolution
-SUB IncludeProvider_Test_AddPathMap (fromPath$, toPath$)
-
-' Resolve path using mappings
-FUNCTION IncludeProvider_Test_ResolveMappedPath$ (fileName$)
-
-' Runtime function stub registration
-SUB IncludeProvider_Test_RegisterStub (functionName$, returnValue$)
-
-' Get stub return value
-FUNCTION IncludeProvider_Test_GetStubValue$ (functionName$)
-
-' Get stub call count
-FUNCTION IncludeProvider_Test_GetStubCallCount& (functionName$)
-
-' Clear all stubs
-SUB IncludeProvider_Test_ClearStubs
+' Note: Function implementations are in include_provider.bas
+' The .bi file contains TYPE definitions and DIM SHARED declarations to ensure proper declaration order

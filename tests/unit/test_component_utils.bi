@@ -6,7 +6,7 @@
 ' and comparing results.
 '
 
-'$INCLUDE:'test_state_manager.bi'
+'$INCLUDE:'test_state_manager_declarations.bi'
 
 ' Initialize a test context for a specific component
 ' Returns initialized TestStateContext

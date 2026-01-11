@@ -67,7 +67,15 @@ do
         pushd . >/dev/null
         cd "tests/format_tests/$category"
         # Capture both stdout and stderr for complete error information
-        "../../../$QB64" -y -m "${compilerFlags[@]}" "$testName.bas" -o "../../../$output" >"../../../$compileResultOutput" 2>&1
+        # Check if QB64 is already an absolute path - if so, use it directly
+        if [[ "$QB64" == /* ]]; then
+            # Absolute path - use directly
+            QB64_PATH="$QB64"
+        else
+            # Relative path - construct relative to current directory
+            QB64_PATH="../../../$QB64"
+        fi
+        "$QB64_PATH" -y -m "${compilerFlags[@]}" "$testName.bas" -o "../../../$output" >"../../../$compileResultOutput" 2>&1
         ERR=$?
         popd >/dev/null
         (exit $ERR)

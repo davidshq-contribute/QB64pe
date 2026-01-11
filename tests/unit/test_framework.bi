@@ -5,26 +5,11 @@
 ' for testing individual compiler components in isolation.
 '
 
-' Test result constants
-CONST TEST_RESULT_PASS = 0
-CONST TEST_RESULT_FAIL = 1
-CONST TEST_RESULT_SKIP = 2
+' Note: Test result constants are in test_framework_constants.bi and included by test_runner.bas
+' Note: test_global_state_reset.bi is included by test_runner.bas before include_provider.bi
 
-' Test statistics
-TYPE TestStats
-    totalTests AS LONG
-    passedTests AS LONG
-    failedTests AS LONG
-    skippedTests AS LONG
-    totalAssertions AS LONG
-    passedAssertions AS LONG
-    failedAssertions AS LONG
-END TYPE
-
-DIM SHARED testStats AS TestStats
-DIM SHARED currentTestName$ AS STRING
-DIM SHARED testOutput$ AS STRING
-DIM SHARED testVerbose AS LONG
+' Note: TestStats TYPE and DIM SHARED declarations are in test_global_state_reset.bi
+' and included by test_runner.bas before include_provider.bi to ensure proper order
 
 ' Initialize test framework
 SUB TestFramework_Init
@@ -45,7 +30,11 @@ SUB TestFramework_SetVerbose (verbose AS LONG)
 END SUB
 
 ' Start a test case
+' Automatically resets global state to ensure test isolation
 SUB Test_Start (testName$)
+    ' Reset global state before each test to ensure isolation
+    Test_ResetGlobalState
+    
     currentTestName$ = testName$
     testStats.totalTests = testStats.totalTests + 1
     IF testVerbose THEN
@@ -119,7 +108,7 @@ FUNCTION Test_AssertEqualString& (expected$, actual$, message$)
     result = (expected$ = actual$)
     
     IF NOT result AND message$ = "" THEN
-        message$ = "Expected """ + expected$ + """ but got """ + actual$ + """"
+        message$ = "Expected " + CHR$(34) + expected$ + CHR$(34) + " but got " + CHR$(34) + actual$ + CHR$(34)
     END IF
     
     Test_AssertEqualString& = Test_Assert&(result, message$)
@@ -168,7 +157,7 @@ FUNCTION Test_AssertContains& (haystack$, needle$, message$)
     result = (INSTR(haystack$, needle$) > 0)
     
     IF NOT result AND message$ = "" THEN
-        message$ = "Expected string to contain """ + needle$ + """ but it doesn't"
+        message$ = "Expected string to contain " + CHR$(34) + needle$ + CHR$(34) + " but it doesn't"
     END IF
     
     Test_AssertContains& = Test_Assert&(result, message$)
@@ -183,7 +172,7 @@ FUNCTION Test_AssertNotContains& (haystack$, needle$, message$)
     result = (INSTR(haystack$, needle$) = 0)
     
     IF NOT result AND message$ = "" THEN
-        message$ = "Expected string to not contain """ + needle$ + """ but it does"
+        message$ = "Expected string to not contain " + CHR$(34) + needle$ + CHR$(34) + " but it does"
     END IF
     
     Test_AssertNotContains& = Test_Assert&(result, message$)
@@ -250,25 +239,25 @@ FUNCTION Test_AssertLessThanOrEqual& (actual AS LONG, expected AS LONG, message$
 END FUNCTION
 
 ' Assert that a string is empty
-' str$: String to check
+' testStr$: String to check
 ' message$: Optional message
-FUNCTION Test_AssertEmpty& (str$, message$)
+FUNCTION Test_AssertEmpty& (testStr$, message$)
     DIM result AS LONG
-    result = (LEN(str$) = 0)
+    result = (LEN(testStr$) = 0)
     
     IF NOT result AND message$ = "" THEN
-        message$ = "Expected empty string but got """ + str$ + """"
+        message$ = "Expected empty string but got " + CHR$(34) + testStr$ + CHR$(34)
     END IF
     
     Test_AssertEmpty& = Test_Assert&(result, message$)
 END FUNCTION
 
 ' Assert that a string is not empty
-' str$: String to check
+' testStr$: String to check
 ' message$: Optional message
-FUNCTION Test_AssertNotEmpty& (str$, message$)
+FUNCTION Test_AssertNotEmpty& (testStr$, message$)
     DIM result AS LONG
-    result = (LEN(str$) > 0)
+    result = (LEN(testStr$) > 0)
     
     IF NOT result AND message$ = "" THEN
         message$ = "Expected non-empty string but got empty string"
@@ -314,7 +303,7 @@ FUNCTION Test_AssertEqualStringIgnoreCase& (expected$, actual$, message$)
     result = (UCASE$(expected$) = UCASE$(actual$))
     
     IF NOT result AND message$ = "" THEN
-        message$ = "Expected (case-insensitive) """ + expected$ + """ but got """ + actual$ + """"
+        message$ = "Expected (case-insensitive) " + CHR$(34) + expected$ + CHR$(34) + " but got " + CHR$(34) + actual$ + CHR$(34)
     END IF
     
     Test_AssertEqualStringIgnoreCase& = Test_Assert&(result, message$)

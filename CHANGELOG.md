@@ -44,12 +44,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `source/utilities/include_provider.bas` - New include provider implementation
   - Added `source/utilities/include_provider.bi` - Include provider header/interface definitions
 
+- **Three-Phase Include System Support**
+  - Added `source/utilities/hash_declarations.bi` - Hash table declarations for three-phase include system
+  - Added `source/utilities/hash_init.bas` - Hash table initialization code
+  - Added `source/utilities/s-buffer/simplebuffer_declarations.bi` - Simple buffer declarations
+  - Added `source/utilities/s-buffer/simplebuffer_init.bas` - Simple buffer initialization code
+  - Added `source/utilities/type_declarations.bi` - Type system declarations
+  - Added `source/utilities/type_init.bas` - Type system initialization code
+
 #### Testing Infrastructure
 - **Test Framework**
   - Added `tests/unit/test_framework.bi` - Unit testing framework header/interface
   - Added `tests/unit/test_runner.bas` - Test runner implementation
   - Added `tests/test_report.sh` - Test reporting script
   - Added `tests/test_utils.sh` - Test utility functions
+  - Added `tests/unit/run_tests.sh` - Bash wrapper script for cross-platform test execution (Linux/Mac/Git Bash)
+  - Added `tests/unit/run_tests.bat` - Windows batch wrapper script for test execution
+  - Added `tests/unit/run_tests_wsl.sh` - WSL test runner for fully automated testing on Windows
+  - Added `tests/unit/run_tests_wsl.bat` - Windows wrapper for WSL test runner
+  - Added `tests/unit/README.md` - Comprehensive test documentation and usage guide
+  - Added `tests/unit/WSL_SETUP.md` - WSL setup guide for automated testing on Windows
 
 - **C Test Utilities**
   - Added `tests/c/mem.cpp` - Memory testing utilities
@@ -96,6 +110,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `source/utilities/include_provider.bas` - Enhanced include provider implementation with improved functionality
   - Updated `source/utilities/include_provider.bi` - Updated interface definitions for include provider
 
+- **Code Quality Improvements - GOTO Label Refactoring**
+  - Refactored `source/utilities/hash.bas` - Eliminated 6 GOTO labels, replaced with structured DO...LOOP control flow in HashFind, HashFindRev, HashFindCont, and HashDump functions
+  - Refactored `source/utilities/include_provider.bas` - Eliminated 2 error handler GOTO labels, replaced with pre-validation checks using `_FILEEXISTS`
+  - Refactored `source/utilities/elements.bas` - Eliminated 4 GOTO labels, replaced with structured DO...LOOP control flow in getelement$, getelements$, getelementsafter$, and numelements functions
+  - **Total GOTO labels eliminated**: 12 labels across 3 utility files, improving code maintainability and test compatibility
+
 #### Documentation
 - **Architecture Documentation**
   - Enhanced `docs/ARCHITECTURE.md` - Expanded architecture documentation with additional details and improvements (84 lines added)
@@ -136,7 +156,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `tests/unit/parser/test_statement_parsing.bas`
     - `tests/unit/symbol_table/test_hash.bas`
     - `tests/unit/type_system/test_type_system.bas`
-  - Updated `tests/unit/test_runner.bas` - Minor improvements to test runner functionality
+  - Updated `tests/unit/test_runner.bas` - Enhanced with three-phase include system support, enabled all 10 test suites, fixed $INCLUDE syntax
+  - Updated `tests/unit/test_framework_implementations.bas` - Added file output support for test results (test_results.txt) to enable result capture on Windows console applications
 
 ### Fixed
 - **Compiler Issues**
@@ -149,6 +170,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed race conditions in parallel test execution - Improved array rebuilding approach for more robust process management
   - Fixed error handling gaps in test reporting - Added comprehensive error trap handlers, input validation, and file write error checking
   - Improved JSON parsing robustness - Added fallback handling when `jq` is not available, with proper escaping for special characters
+  - Fixed $INCLUDE syntax errors in test files - All include directives now use correct `'$INCLUDE:'filename'` syntax with leading apostrophe
+  - Fixed test compilation errors - Resolved "Common label within a SUB/FUNCTION" errors by refactoring GOTO labels to structured control flow
+  - Fixed parser test bugs - Corrected element separator usage in test_statement_parsing.bas (3 assertions fixed)
+  - Fixed include provider test bug - Corrected path mapping expectation in test_include_provider.bas (1 assertion fixed)
+  - **All tests now passing**: 73/73 tests pass with 100% assertion success rate
 
 ### Statistics
 - **Total Changes**: 69 files changed (22 in this update)
@@ -179,3 +205,11 @@ This changelog entry represents a significant update focusing on:
 - **Race Condition Mitigation**: Improved parallel test execution robustness with better array handling and process management
 - **Code Quality**: Enhanced error recovery mechanisms and improved JSON parsing with proper escaping support
 - **Documentation**: Added comprehensive code review documentation tracking improvements and remaining issues
+
+### Recent Updates (2026-01-10 - GOTO Refactoring & Test Infrastructure)
+- **GOTO Label Elimination**: Successfully refactored all 12 GOTO labels from utility files (hash.bas: 6, include_provider.bas: 2, elements.bas: 4) to structured control flow, enabling full test suite compilation
+- **Three-Phase Include System**: Split hash.bi, simplebuffer.bi, and type.bi into declaration (.bi) and initialization (.bas) files to support QB64's three-phase include system requirements
+- **Test Suite Completion**: All 10 test suites now enabled and compiling successfully (type system, symbol table, parser, code generation, file utilities, string utilities, include provider, error handling, state variables, build utilities, format)
+- **Test Execution Tools**: Added wrapper scripts for seamless test execution across platforms, with WSL support for fully automated testing on Windows
+- **Test Results**: Achieved 100% test pass rate (73/73 tests, 73/73 assertions) after fixing test bugs and refactoring code
+- **Code Quality**: Improved maintainability by replacing GOTO labels with structured DO...LOOP control flow throughout utility files

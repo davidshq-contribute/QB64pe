@@ -1,4 +1,6 @@
 
+$INCLUDEONCE
+
 FUNCTION getelement$ (a$, elenum)
     DIM p AS LONG, n AS LONG, i AS LONG
 
@@ -6,22 +8,22 @@ FUNCTION getelement$ (a$, elenum)
 
     n = 1
     p = 1
-    getelementnext:
-    i = INSTR(p, a$, sp)
+    DO
+        i = INSTR(p, a$, sp)
 
-    IF elenum = n THEN
-        IF i THEN
-            getelement$ = MID$(a$, p, i - p)
-        ELSE
-            getelement$ = RIGHT$(a$, LEN(a$) - p + 1)
+        IF elenum = n THEN
+            IF i THEN
+                getelement$ = MID$(a$, p, i - p)
+            ELSE
+                getelement$ = RIGHT$(a$, LEN(a$) - p + 1)
+            END IF
+            EXIT FUNCTION
         END IF
-        EXIT FUNCTION
-    END IF
 
-    IF i = 0 THEN EXIT FUNCTION 'no more elements!
-    n = n + 1
-    p = i + 1
-    GOTO getelementnext
+        IF i = 0 THEN EXIT FUNCTION 'no more elements!
+        n = n + 1
+        p = i + 1
+    LOOP
 END FUNCTION
 
 ' Used to iterate over all the elements in a$
@@ -95,22 +97,22 @@ FUNCTION getelements$ (a$, i1, i2)
     IF i2 < i1 THEN getelements$ = "": EXIT FUNCTION
     n = 1
     p = 1
-    getelementsnext:
-    i = INSTR(p, a$, sp)
-    IF n = i1 THEN
-        i1pos = p
-    END IF
-    IF n = i2 THEN
-        IF i THEN
-            getelements$ = MID$(a$, i1pos, i - i1pos)
-        ELSE
-            getelements$ = RIGHT$(a$, LEN(a$) - i1pos + 1)
+    DO
+        i = INSTR(p, a$, sp)
+        IF n = i1 THEN
+            i1pos = p
         END IF
-        EXIT FUNCTION
-    END IF
-    n = n + 1
-    p = i + 1
-    GOTO getelementsnext
+        IF n = i2 THEN
+            IF i THEN
+                getelements$ = MID$(a$, i1pos, i - i1pos)
+            ELSE
+                getelements$ = RIGHT$(a$, LEN(a$) - i1pos + 1)
+            END IF
+            EXIT FUNCTION
+        END IF
+        n = n + 1
+        p = i + 1
+    LOOP
 END FUNCTION
 
 FUNCTION getelementsbefore$ (a$, i1)
@@ -123,17 +125,17 @@ FUNCTION getelementsafter$ (a$, i1)
     n = 1
     p = 1
 
-    getelementsnext:
-    i = INSTR(p, a$, sp)
+    DO
+        i = INSTR(p, a$, sp)
 
-    IF n = i1 THEN
-        getelementsafter$ = RIGHT$(a$, LEN(a$) - p + 1)
-        EXIT FUNCTION
-    END IF
+        IF n = i1 THEN
+            getelementsafter$ = RIGHT$(a$, LEN(a$) - p + 1)
+            EXIT FUNCTION
+        END IF
 
-    n = n + 1
-    p = i + 1
-    GOTO getelementsnext
+        n = n + 1
+        p = i + 1
+    LOOP
 END FUNCTION
 
 SUB insertelements (a$, i, elements$)
@@ -167,12 +169,12 @@ FUNCTION numelements (a$)
     IF a$ = "" THEN EXIT FUNCTION
     n = 1
     p = 1
-    numelementsnext:
-    i = INSTR(p, a$, sp)
-    IF i = 0 THEN numelements = n: EXIT FUNCTION
-    n = n + 1
-    p = i + 1
-    GOTO numelementsnext
+    DO
+        i = INSTR(p, a$, sp)
+        IF i = 0 THEN numelements = n: EXIT FUNCTION
+        n = n + 1
+        p = i + 1
+    LOOP
 END FUNCTION
 
 SUB removeelements (a$, first, last, keepindexing)
@@ -513,11 +515,16 @@ FUNCTION elementGetNumericValue& (ele$, floating AS _FLOAT, integral AS _INTEGER
     handleInteger:
     num$ = LEFT$(num$, LEN(num$) - LEN(e$))
 
+    ' Workaround: Use VAL with one parameter, then convert via _MK$ and _CV
+    ' This avoids compiler issue with VAL overload in test compilation context
+    DIM tempVal$
+    tempVal$ = _MK$(_INTEGER64, VAL(num$))
+    
     IF returnValue AND ISUNSIGNED THEN
-        uintegral = VAL(num$, _UNSIGNED _INTEGER64)
+        uintegral = _CV(_UNSIGNED _INTEGER64, tempVal$)
         integral = uintegral
     ELSE
-        integral = VAL(num$, _INTEGER64)
+        integral = _CV(_INTEGER64, tempVal$)
         uintegral = integral
     END IF
 

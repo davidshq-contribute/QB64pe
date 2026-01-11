@@ -5,11 +5,11 @@
 ' Uses component test harness for isolated testing.
 '
 ' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
-'$INCLUDE:'../../source/global/constants.bas'
-'$INCLUDE:'../../source/utilities/type.bi'
-'$INCLUDE:'../../source/utilities/hash.bi'
-'$INCLUDE:'../../source/utilities/elements.bas'
-'$INCLUDE:'../../source/utilities/parser_utils.bas'
+'$INCLUDE:'../../../source/global/constants.bas'
+''$INCLUDE:'../../../source/utilities/type.bi'  ' Now included globally in test_runner.bas
+' Note: hash.bi is already included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/elements.bas'
+'$INCLUDE:'../../../source/utilities/parser_utils.bas'
 
 ' Note: These tests require significant compiler state initialization.
 ' For now, we test simpler parsing functions that can be tested in isolation.

@@ -1,4 +1,6 @@
 
+$INCLUDEONCE
+
 FUNCTION HashValue& (a$) 'returns the hash table value of a string
     '[5(first)][5(second)][5(last)][5(2nd-last)][3(length AND 7)][1(first char is underscore)]
     l = LEN(a$)
@@ -87,30 +89,30 @@ FUNCTION HashFind (a$, searchflags, resultflags, resultreference)
     i = HashTable(HashValue(a$))
     IF i THEN
         ua$ = UCASE$(a$) + SPACE$(256 - LEN(a$))
-        hashfind_next:
-        f = HashList(i).Flags
-        IF searchflags AND f THEN 'flags in common
-            IF HashListName(i) = ua$ THEN
-                resultflags = f
-                resultreference = HashList(i).Reference
-                i2 = HashList(i).NextItem
-                IF i2 THEN
-                    HashFind = 2
-                    HashFind_NextListItem = i2
-                    HashFind_Reverse = 0
-                    HashFind_SearchFlags = searchflags
-                    HashFind_Name = ua$
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
-                ELSE
-                    HashFind = 1
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
+        DO WHILE i
+            f = HashList(i).Flags
+            IF searchflags AND f THEN 'flags in common
+                IF HashListName(i) = ua$ THEN
+                    resultflags = f
+                    resultreference = HashList(i).Reference
+                    i2 = HashList(i).NextItem
+                    IF i2 THEN
+                        HashFind = 2
+                        HashFind_NextListItem = i2
+                        HashFind_Reverse = 0
+                        HashFind_SearchFlags = searchflags
+                        HashFind_Name = ua$
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    ELSE
+                        HashFind = 1
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    END IF
                 END IF
             END IF
-        END IF
-        i = HashList(i).NextItem
-        IF i THEN GOTO hashfind_next
+            i = HashList(i).NextItem
+        LOOP
     END IF
 END FUNCTION
 
@@ -123,30 +125,30 @@ FUNCTION HashFindRev (a$, searchflags, resultflags, resultreference)
     IF i THEN
         i = HashList(i).LastItem
         ua$ = UCASE$(a$) + SPACE$(256 - LEN(a$))
-        hashfindrev_next:
-        f = HashList(i).Flags
-        IF searchflags AND f THEN 'flags in common
-            IF HashListName(i) = ua$ THEN
-                resultflags = f
-                resultreference = HashList(i).Reference
-                i2 = HashList(i).PrevItem
-                IF i2 THEN
-                    HashFindRev = 2
-                    HashFind_NextListItem = i2
-                    HashFind_Reverse = 1
-                    HashFind_SearchFlags = searchflags
-                    HashFind_Name = ua$
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
-                ELSE
-                    HashFindRev = 1
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
+        DO WHILE i
+            f = HashList(i).Flags
+            IF searchflags AND f THEN 'flags in common
+                IF HashListName(i) = ua$ THEN
+                    resultflags = f
+                    resultreference = HashList(i).Reference
+                    i2 = HashList(i).PrevItem
+                    IF i2 THEN
+                        HashFindRev = 2
+                        HashFind_NextListItem = i2
+                        HashFind_Reverse = 1
+                        HashFind_SearchFlags = searchflags
+                        HashFind_Name = ua$
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    ELSE
+                        HashFindRev = 1
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    END IF
                 END IF
             END IF
-        END IF
-        i = HashList(i).PrevItem
-        IF i THEN GOTO hashfindrev_next
+            i = HashList(i).PrevItem
+        LOOP
     END IF
 END FUNCTION
 
@@ -158,53 +160,53 @@ FUNCTION HashFindCont (resultflags, resultreference)
     IF HashFind_Reverse THEN
 
         i = HashFind_NextListItem
-        hashfindrevc_next:
-        f = HashList(i).Flags
-        IF HashFind_SearchFlags AND f THEN 'flags in common
-            IF HashListName(i) = HashFind_Name THEN
-                resultflags = f
-                resultreference = HashList(i).Reference
-                i2 = HashList(i).PrevItem
-                IF i2 THEN
-                    HashFindCont = 2
-                    HashFind_NextListItem = i2
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
-                ELSE
-                    HashFindCont = 1
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
+        DO WHILE i
+            f = HashList(i).Flags
+            IF HashFind_SearchFlags AND f THEN 'flags in common
+                IF HashListName(i) = HashFind_Name THEN
+                    resultflags = f
+                    resultreference = HashList(i).Reference
+                    i2 = HashList(i).PrevItem
+                    IF i2 THEN
+                        HashFindCont = 2
+                        HashFind_NextListItem = i2
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    ELSE
+                        HashFindCont = 1
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    END IF
                 END IF
             END IF
-        END IF
-        i = HashList(i).PrevItem
-        IF i THEN GOTO hashfindrevc_next
+            i = HashList(i).PrevItem
+        LOOP
         EXIT FUNCTION
 
     ELSE
 
         i = HashFind_NextListItem
-        hashfindc_next:
-        f = HashList(i).Flags
-        IF HashFind_SearchFlags AND f THEN 'flags in common
-            IF HashListName(i) = HashFind_Name THEN
-                resultflags = f
-                resultreference = HashList(i).Reference
-                i2 = HashList(i).NextItem
-                IF i2 THEN
-                    HashFindCont = 2
-                    HashFind_NextListItem = i2
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
-                ELSE
-                    HashFindCont = 1
-                    HashRemove_LastFound = i
-                    EXIT FUNCTION
+        DO WHILE i
+            f = HashList(i).Flags
+            IF HashFind_SearchFlags AND f THEN 'flags in common
+                IF HashListName(i) = HashFind_Name THEN
+                    resultflags = f
+                    resultreference = HashList(i).Reference
+                    i2 = HashList(i).NextItem
+                    IF i2 THEN
+                        HashFindCont = 2
+                        HashFind_NextListItem = i2
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    ELSE
+                        HashFindCont = 1
+                        HashRemove_LastFound = i
+                        EXIT FUNCTION
+                    END IF
                 END IF
             END IF
-        END IF
-        i = HashList(i).NextItem
-        IF i THEN GOTO hashfindc_next
+            i = HashList(i).NextItem
+        LOOP
         EXIT FUNCTION
 
     END IF
@@ -255,9 +257,11 @@ SUB HashRemove
 END SUB
 
 SUB HashDump 'used for debugging purposes
+    DIM isCorrupt AS LONG
     fh = FREEFILE
     OPEN "hashdump.txt" FOR OUTPUT AS #fh
     b$ = "12345678901234567890123456789012}"
+    isCorrupt = 0
     FOR x = 0 TO 16777215
         IF HashTable(x) THEN
 
@@ -266,48 +270,61 @@ SUB HashDump 'used for debugging purposes
 
             'validate
             lasti = HashList(i).LastItem
-            IF HashList(i).LastItem = 0 OR HashList(i).PrevItem <> 0 OR HashValue(HashListName(i)) <> x THEN GOTO corrupt
+            IF HashList(i).LastItem = 0 OR HashList(i).PrevItem <> 0 OR HashValue(HashListName(i)) <> x THEN
+                isCorrupt = -1
+                EXIT FOR
+            END IF
 
             PRINT #fh, "  HashList("; i; ").LastItem="; HashList(i).LastItem
-            hashdumpnextitem:
-            x$ = "  [" + _TOSTR$(i) + "]" + HashListName(i)
+            DO WHILE i
+                x$ = "  [" + _TOSTR$(i) + "]" + HashListName(i)
 
-            f = HashList(i).Flags
-            x$ = x$ + ",.Flags=" + _TOSTR$(f) + "{"
-            FOR z = 1 TO 32
-                ASC(b$, z) = (f AND 1) + 48
-                f = f \ 2
-            NEXT
-            x$ = x$ + b$
+                f = HashList(i).Flags
+                x$ = x$ + ",.Flags=" + _TOSTR$(f) + "{"
+                FOR z = 1 TO 32
+                    ASC(b$, z) = (f AND 1) + 48
+                    f = f \ 2
+                NEXT
+                x$ = x$ + b$
 
-            x$ = x$ + ",.Reference=" + _TOSTR$(HashList(i).Reference)
+                x$ = x$ + ",.Reference=" + _TOSTR$(HashList(i).Reference)
 
-            PRINT #fh, x$
+                PRINT #fh, x$
 
-            'validate
-            i1 = HashList(i).PrevItem
-            i2 = HashList(i).NextItem
-            IF i1 THEN
-                IF HashList(i1).NextItem <> i THEN GOTO corrupt
-            END IF
-            IF i2 THEN
-                IF HashList(i2).PrevItem <> i THEN GOTO corrupt
-            END IF
-            IF i2 = 0 THEN
-                IF lasti <> i THEN GOTO corrupt
-            END IF
+                'validate
+                i1 = HashList(i).PrevItem
+                i2 = HashList(i).NextItem
+                IF i1 THEN
+                    IF HashList(i1).NextItem <> i THEN
+                        isCorrupt = -1
+                        EXIT DO
+                    END IF
+                END IF
+                IF i2 THEN
+                    IF HashList(i2).PrevItem <> i THEN
+                        isCorrupt = -1
+                        EXIT DO
+                    END IF
+                END IF
+                IF i2 = 0 THEN
+                    IF lasti <> i THEN
+                        isCorrupt = -1
+                        EXIT DO
+                    END IF
+                END IF
 
-            i = HashList(i).NextItem
-            IF i THEN GOTO hashdumpnextitem
+                i = HashList(i).NextItem
+            LOOP
+
+            IF isCorrupt THEN EXIT FOR
 
             PRINT #fh, "END HashTable("; x; ")"
         END IF
     NEXT
-    CLOSE #fh
 
-    EXIT SUB
-    corrupt:
-    PRINT #fh, "HASH TABLE CORRUPT!" 'should never happen
+    IF isCorrupt THEN
+        PRINT #fh, "HASH TABLE CORRUPT!" 'should never happen
+    END IF
     CLOSE #fh
 
 END SUB

@@ -4,10 +4,8 @@
 ' Tests symbol insertion, lookup, and scope resolution.
 ' Uses component test harness for isolated testing.
 '
-' Note: test_framework.bi, test_state_manager.bi, and test_output_verification.bi are included by test_runner.bas
-'$INCLUDE:'../test_output_verification.bas'
-'$INCLUDE:'../../source/utilities/hash.bi'
-'$INCLUDE:'../../source/utilities/hash.bas'
+' Note: test_framework.bi, test_state_manager.bi, test_output_verification.bi, test_output_verification.bas, and hash.bi are included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/hash.bas'
 
 SUB Test_SymbolInsertion
     Test_Start "Symbol insertion"
@@ -152,7 +150,7 @@ SUB Test_SymbolTableVerification
     
     DIM result AS LONG
     DIM snapshot AS SymbolTableSnapshot
-    DIM expectedSymbols$(1 TO 5) AS STRING
+    DIM expectedSymbols$(1 TO 5)
     DIM count AS LONG
     
     ' Add multiple symbols
@@ -163,7 +161,7 @@ SUB Test_SymbolTableVerification
     HashAdd "const1", HASHFLAG_CONSTANT, 30
     
     ' Verify symbol count
-    count = VerifySymbolTable_GetCount&()
+        count = VerifySymbolTable_GetCount&
     result = Test_AssertEqual&(5, count, "Should have 5 symbols")
     
     ' Verify counts by flag
@@ -211,7 +209,12 @@ SUB Test_SymbolTableVerification
     
     ' Test snapshot functionality
     IF result THEN
-        VerifySymbolTable_InitSnapshot snapshot
+        DIM initResult AS LONG
+        initResult = VerifySymbolTable_InitSnapshot&(snapshot)
+        IF NOT initResult THEN
+            result = 0
+            EXIT SUB
+        END IF
         result = VerifySymbolTable_Enumerate&(snapshot)
         result = Test_Assert&(result, "Should enumerate symbols successfully")
         

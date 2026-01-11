@@ -1,4 +1,5 @@
+$INCLUDEONCE
 
-DIM SHARED Error_Happened AS LONG
-DIM SHARED Error_Message AS STRING
+' Note: Error_Happened and Error_Message are declared in test_global_state_declarations.bi
+' for unit tests. In the main compiler, they should be declared before including this file.
 

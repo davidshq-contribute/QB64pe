@@ -2,10 +2,17 @@
 ' Include Provider Implementation
 '
 ' Provides concrete implementations of include providers:
+
+$INCLUDEONCE
 ' - Filesystem provider (default, uses actual file I/O)
 ' - Memory provider (for testing, uses in-memory content)
 ' - Test provider (for unit testing, allows mocking)
 '
+
+' ============================================
+' Memory Provider Implementation (for testing)
+' ============================================
+' Note: TYPE MemoryFile and DIM SHARED declarations are in include_provider.bi
 
 ' ============================================
 ' Filesystem Provider Implementation
@@ -15,36 +22,43 @@ FUNCTION IncludeProvider_Filesystem_FileExists& (fileName$)
     IncludeProvider_Filesystem_FileExists& = _FILEEXISTS(fileName$)
 END FUNCTION
 
+' Open a file for reading using filesystem I/O
+' fileName$: Full path to the file to open
+' level: Include nesting level (0-based, 0=main file, 1=first include, etc.)
+' Returns: -1 on success, 0 on failure
+' Note: Uses file handle #(199 + level + 1) to ensure unique handles per level
 FUNCTION IncludeProvider_Filesystem_Open& (fileName$, level AS LONG)
     DIM fh AS LONG
     fh = 199 + level + 1
-    
+
+    ' Close handle if already open (shouldn't happen, but be safe)
     IF EOF(fh) = 0 THEN
-        ' File handle might already be open, close it first
         CLOSE #fh
     END IF
-    
-    ON ERROR GOTO filesystem_open_error
+
+    ' Attempt to open the file
+    ' Check if file exists first
+    IF _FILEEXISTS(fileName$) = 0 THEN
+        ' Mark as closed on error
+        includeProviderStates(level).isOpen = 0
+        IncludeProvider_Filesystem_Open& = 0
+        EXIT FUNCTION
+    END IF
+
     OPEN fileName$ FOR BINARY AS #fh
-    ON ERROR GOTO _LASTHANDLER
-    
+
+    ' Update state for this include level
     includeProviderStates(level).fileHandle = fh
     includeProviderStates(level).fileName = fileName$
     includeProviderStates(level).providerType = INCLUDE_PROVIDER_FILESYSTEM
     includeProviderStates(level).isOpen = -1
     includeProviderStates(level).currentLine = 0
-    
+
     IncludeProvider_Filesystem_Open& = -1
-    EXIT FUNCTION
-    
-filesystem_open_error:
-    ON ERROR GOTO _LASTHANDLER
-    includeProviderStates(level).isOpen = 0
-    IncludeProvider_Filesystem_Open& = 0
 END FUNCTION
 
 FUNCTION IncludeProvider_Filesystem_ReadLine$ (level AS LONG)
-    DIM fh AS LONG, line$ AS STRING
+    DIM fh AS LONG, line$
     fh = includeProviderStates(level).fileHandle
     
     IF includeProviderStates(level).isOpen = 0 THEN
@@ -88,14 +102,27 @@ SUB IncludeProvider_Filesystem_Close (level AS LONG)
     includeProviderStates(level).fileName = ""
 END SUB
 
+' Resolve a relative file path to an absolute path
+' fileName$: File name/path (may be relative or absolute)
+' basePath$: Base directory path (directory of the file that's including this one)
+' Returns: Full resolved path
+' 
+' PATH RESOLUTION LOGIC:
+' 1. If fileName$ is absolute (starts with / or drive letter), return as-is
+' 2. Remove leading .\ or ./ if present
+' 3. If basePath$ is empty, return fileName$ as-is
+' 4. Otherwise, combine basePath$ + separator + fileName$
+' 
+' This ensures that includes like $INCLUDE:'../file.bas' resolve correctly
+' relative to the directory of the file containing the $INCLUDE directive.
 FUNCTION IncludeProvider_Filesystem_ResolvePath$ (fileName$, basePath$)
-    ' If absolute path, return as-is
+    ' If absolute path (Unix / or Windows C:), return as-is
     IF LEFT$(fileName$, 1) = "/" OR (LEN(fileName$) >= 2 AND MID$(fileName$, 2, 1) = ":") THEN
         IncludeProvider_Filesystem_ResolvePath$ = fileName$
         EXIT FUNCTION
     END IF
     
-    ' Remove leading .\ or ./
+    ' Remove leading .\ or ./ (current directory reference)
     IF LEFT$(fileName$, 2) = ".\" OR LEFT$(fileName$, 2) = "./" THEN
         fileName$ = MID$(fileName$, 3)
     END IF
@@ -106,14 +133,15 @@ FUNCTION IncludeProvider_Filesystem_ResolvePath$ (fileName$, basePath$)
         EXIT FUNCTION
     END IF
     
-    ' Combine base path with file name
+    ' Determine path separator based on basePath format
     DIM pathSep$
     IF INSTR(basePath$, "\") > 0 THEN
-        pathSep$ = "\"
+        pathSep$ = "\"  ' Windows-style
     ELSE
-        pathSep$ = "/"
+        pathSep$ = "/"  ' Unix-style
     END IF
     
+    ' Combine paths (add separator if basePath doesn't end with one)
     IF RIGHT$(basePath$, 1) <> "\" AND RIGHT$(basePath$, 1) <> "/" THEN
         IncludeProvider_Filesystem_ResolvePath$ = basePath$ + pathSep$ + fileName$
     ELSE
@@ -123,30 +151,19 @@ END FUNCTION
 
 FUNCTION IncludeProvider_Filesystem_ReadAll$ (fileName$)
     ' Read entire file content for $INCLUDEONCE checking
-    DIM content$ AS STRING
-    ON ERROR GOTO filesystem_readall_error
+    DIM content$
+    IF _FILEEXISTS(fileName$) = 0 THEN
+        IncludeProvider_Filesystem_ReadAll$ = ""
+        EXIT FUNCTION
+    END IF
     content$ = _READFILE$(fileName$)
-    ON ERROR GOTO _LASTHANDLER
     IncludeProvider_Filesystem_ReadAll$ = content$
-    EXIT FUNCTION
-    
-filesystem_readall_error:
-    ON ERROR GOTO _LASTHANDLER
-    IncludeProvider_Filesystem_ReadAll$ = ""
 END FUNCTION
 
 ' ============================================
 ' Memory Provider Implementation (for testing)
 ' ============================================
-
-' In-memory file storage for testing
-TYPE MemoryFile
-    fileName AS STRING
-    content AS STRING
-END TYPE
-
-DIM SHARED memoryFiles(1000) AS MemoryFile
-DIM SHARED memoryFileCount AS LONG
+' Note: TYPE MemoryFile and DIM SHARED declarations moved to top of file
 
 SUB IncludeProvider_Memory_Clear
     DIM i AS LONG
@@ -212,7 +229,7 @@ FUNCTION IncludeProvider_Memory_Open& (fileName$, level AS LONG)
 END FUNCTION
 
 FUNCTION IncludeProvider_Memory_ReadLine$ (level AS LONG)
-    DIM content$ AS STRING, line$ AS STRING, pos AS LONG, newline AS LONG
+    DIM content$, line$, currentPos AS LONG, newline AS LONG
     DIM crlf AS LONG, lf AS LONG
     
     IF includeProviderStates(level).isOpen = 0 THEN
@@ -221,24 +238,24 @@ FUNCTION IncludeProvider_Memory_ReadLine$ (level AS LONG)
     END IF
     
     content$ = includeProviderStates(level).content
-    pos = includeProviderStates(level).currentLine
+    currentPos = includeProviderStates(level).currentLine
     
     ' Find next newline
-    crlf = INSTR(pos + 1, content$, CHR$(13) + CHR$(10))
-    lf = INSTR(pos + 1, content$, CHR$(10))
+    crlf = INSTR(currentPos + 1, content$, CHR$(13) + CHR$(10))
+    lf = INSTR(currentPos + 1, content$, CHR$(10))
     
     IF crlf > 0 AND (lf = 0 OR crlf < lf) THEN
         newline = crlf
-        line$ = MID$(content$, pos + 1, newline - pos - 1)
+        line$ = MID$(content$, currentPos + 1, newline - currentPos - 1)
         includeProviderStates(level).currentLine = newline + 1
     ELSEIF lf > 0 THEN
         newline = lf
-        line$ = MID$(content$, pos + 1, newline - pos - 1)
+        line$ = MID$(content$, currentPos + 1, newline - currentPos - 1)
         includeProviderStates(level).currentLine = newline + 1
     ELSE
         ' Last line or EOF
-        IF pos < LEN(content$) THEN
-            line$ = MID$(content$, pos + 1)
+        IF currentPos < LEN(content$) THEN
+            line$ = MID$(content$, currentPos + 1)
             includeProviderStates(level).currentLine = LEN(content$) + 1
         ELSE
             line$ = ""
@@ -249,16 +266,16 @@ FUNCTION IncludeProvider_Memory_ReadLine$ (level AS LONG)
 END FUNCTION
 
 FUNCTION IncludeProvider_Memory_EOF& (level AS LONG)
-    DIM content$ AS STRING, pos AS LONG
+    DIM content$, currentPos AS LONG
     content$ = includeProviderStates(level).content
-    pos = includeProviderStates(level).currentLine
+    currentPos = includeProviderStates(level).currentLine
     
     IF includeProviderStates(level).isOpen = 0 THEN
         IncludeProvider_Memory_EOF& = -1
         EXIT FUNCTION
     END IF
     
-    IF pos >= LEN(content$) THEN
+    IF currentPos >= LEN(content$) THEN
         IncludeProvider_Memory_EOF& = -1
     ELSE
         IncludeProvider_Memory_EOF& = 0
@@ -296,28 +313,7 @@ END FUNCTION
 ' Test provider extends memory provider with additional test-specific functionality
 ' including call tracking, error injection, and path mapping
 
-' Call tracking for test verification
-TYPE TestProviderCall
-    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
-    fileName AS STRING
-    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
-END TYPE
-
-DIM SHARED testProviderCalls(1000) AS TestProviderCall
-DIM SHARED testProviderCallCount AS LONG
-
-' Error injection support
-DIM SHARED testProviderErrorFile$ AS STRING
-DIM SHARED testProviderErrorType AS LONG  ' 0 = none, 1 = file not found, 2 = read error
-
-' Path mapping for test scenarios
-TYPE TestProviderPathMap
-    fromPath AS STRING
-    toPath AS STRING
-END TYPE
-
-DIM SHARED testProviderPathMaps(100) AS TestProviderPathMap
-DIM SHARED testProviderPathMapCount AS LONG
+' Note: TestProviderCall TYPE and all DIM SHARED declarations moved to include_provider.bi
 
 ' Clear test provider state
 SUB IncludeProvider_Test_Clear
@@ -466,15 +462,7 @@ END FUNCTION
 ' Stub utilities for runtime functions
 ' These can be used to mock runtime behavior in tests
 
-' Runtime function stub registry
-TYPE RuntimeStub
-    functionName AS STRING * 50
-    returnValue AS STRING
-    callCount AS LONG
-END TYPE
-
-DIM SHARED runtimeStubs(100) AS RuntimeStub
-DIM SHARED runtimeStubCount AS LONG
+' Note: RuntimeStub TYPE and DIM SHARED declarations moved to include_provider.bi
 
 ' Register a runtime function stub
 SUB IncludeProvider_Test_RegisterStub (functionName$, returnValue$)

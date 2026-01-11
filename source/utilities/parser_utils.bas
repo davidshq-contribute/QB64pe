@@ -10,6 +10,8 @@
 '
 ' @param a2$ The string to check
 ' @return The precedence level (1-15) if operator, 0 if not an operator
+$INCLUDEONCE
+
 FUNCTION isoperator (a2$)
     DIM a$
     DIM l AS LONG

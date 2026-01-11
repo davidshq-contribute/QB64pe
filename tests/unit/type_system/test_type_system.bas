@@ -5,7 +5,8 @@
 ' Uses component test harness for isolated testing.
 '
 ' Note: test_framework.bi and test_state_manager.bi are included by test_runner.bas
-'$INCLUDE:'../../../source/utilities/type.bi'
+' Note: type.bi is now split and included by test_runner.bas (type_declarations.bi + type_init.bas)
+''$INCLUDE:'../../../source/utilities/type.bi'  ' Now included globally in test_runner.bas
 '$INCLUDE:'../../../source/utilities/type.bas'
 
 SUB Test_TypeSymbolConversion

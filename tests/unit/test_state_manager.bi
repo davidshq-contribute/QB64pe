@@ -82,18 +82,20 @@ SUB TestState_Init (context AS TestStateContext, componentType$)
             END IF
             
             ' Initialize const arrays for testing
+            ' Note: Arrays are already declared as SHARED in const_eval.bi
+            ' We just REDIM them here (without SHARED keyword since we're inside a SUB)
             constmax = 100
             constlast = -1
-            REDIM SHARED constname(constmax) AS STRING
-            REDIM SHARED constcname(constmax) AS STRING
-            REDIM SHARED constnamesymbol(constmax) AS STRING
-            REDIM SHARED consttype(constmax) AS LONG
-            REDIM SHARED constinteger(constmax) AS _INTEGER64
-            REDIM SHARED constuinteger(constmax) AS _UNSIGNED _INTEGER64
-            REDIM SHARED constfloat(constmax) AS _FLOAT
-            REDIM SHARED conststring(constmax) AS STRING
-            REDIM SHARED constsubfunc(constmax) AS LONG
-            REDIM SHARED constdefined(constmax) AS LONG
+            REDIM constname(constmax) AS STRING
+            REDIM constcname(constmax) AS STRING
+            REDIM constnamesymbol(constmax) AS STRING
+            REDIM consttype(constmax) AS LONG
+            REDIM constinteger(constmax) AS _INTEGER64
+            REDIM constuinteger(constmax) AS _UNSIGNED _INTEGER64
+            REDIM constfloat(constmax) AS _FLOAT
+            REDIM conststring(constmax) AS STRING
+            REDIM constsubfunc(constmax) AS LONG
+            REDIM constdefined(constmax) AS LONG
             
             ' Initialize const functions if needed
             ' Note: ConstFuncs array is REDIM'd and Set_ConstFunctions is called in const_eval.bi
@@ -118,7 +120,7 @@ SUB TestState_Cleanup (context AS TestStateContext)
             HashListFreeSize = context.savedHashListFreeSize
             HashListFreeLast = context.savedHashListFreeLast
             ' REDIM arrays to match saved sizes
-            ' Note: Array contents are not restored (they will be empty/new)
+            ' Note: REDIM clears array contents, ensuring clean state
             ' This ensures array sizes match the saved state for consistency
             REDIM HashList(1 TO HashListSize) AS HashListItem
             REDIM HashListName(1 TO HashListSize) AS STRING * 256
@@ -142,16 +144,18 @@ SUB TestState_Cleanup (context AS TestStateContext)
             ' REDIM arrays to match saved sizes
             ' Note: Array contents are not restored (they will be empty/new)
             ' This ensures array sizes match the saved state for consistency
-            REDIM SHARED constname(constmax) AS STRING
-            REDIM SHARED constcname(constmax) AS STRING
-            REDIM SHARED constnamesymbol(constmax) AS STRING
-            REDIM SHARED consttype(constmax) AS LONG
-            REDIM SHARED constinteger(constmax) AS _INTEGER64
-            REDIM SHARED constuinteger(constmax) AS _UNSIGNED _INTEGER64
-            REDIM SHARED constfloat(constmax) AS _FLOAT
-            REDIM SHARED conststring(constmax) AS STRING
-            REDIM SHARED constsubfunc(constmax) AS LONG
-            REDIM SHARED constdefined(constmax) AS LONG
+            ' Note: Arrays are already declared as SHARED in const_eval.bi
+            ' We just REDIM them here (without SHARED keyword since we're inside a SUB)
+            REDIM constname(constmax) AS STRING
+            REDIM constcname(constmax) AS STRING
+            REDIM constnamesymbol(constmax) AS STRING
+            REDIM consttype(constmax) AS LONG
+            REDIM constinteger(constmax) AS _INTEGER64
+            REDIM constuinteger(constmax) AS _UNSIGNED _INTEGER64
+            REDIM constfloat(constmax) AS _FLOAT
+            REDIM conststring(constmax) AS STRING
+            REDIM constsubfunc(constmax) AS LONG
+            REDIM constdefined(constmax) AS LONG
         ELSE
             ' No previous state, just clear
             constlast = -1

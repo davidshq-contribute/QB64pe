@@ -1,4 +1,7 @@
 
+' CONST declarations must come before executable code
+CONST CONST_EVAL_DEBUG = 0
+
 TYPE ConstFunction
     nam AS STRING
 
@@ -13,8 +16,6 @@ TYPE ParseNum
     s AS STRING
     typ AS LONG
 END TYPE
-
-CONST CONST_EVAL_DEBUG = 0
 
 Set_ConstFunctions
 

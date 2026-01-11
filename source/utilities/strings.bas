@@ -1,6 +1,8 @@
 '
 ' String manipulation functions
 '
+$INCLUDEONCE
+
 FUNCTION StrRemove$ (myString$, whatToRemove$) 'noncase sensitive
     DIM a$, b$
     DIM AS LONG i

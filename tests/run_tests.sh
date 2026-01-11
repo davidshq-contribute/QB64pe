@@ -5,7 +5,27 @@
 # Use --no-fast-fail to disable fast-fail mode
 # Use --run-qbasic to include QBasic compatibility tests
 
-. ./tests/test_utils.sh
+# Determine script location and project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# If script is in tests/ directory, go up one level to project root
+if [ "$(basename "$SCRIPT_DIR")" = "tests" ]; then
+    ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    ROOT_DIR="$SCRIPT_DIR"
+fi
+
+# Change to project root
+cd "$ROOT_DIR"
+
+# Source test utilities (adjust path based on where we are)
+if [ -f "./tests/test_utils.sh" ]; then
+    . ./tests/test_utils.sh
+elif [ -f "./test_utils.sh" ]; then
+    . ./test_utils.sh
+else
+    echo "Error: test_utils.sh not found!" >&2
+    exit 1
+fi
 
 # Default values
 FAST_FAIL_DEFAULT=1
@@ -60,13 +80,29 @@ passed_tests=0
 failed_tests=0
 
 # Detect the correct QB64 executable name
-if [ -f "./qb64pe.exe" ]; then
-    QB64_EXE="./qb64pe.exe"
-elif [ -f "./qb64pe" ]; then
-    QB64_EXE="./qb64pe"
+# In WSL/Linux, prioritize Linux binary; in Windows, prioritize Windows executable
+if [ -n "$WSL_DISTRO_NAME" ] || [ "$OSTYPE" = "linux-gnu" ] || [ -f "/proc/version" ] && grep -q "Linux" /proc/version 2>/dev/null; then
+    # Running in WSL or Linux - prioritize Linux binary
+    if [ -f "$ROOT_DIR/qb64pe" ]; then
+        QB64_EXE="$ROOT_DIR/qb64pe"
+    elif [ -f "$ROOT_DIR/qb64pe.exe" ]; then
+        QB64_EXE="$ROOT_DIR/qb64pe.exe"
+    else
+        echo "Error: qb64pe executable not found in $ROOT_DIR!"
+        echo "Please build QB64-PE for Linux first: ./setup_lnx.sh"
+        exit 1
+    fi
 else
-    echo "Error: qb64pe executable not found!"
-    exit 1
+    # Running in Windows - prioritize Windows executable
+    if [ -f "$ROOT_DIR/qb64pe.exe" ]; then
+        QB64_EXE="$ROOT_DIR/qb64pe.exe"
+    elif [ -f "$ROOT_DIR/qb64pe" ]; then
+        QB64_EXE="$ROOT_DIR/qb64pe"
+    else
+        echo "Error: qb64pe executable not found in $ROOT_DIR!"
+        echo "Please run this script from the QB64 project root directory."
+        exit 1
+    fi
 fi
 
 # Set fast-fail mode (default: enabled)
@@ -87,7 +123,7 @@ fi
 
 # Run compiler tests
 print_test_header "Compiler Tests"
-./tests/assert.sh ./tests/compile_tests.sh "$QB64_EXE"
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/compile_tests.sh" "$QB64_EXE"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then
@@ -106,7 +142,7 @@ fi
 # Run QBasic compatibility tests (default: skipped)
 if [ "$SKIP_QBASIC" != "1" ]; then
     print_test_header "QBasic Compatibility Tests"
-    ./tests/assert.sh ./tests/qbasic_tests.sh "$QB64_EXE"
+    "$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/qbasic_tests.sh" "$QB64_EXE"
     test_result=$?
     total_tests=$((total_tests + 1))
     if [ $test_result -eq 0 ]; then
@@ -127,7 +163,7 @@ fi
 
 # Run format tests
 print_test_header "Format Tests"
-./tests/assert.sh ./tests/format_tests.sh "$QB64_EXE"
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/format_tests.sh" "$QB64_EXE"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then
@@ -145,7 +181,7 @@ fi
 
 # Run add prefix test
 print_test_header "Add Prefix Test"
-./tests/assert.sh ./tests/add_prefix_test.sh "$QB64_EXE"
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/add_prefix_test.sh" "$QB64_EXE"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then
@@ -163,7 +199,7 @@ fi
 
 # Run C++ runtime tests
 print_test_header "C++ Runtime Tests"
-./tests/assert.sh ./tests/run_c_tests.sh
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/run_c_tests.sh"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then
@@ -181,14 +217,14 @@ fi
 
 # Run unit tests
 print_test_header "Unit Tests"
-if [ -f "./tests/unit/test_runner.bas" ]; then
-    "$QB64_EXE" -x ./tests/unit/test_runner.bas -o ./test_runner_output 2>&1
-    if [ -f "./test_runner_output" ] || [ -f "./test_runner_output.exe" ]; then
-        EXE="./test_runner_output"
-        [ -f "./test_runner_output.exe" ] && EXE="./test_runner_output.exe"
+if [ -f "$ROOT_DIR/tests/unit/test_runner.bas" ]; then
+    "$QB64_EXE" -x "$ROOT_DIR/tests/unit/test_runner.bas" -o "$ROOT_DIR/test_runner_output" 2>&1
+    if [ -f "$ROOT_DIR/test_runner_output" ] || [ -f "$ROOT_DIR/test_runner_output.exe" ]; then
+        EXE="$ROOT_DIR/test_runner_output"
+        [ -f "$ROOT_DIR/test_runner_output.exe" ] && EXE="$ROOT_DIR/test_runner_output.exe"
         $EXE
         test_result=$?
-        rm -f "$EXE" "./test_runner_output" "./test_runner_output.exe" 2>/dev/null
+        rm -f "$EXE" "$ROOT_DIR/test_runner_output" "$ROOT_DIR/test_runner_output.exe" 2>/dev/null
     else
         echo "Failed to compile unit test runner"
         test_result=1
@@ -217,11 +253,11 @@ test_result=0
 integration_count=0
 integration_passed=0
 integration_failed=0
-for test_file in $(find ./tests/integration -name "*.bas" -type f 2>/dev/null | sort); do
+for test_file in $(find "$ROOT_DIR/tests/integration" -name "*.bas" -type f 2>/dev/null | sort); do
     integration_count=$((integration_count + 1))
     test_name=$(basename "$test_file" .bas)
     echo "  Running: $test_name"
-    "$QB64_EXE" -x "$test_file" -o "./integration_test_output" 2>&1
+    "$QB64_EXE" -x "$test_file" -o "$ROOT_DIR/integration_test_output" 2>&1
     compile_result=$?
     if [ $compile_result -ne 0 ]; then
         echo "    Failed to compile: $test_name"
@@ -229,9 +265,9 @@ for test_file in $(find ./tests/integration -name "*.bas" -type f 2>/dev/null | 
         test_result=1
         continue
     fi
-    if [ -f "./integration_test_output" ] || [ -f "./integration_test_output.exe" ]; then
-        EXE="./integration_test_output"
-        [ -f "./integration_test_output.exe" ] && EXE="./integration_test_output.exe"
+    if [ -f "$ROOT_DIR/integration_test_output" ] || [ -f "$ROOT_DIR/integration_test_output.exe" ]; then
+        EXE="$ROOT_DIR/integration_test_output"
+        [ -f "$ROOT_DIR/integration_test_output.exe" ] && EXE="$ROOT_DIR/integration_test_output.exe"
         $EXE
         if [ $? -ne 0 ]; then
             integration_failed=$((integration_failed + 1))
@@ -239,7 +275,7 @@ for test_file in $(find ./tests/integration -name "*.bas" -type f 2>/dev/null | 
         else
             integration_passed=$((integration_passed + 1))
         fi
-        rm -f "$EXE" "./integration_test_output" "./integration_test_output.exe" 2>/dev/null
+        rm -f "$EXE" "$ROOT_DIR/integration_test_output" "$ROOT_DIR/integration_test_output.exe" 2>/dev/null
     else
         echo "    Executable not found after compilation: $test_name"
         integration_failed=$((integration_failed + 1))
@@ -268,7 +304,7 @@ fi
 
 # Run distribution tests
 print_test_header "Distribution Tests"
-./tests/assert.sh ./tests/run_dist_tests.sh "$QB64_EXE"
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/run_dist_tests.sh" "$QB64_EXE"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then

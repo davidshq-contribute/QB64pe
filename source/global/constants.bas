@@ -1,3 +1,5 @@
+$INCLUDEONCE
+
 'String SPacer/delimiter constants
 'sp is used as the primary string spacer
 'sp2 & sp3 are used when further delimiation is required

@@ -5,9 +5,8 @@
 ' Uses component test harness for isolated testing.
 '
 ' Note: test_framework.bi, test_state_manager.bi, and test_output_verification.bi are included by test_runner.bas
-'$INCLUDE:'../test_output_verification.bas'
-'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bi'
-'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bm'
+' Note: test_output_verification.bas and simplebuffer.bi are included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/s-buffer/simplebuffer.bm'
 
 SUB Test_CodeStructureGeneration
     Test_Start "Code structure generation"
@@ -38,7 +37,8 @@ SUB Test_CodeStructureGeneration
         NEXT
         
         ' Verify structure
-        SeekBuf bufHandle, 0, 0
+        DIM seekResult AS LONG
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
         FOR i = 1 TO 5
             readBack$ = ReadBufLine$(bufHandle)
             result = Test_AssertEqualString&(codeLines$(i), readBack$, "Line " + _TOSTR$(i) + " should match")
@@ -92,7 +92,7 @@ SUB Test_BufferPosition
     
     DIM result AS LONG
     DIM bufHandle AS INTEGER
-    DIM pos AS LONG
+    DIM bufPos AS LONG
     
     ' Test that buffer position is tracked correctly
     bufHandle = CreateBuf%
@@ -105,14 +105,15 @@ SUB Test_BufferPosition
         WriteBufLine bufHandle, "line 3"
         
         ' Position should be at end
-        pos = GetBufPos&(bufHandle)
-        result = Test_Assert&(pos > 0, "Position should be greater than 0 after writes")
+        bufPos = GetBufPos&(bufHandle)
+        result = Test_Assert&(bufPos > 0, "Position should be greater than 0 after writes")
         
         ' Seek to beginning
         IF result THEN
-            SeekBuf bufHandle, 0, 0
-            pos = GetBufPos&(bufHandle)
-            result = Test_AssertEqual&(0, pos, "Position should be 0 after seeking to beginning")
+            DIM seekResult AS LONG
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
+            bufPos = GetBufPos&(bufHandle)
+            result = Test_AssertEqual&(0, bufPos, "Position should be 0 after seeking to beginning")
         END IF
         
         DisposeBuf bufHandle
@@ -131,7 +132,7 @@ SUB Test_CodeStructureComparison
     DIM result AS LONG
     DIM bufHandle1 AS INTEGER, bufHandle2 AS INTEGER
     DIM code1 AS CodeStructure, code2 AS CodeStructure
-    DIM differences$ AS STRING
+    DIM differences$
     
     ' Create two buffers with identical code
     bufHandle1 = CreateBuf%

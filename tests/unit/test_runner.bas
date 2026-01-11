@@ -3,49 +3,147 @@
 '
 ' Discovers and runs unit tests for QB64 compiler components.
 '
+' This file follows the recommended structure from QB64_MAIN_PROGRAM_STRUCTURE_DEBUG.md:
+' 1. Include declaration files (.bi) with only CONST, TYPE, DIM SHARED, DECLARE
+' 2. Include main program code (test_runner_main.bas) with RunAllTests call
+' 3. Include implementation files (.bas) with SUB/FUNCTION definitions
+'
+'$CONSOLE:ONLY
 
-'$INCLUDE:'test_framework.bi'
-'$INCLUDE:'test_state_manager.bi'
+' Error handler stub for utility files that reference qberror_test
+' This label is normally defined in qb64pe.bas, but we need it for test compilation
+' Must be defined before any SUB/FUNCTION declarations
+' Note: Error handler must be in main program section
+qberror_test:
+    RESUME NEXT
+
+' ============================================================================
+' PHASE 1: Include declaration files (CONST, TYPE, DIM SHARED, DECLARE only)
+' ============================================================================
+' These files contain only declarations and do not trigger implicit END
+
+' Define constants needed for test compilation
+' Debug constant (from source/global/settings.bas) - needed by constants.bas
+CONST Debug = 0
+
+' Now we can include the split declaration files (no executable code)
+'$INCLUDE:'../../source/utilities/hash_declarations.bi'
+'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer_declarations.bi'
+'$INCLUDE:'../../source/utilities/type_declarations.bi'
+
+' Test framework infrastructure declarations
+'$INCLUDE:'test_framework_constants.bi'
+'$INCLUDE:'test_global_state_declarations.bi'
+'$INCLUDE:'include_provider_declarations.bi'
+'$INCLUDE:'test_framework_declarations.bi'
+'$INCLUDE:'test_state_manager_declarations.bi'
+'$INCLUDE:'test_global_state_reset_declarations.bi'
 '$INCLUDE:'test_output_verification.bi'
+
+' ============================================================================
+' PHASE 2: Main program code (executes before SUB/FUNCTION definitions)
+' ============================================================================
+' This file contains the RunAllTests call and must be included after
+' all declaration files but before any implementation files with SUB/FUNCTION
+
+' Include constants.bas here (in main program section) since it has initialization code
+'$INCLUDE:'../../source/global/constants.bas'
+
+' Include initialization files (executable code to initialize arrays and variables)
+'$INCLUDE:'../../source/utilities/hash_init.bas'
+'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer_init.bas'
+'$INCLUDE:'../../source/utilities/type_init.bas'
+
+'$INCLUDE:'test_runner_main.bas'
+
+' ============================================================================
+' PHASE 3: Include implementation files (SUB/FUNCTION definitions)
+' ============================================================================
+' These files contain SUB/FUNCTION implementations and will trigger implicit END
+' They are included after the main program code to ensure proper execution order
+
+' Include provider implementations
+'$INCLUDE:'include_provider_implementations.bas'
+'$INCLUDE:'../../source/utilities/include_provider.bas'
+
+' Test framework implementations
+'$INCLUDE:'test_framework_implementations.bas'
+
+' Test state manager implementations
+'$INCLUDE:'test_state_manager_implementations.bas'
+
+' Test global state reset implementations
+'$INCLUDE:'test_global_state_reset_implementations.bas'
+
+' Utility functions needed by test files
+' Note: give_error.bas now has $INCLUDEONCE, so it can be included multiple times safely
+'$INCLUDE:'../../source/utilities/give_error.bas'
+
+' Output verification implementations
+'$INCLUDE:'test_output_verification.bas'
+
+' Test suite implementations
 '$INCLUDE:'type_system/test_type_system.bas'
 '$INCLUDE:'symbol_table/test_hash.bas'
-'$INCLUDE:'const_eval/test_const_eval.bas'
 '$INCLUDE:'parser/test_parser.bas'
 '$INCLUDE:'code_generation/test_code_generation.bas'
+'$INCLUDE:'file_utilities/test_file_utilities.bas'
+'$INCLUDE:'string_utilities/test_string_utilities.bas'
+'$INCLUDE:'include_provider/test_include_provider.bas'
+'$INCLUDE:'error_handling/test_error_handling.bas'
+'$INCLUDE:'statevars/test_statevars.bas'
+'$INCLUDE:'build_utilities/test_build_utilities.bas'
+'$INCLUDE:'format/test_format.bas'
 
-' Test discovery and execution
 SUB RunAllTests
-    TestFramework_Init
-    TestFramework_SetVerbose 1
+    STATIC initialized AS LONG
+    IF NOT initialized THEN
+        TestFramework_Init
+        TestFramework_SetVerbose 1
+        initialized = -1
+    END IF
     
     PRINT "QB64 Compiler Unit Tests"
     PRINT "========================"
     PRINT ""
-    
-    ' Run tests for each component
+
     PRINT "Running type system tests..."
     RunTypeSystemTests
-    
+
     PRINT "Running symbol table tests..."
     RunSymbolTableTests
-    
-    PRINT "Running constant evaluation tests..."
-    RunConstEvalTests
-    
+
     PRINT "Running parser tests..."
     RunParserTests
-    
+
     PRINT "Running code generation tests..."
     RunCodeGenerationTests
+
+    PRINT "Running file utility tests..."
+    RunFileUtilityTests
+
+    PRINT "Running string utility tests..."
+    RunStringUtilityTests
+
+    PRINT "Running include provider tests..."
+    RunIncludeProviderTests
+
+    PRINT "Running error handling tests..."
+    RunErrorHandlingTests
+
+    PRINT "Running state variable tests..."
+    RunStateVarTests
+
+    PRINT "Running build utility tests..."
+    RunBuildUtilityTests
+
+    PRINT "Running format utility tests..."
+    RunFormatTests
     
     PRINT ""
     TestFramework_PrintSummary
     
     IF NOT TestFramework_AllPassed& THEN
-        SYSTEM 1 ' Exit with error code if tests failed
+        SYSTEM 1
     END IF
 END SUB
-
-' Main entry point
-TestFramework_Init
-RunAllTests

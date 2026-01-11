@@ -220,7 +220,10 @@ do
     # Store executables in category-specific directory
     EXE_NAME="$category-$testName - output"
     
-    if [ "$OS" == "win" ]; then
+    # Determine if we should add .exe based on the QB64 executable being used
+    # If QB64 is a .exe file, it's Windows and will create .exe files
+    # Otherwise, it's Linux/macOS and will create executables without .exe
+    if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
         EXE_NAME="$EXE_NAME.exe"
     fi
     
@@ -300,7 +303,15 @@ do
         # Capture both stdout and stderr for complete error information
         # Both EXE and compileResultOutput are already absolute paths, so use them directly
         # This avoids path resolution issues when changing directories
-        "../../../$QB64" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "$testName.bas" -o "$EXE_OUT" >"$compileResultOutput" 2>&1
+        # Check if QB64 is already an absolute path - if so, use it directly
+        if [[ "$QB64" == /* ]]; then
+            # Absolute path - use directly
+            QB64_PATH="$QB64"
+        else
+            # Relative path - construct relative to current directory
+            QB64_PATH="../../../$QB64"
+        fi
+        "$QB64_PATH" "-f:OptimizeCppProgram=true" "-f:StripDebugSymbols=false" $compilerFlags -q -m -x "$testName.bas" -o "$EXE_OUT" >"$compileResultOutput" 2>&1
         ERR=$?
 
         popd >/dev/null
@@ -329,12 +340,29 @@ do
             # This fixes false negatives where QB64 reports failure but executable was created
             : # Success - continue with test execution
         else
-            # Executable doesn't exist - check exit code to determine if it was a real failure
-            (exit $ERR)
-            assert_success_named "Compile" "Compilation Error:" show_failure "$category" "$testName"
-            # If we get here, exit code was 0 but executable doesn't exist - this is a real problem
-            test -f "$EXE"
-            assert_success_named "exe exists" "Executable '$EXE' does not exist!" show_failure "$category" "$testName"
+            # Executable doesn't exist - try without .exe extension (Linux/macOS executables)
+            # This handles the case where we're using Linux qb64pe in WSL but OS was detected as "win"
+            if [[ "$EXE" == *.exe ]]; then
+                EXE_WITHOUT_EXE="${EXE%.exe}"
+                if [ -f "$EXE_WITHOUT_EXE" ]; then
+                    EXE="$EXE_WITHOUT_EXE"
+                    : # Success - continue with test execution
+                else
+                    # Executable doesn't exist - check exit code to determine if it was a real failure
+                    (exit $ERR)
+                    assert_success_named "Compile" "Compilation Error:" show_failure "$category" "$testName"
+                    # If we get here, exit code was 0 but executable doesn't exist - this is a real problem
+                    test -f "$EXE" || test -f "$EXE_WITHOUT_EXE"
+                    assert_success_named "exe exists" "Executable '$EXE' (or without .exe) does not exist!" show_failure "$category" "$testName"
+                fi
+            else
+                # Executable doesn't exist - check exit code to determine if it was a real failure
+                (exit $ERR)
+                assert_success_named "Compile" "Compilation Error:" show_failure "$category" "$testName"
+                # If we get here, exit code was 0 but executable doesn't exist - this is a real problem
+                test -f "$EXE"
+                assert_success_named "exe exists" "Executable '$EXE' does not exist!" show_failure "$category" "$testName"
+            fi
         fi
 
         if [ "$checkLicense" == "y" ]; then
@@ -358,7 +386,8 @@ do
         if [ ! -f "$EXE" ]; then
             # Try to resolve the path again - might need to check in category subdirectory
             EXE_IN_CATEGORY_DIR="$CATEGORY_RESULTS_DIR/$category-$testName - output"
-            if [ "$OS" == "win" ]; then
+            # Only add .exe if we're using a Windows QB64 executable
+            if [ "$OS" == "win" ] && [[ "$QB64" == *.exe ]]; then
                 EXE_IN_CATEGORY_DIR="${EXE_IN_CATEGORY_DIR}.exe"
             fi
             if [ -f "$EXE_IN_CATEGORY_DIR" ]; then
@@ -387,7 +416,10 @@ do
             LOG_FILE_PATH_ARG="$(to_windows_path "$LOG_FILE_PATH")"
         fi
 
-        testResult=$(
+        # Run the test and capture output
+        # Filter out ALSA error messages (common in WSL/headless environments where audio hardware isn't available)
+        # ALSA errors start with "ALSA lib" and are written to stderr, but don't affect program functionality
+        originalResult=$(
             QB64PE_LOG_HANDLERS=file \
             QB64PE_LOG_SCOPES="qb64,libqb,libqb-image,libqb-audio" \
             QB64PE_LOG_FILE_PATH="$LOG_FILE_PATH_ARG" \
@@ -396,8 +428,11 @@ do
         ERR=$?
         popd > /dev/null
 
-        # Store run output in category-specific directory
-        cat >"$CATEGORY_RESULTS_DIR/$category-$testName-run-output.txt" <<<"$testResult"
+        # Store original output for debugging (includes ALSA errors)
+        echo "$originalResult" > "$CATEGORY_RESULTS_DIR/$category-$testName-run-output.txt"
+
+        # Filter out ALSA error messages for comparison (they're expected in WSL/headless environments)
+        testResult=$(echo "$originalResult" | grep -v "^ALSA lib" || echo "$originalResult")
 
         (exit $ERR)
         assert_success_named "run" "Execution Error:" echo "$testResult"
@@ -405,6 +440,54 @@ do
         # Normalize newlines for comparison (strip trailing newlines from both)
         expectedResult=$(echo -n "$expectedResult" | sed 's/\r$//')
         testResult=$(echo -n "$testResult" | sed 's/\r$//')
+        
+        # Strip license text from both outputs before comparison
+        # License text can vary between platforms (Windows shows MinGW licenses, Linux shows QB64-PE licenses)
+        # and shouldn't be part of test output comparison
+        # License sections are marked by lines of dashes and contain "License", "Copyright", etc.
+        
+        # Helper function to strip license text - finds where actual program output begins
+        strip_license() {
+            local text="$1"
+            # Find the first line that looks like actual program output:
+            # - Starts with optional whitespace followed by a digit (like " 0")
+            # - Or contains specific test output patterns
+            # Extract from that line onwards, skipping all license content before it
+            echo "$text" | awk '
+                BEGIN { 
+                    found_start=0
+                }
+                # Detect start of actual program output - this is what we want to keep
+                # Look for lines that start with a digit (possibly with leading whitespace)
+                # or contain specific test output messages
+                /^[[:space:]]*[0-9]/ || /^[[:space:]]*This failure/ || /^[[:space:]]*So was this/ {
+                    found_start=1
+                    print
+                    next
+                }
+                # Once we found the start, output everything
+                found_start==1 {
+                    print
+                    next
+                }
+                # Before we found the start, skip everything (it's license text)
+                # Don't output anything until we find the program output
+            '
+        }
+        
+        # Always strip license text from both outputs if they contain license markers
+        # This ensures we only compare actual program output
+        # Check for various license text patterns that might appear at the start
+        if echo "$expectedResult" | head -5 | grep -qiE "--------------------------------------------------------------------------------|License of|ARISING OUT OF|Copyright.*Sun Microsystems|Parts of the math library|GCC RUNTIME|Freeglut Copyright"; then
+            expectedResult=$(strip_license "$expectedResult")
+        fi
+        if echo "$testResult" | head -5 | grep -qiE "--------------------------------------------------------------------------------|License of|ARISING OUT OF|Copyright.*Sun Microsystems|Parts of the math library|GCC RUNTIME|Freeglut Copyright"; then
+            testResult=$(strip_license "$testResult")
+        fi
+        
+        # Normalize whitespace after stripping (remove leading/trailing blank lines)
+        expectedResult=$(echo "$expectedResult" | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+        testResult=$(echo "$testResult" | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}')
         
         [ "$testResult" == "$expectedResult" ]
         assert_success_named "result" "Result is wrong:" show_incorrect_result "$expectedResult" "$testResult"

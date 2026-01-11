@@ -5,9 +5,8 @@
 ' Uses component test harness for isolated testing.
 '
 ' Note: test_framework.bi, test_state_manager.bi, and test_output_verification.bi are included by test_runner.bas
-'$INCLUDE:'../test_output_verification.bas'
-'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bi'
-'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bm'
+' Note: test_output_verification.bas and simplebuffer.bi are included by test_runner.bas
+'$INCLUDE:'../../../source/utilities/s-buffer/simplebuffer.bm'
 
 SUB Test_WriteBufLine
     Test_Start "WriteBufLine function"
@@ -30,7 +29,8 @@ SUB Test_WriteBufLine
         WriteBufLine bufHandle, testText$
         
         ' Read it back
-        SeekBuf bufHandle, 0, 0 ' Seek to beginning
+        DIM seekResult AS LONG
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart) ' Seek to beginning
         readBack$ = ReadBufLine$(bufHandle)
         result = Test_AssertEqualString&(testText$, readBack$, "Written text should match read text")
         
@@ -67,7 +67,7 @@ SUB Test_WriteBufLineMultiple
         WriteBufLine bufHandle, line3$
         
         ' Read back all lines
-        SeekBuf bufHandle, 0, 0
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
         readBack$ = ReadBufLine$(bufHandle)
         result = Test_AssertEqualString&(line1$, readBack$, "First line should match")
         
@@ -105,7 +105,7 @@ SUB Test_WriteBufLineEmpty
     IF result THEN
         WriteBufLine bufHandle, ""
         
-        SeekBuf bufHandle, 0, 0
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
         readBack$ = ReadBufLine$(bufHandle)
         result = Test_AssertEqualString&("", readBack$, "Empty string should be written correctly")
         
@@ -141,7 +141,7 @@ SUB Test_WriteBufLineLong
         
         WriteBufLine bufHandle, longLine$
         
-        SeekBuf bufHandle, 0, 0
+        seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
         readBack$ = ReadBufLine$(bufHandle)
         result = Test_AssertEqualString&(longLine$, readBack$, "Long line should be written correctly")
         
@@ -161,7 +161,7 @@ SUB Test_GeneratedCodeVerification
     DIM result AS LONG
     DIM bufHandle AS INTEGER
     DIM code AS CodeStructure
-    DIM expectedLines$(1 TO 4) AS STRING
+    DIM expectedLines$(1 TO 4)
     
     ' Create buffer and write code
     bufHandle = CreateBuf%

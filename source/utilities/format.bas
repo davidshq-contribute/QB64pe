@@ -1,3 +1,5 @@
+$INCLUDEONCE
+
 'Apply indentation to layout$ as per settings and remove control characters.
 FUNCTION apply_layout_indent$ (original$)
     layout2$ = layout$
@@ -27,11 +29,16 @@ FUNCTION apply_layout_indent$ (original$)
                 ignoresp = ignoresp + 1: IF ignoresp = 2 THEN ignoresp = 0
             END IF
             IF ignoresp = 0 THEN
-                IF a = sp_asc THEN ASC(layout3$, i2) = 32: i2 = i2 + 1: GOTO skipchar
-                IF a = sp2_asc THEN GOTO skipchar
+                IF a = sp_asc THEN
+                    ASC(layout3$, i2) = 32: i2 = i2 + 1
+                ELSEIF a = sp2_asc THEN
+                    ' Skip this character (sp2_asc)
+                ELSE
+                    ASC(layout3$, i2) = a: i2 = i2 + 1
+                END IF
+            ELSE
+                ASC(layout3$, i2) = a: i2 = i2 + 1
             END IF
-            ASC(layout3$, i2) = a: i2 = i2 + 1
-            skipchar:
         NEXT
         layout2$ = LEFT$(layout3$, i2 - 1)
 
@@ -66,35 +73,58 @@ FUNCTION apply_layout_indent$ (original$)
 
         IF layout2$ <> olay$ THEN
             lcnt = 0: ocnt = 0
-            WHILE lcnt <= LEN(layout2$)
-                lcnt = lcnt + 1: ocnt = ocnt + 1
-                recheckdiff:
-                IF lch$ <> "" AND lch$ <> " " THEN llch$ = lch$ 'save last non-space
+            recheck_needed = 0
+            DO
+                ' Increment counters at start of iteration (equivalent to original line 72)
+                ' Skip increment if we need to recheck (for cases that modify string without incrementing)
+                IF recheck_needed = 0 THEN
+                    IF lcnt <= LEN(layout2$) THEN lcnt = lcnt + 1
+                    IF ocnt <= LEN(olay$) THEN ocnt = ocnt + 1
+                END IF
+                recheck_needed = 0
+                
+                ' Exit if we've gone past both strings
+                IF lcnt > LEN(layout2$) AND ocnt > LEN(olay$) THEN EXIT DO
+                
+                ' Save last non-space characters (equivalent to original lines 74-75)
+                IF lch$ <> "" AND lch$ <> " " THEN llch$ = lch$
                 IF och$ <> "" AND och$ <> " " THEN loch$ = och$
-                lch$ = MID$(layout2$, lcnt, 1) 'get chars
+                
+                ' Get current characters (equivalent to original lines 76-77)
+                lch$ = MID$(layout2$, lcnt, 1)
                 och$ = MID$(olay$, ocnt, 1)
-                IF lch$ = och$ THEN _CONTINUE 'no diff
-                IF lch$ = " " THEN 'skip spacing diff
-                    lcnt = lcnt + 1: IF lcnt > LEN(layout2$) AND ocnt > LEN(olay$) THEN EXIT WHILE
-                    GOTO recheckdiff
-                END IF
-                IF och$ = " " THEN 'skip spacing diff
-                    ocnt = ocnt + 1: IF ocnt > LEN(olay$) AND lcnt > LEN(layout2$) THEN EXIT WHILE
-                    GOTO recheckdiff
-                END IF
-                IF lch$ = "?" AND UCASE$(MID$(olay$, ocnt, 5)) = "PRINT" THEN '? = PRINT special case
+                
+                ' Check for match (equivalent to original line 78)
+                IF lch$ = och$ THEN
+                    ' No diff, continue to next iteration
+                ELSEIF lch$ = " " THEN
+                    ' Skip spacing diff in layout2$ (equivalent to original lines 79-81)
+                    IF lcnt > LEN(layout2$) AND ocnt > LEN(olay$) THEN EXIT DO
+                    ' Increment lcnt and recheck (original code increments before GOTO)
+                    IF lcnt <= LEN(layout2$) THEN lcnt = lcnt + 1
+                    recheck_needed = -1 ' Recheck without incrementing again
+                ELSEIF och$ = " " THEN
+                    ' Skip spacing diff in olay$ (equivalent to original lines 83-85)
+                    IF ocnt > LEN(olay$) AND lcnt > LEN(layout2$) THEN EXIT DO
+                    ' Increment ocnt and recheck (original code increments before GOTO)
+                    IF ocnt <= LEN(olay$) THEN ocnt = ocnt + 1
+                    recheck_needed = -1 ' Recheck without incrementing again
+                ELSEIF lch$ = "?" AND UCASE$(MID$(olay$, ocnt, 5)) = "PRINT" THEN
+                    ' ? = PRINT special case (equivalent to original lines 87-91)
                     ps$ = "print": nlch$ = MID$(layout2$, lcnt + 1, 1)
                     IF nlch$ <> " " AND nlch$ <> "" THEN ps$ = ps$ + " "
                     layout2$ = LEFT$(layout2$, lcnt - 1) + ps$ + RIGHT$(layout2$, LEN(layout2$) - lcnt)
-                    GOTO recheckdiff
-                END IF
-                IF och$ = CHR$(34) AND llch$ = loch$ THEN 'auto-add string closing quote special case
+                    recheck_needed = -1 ' Recheck without incrementing (original GOTO recheckdiff)
+                ELSEIF och$ = CHR$(34) AND llch$ = loch$ THEN
+                    ' Auto-add string closing quote special case (equivalent to original lines 93-95)
                     layout2$ = LEFT$(layout2$, lcnt - 1) + CHR$(34) + RIGHT$(layout2$, LEN(layout2$) - lcnt)
-                    GOTO recheckdiff
+                    recheck_needed = -1 ' Recheck without incrementing (original GOTO recheckdiff)
+                ELSE
+                    ' Handle case difference (equivalent to original line 97)
+                    las% = _IIF(LEN(lch$), ASC(lch$), 0): oas% = _IIF(LEN(och$), ASC(och$), 0)
+                    IF isalpha(las%) AND isalpha(oas%) AND ABS(las% - oas%) = 32 THEN MID$(layout2$, lcnt, 1) = och$ 'KW case diff
                 END IF
-                las% = _IIF(LEN(lch$), ASC(lch$), 0): oas% = _IIF(LEN(och$), ASC(och$), 0)
-                IF isalpha(las%) AND isalpha(oas%) AND ABS(las% - oas%) = 32 THEN MID$(layout2$, lcnt, 1) = och$ 'KW case diff
-            WEND
+            LOOP WHILE lcnt <= LEN(layout2$)
         END IF
 
         IF LEN(layout2$) THEN

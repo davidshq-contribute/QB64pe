@@ -18,11 +18,6 @@
 '| any questions or suggestions. Thanx for your interest in my work. |
 '+-------------------------------------------------------------------+
 
-'--- The internal array for data storage
-'-----
-'never access this directly, use functions in simplebuffer.bm
-REDIM SHARED simplebuffer_array$(0 TO 10599)
-
 '--- Simplebuffer Errors (most FUNCTIONs)
 '-----
 'initializer error returns
@@ -55,6 +50,11 @@ CONST SBF_InvDelimiter = -1
 'use for treat% argument
 CONST SBF_AsWritten = 0
 CONST SBF_IgnoreCase = -1
+
+'--- The internal array for data storage
+'-----
+'never access this directly, use functions in simplebuffer.bm
+REDIM SHARED simplebuffer_array$(0 TO 10599)
 
 '$INCLUDE: 'sb_qb64pe_extension.bi'
 

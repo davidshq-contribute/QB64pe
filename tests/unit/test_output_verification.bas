@@ -4,15 +4,14 @@
 ' Implementation of verification functions for symbol tables, generated code, etc.
 '
 
-'$INCLUDE:'test_output_verification.bi'
-'$INCLUDE:'../../source/utilities/hash.bi'
+$INCLUDEONCE
+
+' Note: test_output_verification.bi (includes TYPE definitions and DIM SHARED declarations),
+' hash.bi, and simplebuffer.bi are already included by test_runner.bas
 '$INCLUDE:'../../source/utilities/hash.bas'
-'$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bi'
 '$INCLUDE:'../../source/utilities/s-buffer/simplebuffer.bm'
 
-' Module-level arrays for snapshot data (QB64 limitation: can't have arrays in TYPE)
-DIM SHARED snapshotSymbols(10000) AS SymbolInfo
-DIM SHARED snapshotLines(10000) AS STRING
+' Note: snapshotSymbols and snapshotLines arrays are declared in test_output_verification.bi
 
 ' Initialize a symbol table snapshot
 FUNCTION VerifySymbolTable_InitSnapshot& (snapshot AS SymbolTableSnapshot)
@@ -83,7 +82,7 @@ FUNCTION VerifySymbolTable_Enumerate& (snapshot AS SymbolTableSnapshot)
     snapshot.symbolCount = count
     IF count > 0 AND count <= 10000 THEN
         FOR i = 0 TO count - 1
-            snapshot.symbols(i) = tempSymbols(i + 1)
+            snapshotSymbols(i) = tempSymbols(i + 1)
         NEXT
     END IF
     
@@ -95,8 +94,10 @@ FUNCTION VerifySymbolTable_GetCount& ()
     DIM snapshot AS SymbolTableSnapshot
     DIM result AS LONG
     
-    VerifySymbolTable_InitSnapshot snapshot
-    result = VerifySymbolTable_Enumerate&(snapshot)
+    result = VerifySymbolTable_InitSnapshot&(snapshot)
+    IF result THEN
+        result = VerifySymbolTable_Enumerate&(snapshot)
+    END IF
     IF result THEN
         VerifySymbolTable_GetCount& = snapshot.symbolCount
     ELSE
@@ -112,13 +113,15 @@ FUNCTION VerifySymbolTable_GetCountByFlag& (flagMask AS LONG)
     DIM count AS LONG
     DIM i AS LONG
     
-    VerifySymbolTable_InitSnapshot snapshot
-    result = VerifySymbolTable_Enumerate&(snapshot)
+    result = VerifySymbolTable_InitSnapshot&(snapshot)
+    IF result THEN
+        result = VerifySymbolTable_Enumerate&(snapshot)
+    END IF
     
     IF result THEN
         count = 0
-        FOR i = 1 TO snapshot.symbolCount
-            IF snapshot.symbols(i).flags AND flagMask THEN
+        FOR i = 0 TO snapshot.symbolCount - 1
+            IF snapshotSymbols(i).flags AND flagMask THEN
                 count = count + 1
             END IF
         NEXT
@@ -165,8 +168,10 @@ FUNCTION VerifySymbolTable_VerifyExactSymbols& (expectedSymbols$(), expectedCoun
     DIM found AS LONG
     DIM actualCount AS LONG
     
-    VerifySymbolTable_InitSnapshot snapshot
-    result = VerifySymbolTable_Enumerate&(snapshot)
+    result = VerifySymbolTable_InitSnapshot&(snapshot)
+    IF result THEN
+        result = VerifySymbolTable_Enumerate&(snapshot)
+    END IF
     
     IF NOT result THEN
         VerifySymbolTable_VerifyExactSymbols& = 0
@@ -191,8 +196,8 @@ FUNCTION VerifySymbolTable_VerifyExactSymbols& (expectedSymbols$(), expectedCoun
     ' Check each expected symbol exists
     FOR i = 1 TO expectedCount
         found = 0
-        FOR j = 1 TO snapshot.symbolCount
-            IF UCASE$(RTRIM$(snapshot.symbols(j).name)) = UCASE$(RTRIM$(expectedSymbols$(i))) THEN
+        FOR j = 0 TO snapshot.symbolCount - 1
+            IF UCASE$(RTRIM$(snapshotSymbols(j).name)) = UCASE$(RTRIM$(expectedSymbols$(i))) THEN
                 found = 1
                 EXIT FOR
             END IF
@@ -221,37 +226,40 @@ FUNCTION VerifySymbolTable_CompareSnapshots& (snapshot1 AS SymbolTableSnapshot, 
     END IF
     
     ' Compare each symbol in snapshot1
-    FOR i = 1 TO snapshot1.symbolCount
+    ' Note: We need to store symbols in separate arrays for each snapshot
+    ' For now, we'll compare using the global snapshotSymbols array
+    ' This assumes snapshots are compared one at a time
+    FOR i = 0 TO snapshot1.symbolCount - 1
         found = 0
-        FOR j = 1 TO snapshot2.symbolCount
-            IF snapshot1.symbols(i).name = snapshot2.symbols(j).name THEN
+        FOR j = 0 TO snapshot2.symbolCount - 1
+            IF snapshotSymbols(i).name = snapshotSymbols(j).name THEN
                 found = 1
                 ' Check flags and reference
-                IF snapshot1.symbols(i).flags <> snapshot2.symbols(j).flags THEN
-                    differences$ = differences$ + "Symbol " + snapshot1.symbols(i).name + " flags differ" + CHR$(10)
+                IF snapshotSymbols(i).flags <> snapshotSymbols(j).flags THEN
+                    differences$ = differences$ + "Symbol " + snapshotSymbols(i).name + " flags differ" + CHR$(10)
                 END IF
-                IF snapshot1.symbols(i).reference <> snapshot2.symbols(j).reference THEN
-                    differences$ = differences$ + "Symbol " + snapshot1.symbols(i).name + " reference differs" + CHR$(10)
+                IF snapshotSymbols(i).reference <> snapshotSymbols(j).reference THEN
+                    differences$ = differences$ + "Symbol " + snapshotSymbols(i).name + " reference differs" + CHR$(10)
                 END IF
                 EXIT FOR
             END IF
         NEXT
         IF NOT found THEN
-            differences$ = differences$ + "Symbol " + snapshot1.symbols(i).name + " missing in snapshot2" + CHR$(10)
+            differences$ = differences$ + "Symbol " + snapshotSymbols(i).name + " missing in snapshot2" + CHR$(10)
         END IF
     NEXT
     
     ' Check for symbols in snapshot2 not in snapshot1
-    FOR i = 1 TO snapshot2.symbolCount
+    FOR i = 0 TO snapshot2.symbolCount - 1
         found = 0
-        FOR j = 1 TO snapshot1.symbolCount
-            IF snapshot2.symbols(i).name = snapshot1.symbols(j).name THEN
+        FOR j = 0 TO snapshot1.symbolCount - 1
+            IF snapshotSymbols(i).name = snapshotSymbols(j).name THEN
                 found = 1
                 EXIT FOR
             END IF
         NEXT
         IF NOT found THEN
-            differences$ = differences$ + "Symbol " + snapshot2.symbols(i).name + " missing in snapshot1" + CHR$(10)
+            differences$ = differences$ + "Symbol " + snapshotSymbols(i).name + " missing in snapshot1" + CHR$(10)
         END IF
     NEXT
     
@@ -264,7 +272,7 @@ END FUNCTION
 
 ' Extract complete code from buffer
 FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStructure)
-    DIM line$ AS STRING
+    DIM line$
     DIM tempLines(1 TO 10000) AS STRING
     DIM count AS LONG
     DIM oldPos AS LONG
@@ -274,7 +282,8 @@ FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStruct
     oldPos = GetBufPos&(bufHandle)
     
     ' Seek to beginning
-    SeekBuf bufHandle, 0, SBM_BufStart
+    DIM seekResult AS LONG
+    seekResult = SeekBuf&(bufHandle, 0, SBM_BufStart)
     
     ' Read all lines
     count = 0
@@ -283,7 +292,7 @@ FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStruct
         count = count + 1
         IF count > 10000 THEN
             ' Too many lines
-            SeekBuf bufHandle, oldPos, SBM_PosRestore
+            seekResult = SeekBuf&(bufHandle, oldPos, SBM_PosRestore)
             VerifyCode_ExtractFromBuffer& = 0
             EXIT FUNCTION
         END IF
@@ -294,7 +303,7 @@ FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStruct
     code.totalLines = count
     IF count > 0 AND count <= 10000 THEN
         FOR i = 0 TO count - 1
-            code.lines(i) = tempLines(i + 1)
+            snapshotLines(i) = tempLines(i + 1)
         NEXT
     END IF
     
@@ -316,7 +325,7 @@ FUNCTION VerifyCode_ExtractFromBuffer& (bufHandle AS INTEGER, code AS CodeStruct
     NEXT
     
     ' Restore position (SBM_PosRestore uses position directly)
-    SeekBuf bufHandle, oldPos, SBM_PosRestore
+    seekResult = SeekBuf&(bufHandle, oldPos, SBM_PosRestore)
     
     VerifyCode_ExtractFromBuffer& = 1
 END FUNCTION
@@ -325,8 +334,8 @@ END FUNCTION
 FUNCTION VerifyCode_Contains& (code AS CodeStructure, expectedContent$)
     DIM i AS LONG
     
-    FOR i = 1 TO code.totalLines
-        IF INSTR(code.lines(i), expectedContent$) > 0 THEN
+    FOR i = 0 TO code.totalLines - 1
+        IF INSTR(snapshotLines(i), expectedContent$) > 0 THEN
             VerifyCode_Contains& = 1
             EXIT FUNCTION
         END IF
@@ -339,8 +348,8 @@ END FUNCTION
 FUNCTION VerifyCode_ContainsLine& (code AS CodeStructure, expectedLine$)
     DIM i AS LONG
     
-    FOR i = 1 TO code.totalLines
-        IF RTRIM$(code.lines(i)) = RTRIM$(expectedLine$) THEN
+    FOR i = 0 TO code.totalLines - 1
+        IF RTRIM$(snapshotLines(i)) = RTRIM$(expectedLine$) THEN
             VerifyCode_ContainsLine& = 1
             EXIT FUNCTION
         END IF
@@ -389,9 +398,9 @@ FUNCTION VerifyCode_CompareStructures& (code1 AS CodeStructure, code2 AS CodeStr
     minLines = code1.totalLines
     IF code2.totalLines < minLines THEN minLines = code2.totalLines
     
-    FOR i = 1 TO minLines
-        IF code1.lines(i) <> code2.lines(i) THEN
-            differences$ = differences$ + "Line " + _TOSTR$(i) + " differs" + CHR$(10)
+    FOR i = 0 TO minLines - 1
+        IF snapshotLines(i) <> snapshotLines(i) THEN
+            differences$ = differences$ + "Line " + _TOSTR$(i + 1) + " differs" + CHR$(10)
         END IF
     NEXT
     

@@ -1,3 +1,4 @@
+$INCLUDEONCE
 
 SUB Give_Error (a$)
     Error_Happened = 1
