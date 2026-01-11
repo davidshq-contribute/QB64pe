@@ -1,0 +1,40 @@
+CompileFlags:
+  Add:
+    # Windows-specific defines (must come before includes)
+    - -DWIN32
+    - -D_WIN32
+    - -DQB64_WINDOWS
+    - -DGLEW_STATIC
+    - -DFREEGLUT_STATIC
+    # Target Windows x86_64 MinGW (adjust if using 32-bit)
+    - --target=x86_64-w64-mingw32
+    # MinGW system headers (for chdir, signal, etc.) - use -isystem for system headers
+    - -isystem
+    - internal/c/c_compiler/include
+    # Clang built-in headers
+    - -isystem
+    - internal/c/c_compiler/lib/clang/19/include
+    # Main include directory for libqb headers (audio.h, graphics.h, etc.)
+    - -Iinternal/c/libqb/include
+    # Include directory for common headers (common.h, os.h)
+    - -Iinternal/c
+    # C++ standard used in Makefile
+    - -std=gnu++20
+    # Compiler flags from Makefile
+    - -fno-strict-aliasing
+    - -Wno-conversion-null
+  Remove:
+    # Remove overly strict warnings that may be noisy during editing
+    - -W*
+Diagnostics:
+  # Disable unused includes warning - many headers are conditionally used
+  UnusedIncludes: None
+  # Disable missing includes - some includes are generated at build time
+  MissingIncludes: None
+  # Suppress some common false positives
+  Suppress:
+    - unused-includes
+    - missing-includes
+Index:
+  # Index background files for better code completion
+  Background: Build

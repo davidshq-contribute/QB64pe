@@ -1,4 +1,6 @@
 ---
+# Language is auto-detected from file extension (.c for C, .cpp/.hpp for C++)
+# This configuration works for both C and C++ files
 Language: Cpp
 # BasedOnStyle:  LLVM
 AccessModifierOffset: -2

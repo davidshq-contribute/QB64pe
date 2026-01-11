@@ -459,6 +459,12 @@ qbs *pass_str;
 ptrszint data_offset = 0;
 
 // inline functions
+
+/**
+ * Swaps two 8-bit (uint8) values.
+ * @param a Pointer to first value
+ * @param b Pointer to second value
+ */
 inline void swap_8(void *a, void *b) {
     uint8 x;
     x = *(uint8 *)a;
@@ -466,6 +472,11 @@ inline void swap_8(void *a, void *b) {
     *(uint8 *)b = x;
 }
 
+/**
+ * Swaps two 16-bit (uint16) values.
+ * @param a Pointer to first value
+ * @param b Pointer to second value
+ */
 inline void swap_16(void *a, void *b) {
     uint16 x;
     x = *(uint16 *)a;
@@ -473,6 +484,11 @@ inline void swap_16(void *a, void *b) {
     *(uint16 *)b = x;
 }
 
+/**
+ * Swaps two 32-bit (uint32) values.
+ * @param a Pointer to first value
+ * @param b Pointer to second value
+ */
 inline void swap_32(void *a, void *b) {
     uint32 x;
     x = *(uint32 *)a;
@@ -480,6 +496,11 @@ inline void swap_32(void *a, void *b) {
     *(uint32 *)b = x;
 }
 
+/**
+ * Swaps two 64-bit (uint64) values.
+ * @param a Pointer to first value
+ * @param b Pointer to second value
+ */
 inline void swap_64(void *a, void *b) {
     uint64 x;
     x = *(uint64 *)a;
@@ -487,6 +508,11 @@ inline void swap_64(void *a, void *b) {
     *(uint64 *)b = x;
 }
 
+/**
+ * Swaps two long double values.
+ * @param a Pointer to first value
+ * @param b Pointer to second value
+ */
 inline void swap_longdouble(void *a, void *b) {
     long double x;
     x = *(long double *)a;
@@ -494,6 +520,12 @@ inline void swap_longdouble(void *a, void *b) {
     *(long double *)b = x;
 }
 
+/**
+ * Swaps two qbs (QB64 string) values.
+ * Uses a temporary string buffer to perform the swap.
+ * @param a First qbs string to swap
+ * @param b Second qbs string to swap
+ */
 void swap_string(qbs *a, qbs *b) {
     static qbs *c;
     c = qbs_new(a->len, 0);
@@ -503,6 +535,13 @@ void swap_string(qbs *a, qbs *b) {
     qbs_free(c);
 }
 
+/**
+ * Swaps a block of memory between two pointers.
+ * Optimized to swap 32-bit chunks first, then remaining bytes.
+ * @param a Pointer to first memory block
+ * @param b Pointer to second memory block
+ * @param bytes Number of bytes to swap
+ */
 void swap_block(void *a, void *b, uint32 bytes) {
     static uint32 quads;
     quads = bytes >> 2;
@@ -529,6 +568,14 @@ void swap_block(void *a, void *b, uint32 bytes) {
 
 extern int32 disableEvents;
 
+/**
+ * Gets the lower bound of an array dimension with event handling disabled.
+ * Temporarily disables events to prevent interference during array bounds checking.
+ * @param array Pointer to array pointer
+ * @param index Dimension index (1-based)
+ * @param num_indexes Total number of dimensions
+ * @return Lower bound of the specified dimension
+ */
 ptrszint check_lbound(ptrszint *array, int32 index, int32 num_indexes) {
     static ptrszint ret;
     disableEvents = 1;
@@ -538,6 +585,14 @@ ptrszint check_lbound(ptrszint *array, int32 index, int32 num_indexes) {
     return ret;
 }
 
+/**
+ * Gets the upper bound of an array dimension with event handling disabled.
+ * Temporarily disables events to prevent interference during array bounds checking.
+ * @param array Pointer to array pointer
+ * @param index Dimension index (1-based)
+ * @param num_indexes Total number of dimensions
+ * @return Upper bound of the specified dimension
+ */
 ptrszint check_ubound(ptrszint *array, int32 index, int32 num_indexes) {
     static ptrszint ret;
     disableEvents = 1;
@@ -547,18 +602,45 @@ ptrszint check_ubound(ptrszint *array, int32 index, int32 num_indexes) {
     return ret;
 }
 
+/**
+ * Wrapper function to get unsigned bits from an array.
+ * @param bsize Bit size to read
+ * @param array Pointer to array pointer
+ * @param i Index into the array
+ * @return Unsigned value read from the array
+ */
 uint64 call_getubits(uint32 bsize, ptrszint *array, ptrszint i) {
     return getubits(bsize, (uint8 *)(*array), i);
 }
 
+/**
+ * Wrapper function to get signed bits from an array.
+ * @param bsize Bit size to read
+ * @param array Pointer to array pointer
+ * @param i Index into the array
+ * @return Signed value read from the array
+ */
 int64 call_getbits(uint32 bsize, ptrszint *array, ptrszint i) {
     return getbits(bsize, (uint8 *)(*array), i);
 }
 
+/**
+ * Wrapper function to set bits in an array.
+ * @param bsize Bit size to write
+ * @param array Pointer to array pointer
+ * @param i Index into the array
+ * @param val Value to write
+ */
 void call_setbits(uint32 bsize, ptrszint *array, ptrszint i, int64 val) {
     setbits(bsize, (uint8 *)(*array), i, val);
 }
 
+/**
+ * Gets the logical drives bitmap (Windows only).
+ * On Windows, returns a bitmask where each bit represents a drive (A=bit 0, B=bit 1, etc.).
+ * On other platforms, returns 0.
+ * @return Bitmap of available logical drives, or 0 on non-Windows platforms
+ */
 int32 logical_drives() {
 #ifdef QB64_WINDOWS
     return GetLogicalDrives();
@@ -567,6 +649,13 @@ int32 logical_drives() {
 #endif
 }
 
+/**
+ * Validates an array index against a limit and triggers an error if out of bounds.
+ * Forces signed index into an unsigned variable for quicker comparison.
+ * @param index Array index to check
+ * @param limit Upper bound (exclusive)
+ * @return The index if valid, otherwise triggers error 9 (subscript out of range)
+ */
 inline ptrszint array_check(uptrszint index, uptrszint limit) {
     // nb. forces signed index into an unsigned variable for quicker comparison
     if (index < limit)
@@ -575,6 +664,14 @@ inline ptrszint array_check(uptrszint index, uptrszint limit) {
     return 0;
 }
 
+/**
+ * Calculates the VARPTR offset value for a memory address.
+ * Returns the offset within DBLOCK (segment 80) if the address is in DBLOCK,
+ * otherwise returns the offset within the conversion memory segment.
+ * Note: 66816 is the top of DBLOCK (SEG:80+OFF:65536).
+ * @param off Memory address pointer
+ * @return 16-bit offset value
+ */
 inline uint16 varptr_dblock_check(uint8 *off) {
     // note: 66816 is the top of DBLOCK (SEG:80+OFF:65536)
     if (off < (&cmem[66816])) { // in DBLOCK?
@@ -584,6 +681,14 @@ inline uint16 varptr_dblock_check(uint8 *off) {
     }
 }
 
+/**
+ * Calculates the VARSEG segment value for a memory address.
+ * Returns segment 80 if the address is in DBLOCK,
+ * otherwise calculates the segment from the conversion memory base.
+ * Note: 66816 is the top of DBLOCK (SEG:80+OFF:65536).
+ * @param off Memory address pointer
+ * @return 16-bit segment value
+ */
 inline uint16 varseg_dblock_check(uint8 *off) {
     // note: 66816 is the top of DBLOCK (SEG:80+OFF:65536)
     if (off < (&cmem[66816])) { // in DBLOCK?
@@ -599,13 +704,26 @@ inline uint16 varseg_dblock_check(uint8 *off) {
 extern int32 ScreenResize;
 extern int32 ScreenResizeScale;
 
-// set_dynamic_info is called immediately when
-// main() begins, to set global, static variables
-// controlling app init
+/**
+ * Sets dynamic initialization information for the application.
+ * Called immediately when main() begins to set global, static variables
+ * controlling app initialization. The actual implementation is generated
+ * and included from dyninfo.txt.
+ */
 void set_dynamic_info() {
 #include "../temp/dyninfo.txt"
 }
 
+/**
+ * Clears all program state and resets to initial conditions.
+ * Implements the QB64 CLEAR statement functionality. Resets variables, closes files,
+ * frees images and sounds, and invalidates error handling and return points.
+ * Note: stack parameter can be ignored.
+ * @param ignore First parameter (ignored)
+ * @param ignore2 Second parameter (ignored)
+ * @param stack Stack parameter (can be ignored)
+ * @param passed Number of parameters passed
+ */
 void sub_clear(int32 ignore, int32 ignore2, int32 stack, int32 passed) {
     static ptrszint tmp_long;
 // note: stack can be ignored
@@ -639,6 +757,13 @@ void sub__display();
 void sub__autodisplay();
 int32 func__autodisplay();
 
+/**
+ * Processes input from a chained program.
+ * Checks if COMMAND$ contains a chain directive and if so, reads shared data
+ * (COMMON variables, screen state, CHDIR information) from a temporary file.
+ * Note: Every program must check for chained data, as it could be sharing
+ * files or screen state with a previously chained program.
+ */
 void chain_input() {
     // note: common data or not, every program must check for chained data,
     //      it could be sharing files or screen state
@@ -692,6 +817,14 @@ void chain_input() {
     }
 }
 
+/**
+ * Chains execution to another program (CHAIN statement).
+ * Saves current program state (COMMON variables, screen state, CHDIR) to a temporary file,
+ * then launches the specified program with the chain information. The chained program
+ * can read this data using chain_input(). Supports .bas and .exe files, with automatic
+ * compilation if needed. Windows-only implementation.
+ * @param f Filename of the program to chain to (can include .bas or .exe extension, or none)
+ */
 void sub_chain(qbs *f) {
     if (is_error_pending())
         return;
@@ -997,30 +1130,79 @@ int32 device_max = 1000; // number of allocated indexes
 device_struct *devices = (device_struct *)calloc(1000 + 1, sizeof(device_struct));
 
 // device_struct helper functions
+
+/**
+ * Gets the button value from a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Button index (0-based)
+ * @return Button value (0 or 1)
+ */
 uint8 getDeviceEventButtonValue(device_struct *device, int32 eventIndex, int32 objectIndex) {
     return *(device->events + eventIndex * device->event_size + device->lastaxis * 4 + device->lastwheel * 4 + objectIndex);
 }
 
+/**
+ * Sets the button value in a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Button index (0-based)
+ * @param value Button value to set (0 or 1)
+ */
 void setDeviceEventButtonValue(device_struct *device, int32 eventIndex, int32 objectIndex, uint8 value) {
     *(device->events + eventIndex * device->event_size + device->lastaxis * 4 + device->lastwheel * 4 + objectIndex) = value;
 }
 
+/**
+ * Gets the axis value from a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Axis index (0-based)
+ * @return Axis value as float
+ */
 float getDeviceEventAxisValue(device_struct *device, int32 eventIndex, int32 objectIndex) {
     return *(float *)(device->events + eventIndex * device->event_size + objectIndex * 4);
 }
 
+/**
+ * Sets the axis value in a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Axis index (0-based)
+ * @param value Axis value to set
+ */
 void setDeviceEventAxisValue(device_struct *device, int32 eventIndex, int32 objectIndex, float value) {
     *(float *)(device->events + eventIndex * device->event_size + objectIndex * 4) = value;
 }
 
+/**
+ * Gets the wheel value from a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Wheel index (0-based)
+ * @return Wheel value as float
+ */
 float getDeviceEventWheelValue(device_struct *device, int32 eventIndex, int32 objectIndex) {
     return *(float *)(device->events + eventIndex * device->event_size + device->lastaxis * 4 + objectIndex * 4);
 }
 
+/**
+ * Sets the wheel value in a device event.
+ * @param device Pointer to device structure
+ * @param eventIndex Index of the event (0=previous, 1=current)
+ * @param objectIndex Wheel index (0-based)
+ * @param value Wheel value to set
+ */
 void setDeviceEventWheelValue(device_struct *device, int32 eventIndex, int32 objectIndex, float value) {
     *(float *)(device->events + eventIndex * device->event_size + device->lastaxis * 4 + objectIndex * 4) = value;
 }
 
+/**
+ * Initializes a device structure with event buffers.
+ * Calculates event size based on axis, wheel, and button counts, aligns to 8-byte boundary,
+ * and allocates initial event buffers for current and previous states.
+ * @param device Pointer to device structure to initialize
+ */
 void setupDevice(device_struct *device) {
     int32 size = device->lastaxis * 4 + device->lastwheel * 4 + device->lastbutton;
     size += 8; // for appended ordering index
@@ -1034,6 +1216,13 @@ void setupDevice(device_struct *device) {
     device->used = 1;
 }
 
+/**
+ * Creates a new device event in the event queue.
+ * Expands the event buffer if necessary (either by discarding oldest events or doubling buffer size).
+ * Copies the previous event data into the new event and assigns a global event index.
+ * @param device Pointer to device structure
+ * @return Index of the newly created event
+ */
 int32 createDeviceEvent(device_struct *device) {
     uint8 *cp, *cp2;
     if (device->queued_events == device->max_events) { // expand/shift event buffer
@@ -1058,16 +1247,31 @@ int32 createDeviceEvent(device_struct *device) {
     return eventIndex;
 }
 
+/**
+ * Commits a device event to the queue.
+ * Increments the queued events counter after event data has been set.
+ * @param device Pointer to device structure
+ */
 void commitDeviceEvent(device_struct *device) {
     device->queued_events++;
 }
 
+/**
+ * Returns the number of available input devices.
+ * @return Number of devices (device_last)
+ */
 int32 func__devices() {
     return device_last;
 }
 
 int32 device_selected = 0;
 
+/**
+ * Gets the name of a device.
+ * @param i Device index (1-based), or uses device_selected if not passed
+ * @param passed Whether the device index parameter was passed
+ * @return qbs string containing the device name, or empty string on error
+ */
 qbs *func__device(int32 i, int32 passed) {
     if (!passed)
         i = device_selected;
@@ -1078,6 +1282,14 @@ qbs *func__device(int32 i, int32 passed) {
     return qbs_new_txt(devices[i].name);
 }
 
+/**
+ * Checks for and processes device input events.
+ * If no device index is passed, finds the oldest event across all devices.
+ * Removes the oldest queued event from the device and sets it as the selected device.
+ * @param i Device index (1-based), or finds oldest event if not passed
+ * @param passed Whether the device index parameter was passed
+ * @return Device index if event was found and processed, 0 if no event available
+ */
 int32 func__deviceinput(int32 i, int32 passed) {
     static device_struct *d;
     static int32 retval;
@@ -1121,6 +1333,12 @@ int32 func__deviceinput(int32 i, int32 passed) {
     return 0;
 }
 
+/**
+ * Gets the current state of a button on the selected device.
+ * @param i Button index (1-based), defaults to 1 if not passed
+ * @param passed Whether the button index parameter was passed
+ * @return -1 if button is pressed, 0 if not pressed, 0 on error
+ */
 int32 func__button(int32 i, int32 passed) {
     if (device_selected < 1 || device_selected > device_last) {
         error(5);
@@ -1139,6 +1357,12 @@ int32 func__button(int32 i, int32 passed) {
     return 0;
 }
 
+/**
+ * Gets the change state of a button (pressed or released since last check).
+ * @param i Button index (1-based), defaults to 1 if not passed
+ * @param passed Whether the button index parameter was passed
+ * @return -1 if button was just pressed, 1 if just released, 0 if no change or error
+ */
 int32 func__buttonchange(int32 i, int32 passed) {
     if (device_selected < 1 || device_selected > device_last) {
         error(5);
@@ -1162,6 +1386,12 @@ int32 func__buttonchange(int32 i, int32 passed) {
     return 0;
 }
 
+/**
+ * Gets the current value of an axis on the selected device.
+ * @param i Axis index (1-based), defaults to 1 if not passed
+ * @param passed Whether the axis index parameter was passed
+ * @return Axis value as float, or 0.0 on error
+ */
 float func__axis(int32 i, int32 passed) {
     if (device_selected < 1 || device_selected > device_last) {
         error(5);
@@ -1178,6 +1408,12 @@ float func__axis(int32 i, int32 passed) {
     return getDeviceEventAxisValue(d, 1, i - 1);
 }
 
+/**
+ * Gets the current value of a wheel on the selected device.
+ * @param i Wheel index (1-based), defaults to 1 if not passed
+ * @param passed Whether the wheel index parameter was passed
+ * @return Wheel value as float, or 0.0 on error
+ */
 float func__wheel(int32 i, int32 passed) {
     if (device_selected < 1 || device_selected > device_last) {
         error(5);
@@ -1194,6 +1430,12 @@ float func__wheel(int32 i, int32 passed) {
     return getDeviceEventWheelValue(d, 1, i - 1);
 }
 
+/**
+ * Gets the number of buttons available on a device.
+ * @param di Device index (1-based), uses device_selected if not passed
+ * @param passed Whether the device index parameter was passed
+ * @return Number of buttons on the device
+ */
 int32 func__lastbutton(int32 di, int32 passed) {
     if (!passed)
         di = device_selected;
@@ -1204,6 +1446,12 @@ int32 func__lastbutton(int32 di, int32 passed) {
     return d->lastbutton;
 }
 
+/**
+ * Gets the number of axes available on a device.
+ * @param di Device index (1-based), uses device_selected if not passed
+ * @param passed Whether the device index parameter was passed
+ * @return Number of axes on the device
+ */
 int32 func__lastaxis(int32 di, int32 passed) {
     if (!passed)
         di = device_selected;
@@ -1214,6 +1462,12 @@ int32 func__lastaxis(int32 di, int32 passed) {
     return d->lastaxis;
 }
 
+/**
+ * Gets the number of wheels available on a device.
+ * @param di Device index (1-based), uses device_selected if not passed
+ * @param passed Whether the device index parameter was passed
+ * @return Number of wheels on the device
+ */
 int32 func__lastwheel(int32 di, int32 passed) {
     if (!passed)
         di = device_selected;
@@ -1228,6 +1482,16 @@ onstrig_struct *onstrig = (onstrig_struct *)calloc(65536, sizeof(onstrig_struct)
                                                                                    // 256 buttons each supported
 int32 onstrig_inprogress = 0;
 
+/**
+ * Sets up an ON STRIG event handler for a game controller button.
+ * Configures a trigger event that will be called when a specific button on a controller
+ * is pressed. Note: pass is ignored by ids not requiring a pass value.
+ * @param i Button/trigger index (encoded with controller info if controller_passed is false)
+ * @param controller Controller index (1-based), or derived from i if not passed
+ * @param controller_passed Whether the controller parameter was explicitly passed
+ * @param id Event handler ID (subroutine line number)
+ * @param pass Optional pass value for the event handler
+ */
 void onstrig_setup(int32 i, int32 controller, int32 controller_passed, uint32 id, int64 pass) {
     // note: pass is ignored by ids not requiring a pass value
     if (is_error_pending())
@@ -1265,6 +1529,17 @@ void onstrig_setup(int32 i, int32 controller, int32 controller_passed, uint32 id
         func__devices(); // init device interface (if not already setup)
 }
 
+/**
+ * Controls STRIG (game controller button) event checking.
+ * Implements STRIG ON/OFF/STOP statement. Note: QuickBASIC ignores STRIG ON and STRIG OFF
+ * statements--they are provided for compatibility with earlier versions. QB64 makes
+ * STRIG ON/OFF/STOP change the checking status for all buttons.
+ * Reference: http://www.antonis.de/qbebooks/gwbasman/strig.html
+ * @param i Button/trigger index (encoded with controller info if controller not passed)
+ * @param controller Controller index (1-based), or derived from i if not passed
+ * @param option 1=ON, 2=OFF, 3=STOP
+ * @param passed Number of parameters passed (determines if controller was specified)
+ */
 void sub_strig(int32 i, int32 controller, int32 option, int32 passed) {
     // ref: "[(?[,?])]{ON|OFF|STOP}"
     if (is_error_pending())
@@ -1329,6 +1604,14 @@ void sub_strig(int32 i, int32 controller, int32 option, int32 passed) {
 onkey_struct *onkey = (onkey_struct *)calloc(32, sizeof(onkey_struct));
 int32 onkey_inprogress = 0;
 
+/**
+ * Sets up an ON KEY event handler for a specific key.
+ * Configures a trigger event that will be called when a specific key is pressed.
+ * Note: pass is ignored by ids not requiring a pass value.
+ * @param i Key index (1-31)
+ * @param id Event handler ID (subroutine line number)
+ * @param pass Optional pass value for the event handler
+ */
 void onkey_setup(int32 i, uint32 id, int64 pass) {
     // note: pass is ignored by ids not requiring a pass value
     if (is_error_pending())
@@ -1342,6 +1625,12 @@ void onkey_setup(int32 i, uint32 id, int64 pass) {
     onkey[i].id = id; // id must be set last because it is the trigger variable
 }
 
+/**
+ * Controls KEY event checking.
+ * Implements KEY ON/OFF/STOP statement. If i is 0, affects all keys (1-31).
+ * @param i Key index (0-31, where 0 means all keys)
+ * @param option 1=ON, 2=OFF, 3=STOP
+ */
 void sub_key(int32 i, int32 option) {
     // ref: "(?){ON|OFF|STOP}"
     if (is_error_pending())
@@ -1385,16 +1674,28 @@ ontimer_struct *ontimer = (ontimer_struct *)malloc(sizeof(ontimer_struct));
 
 int32 ontimerthread_lock = 0;
 
+/**
+ * Stops the timer thread by acquiring a lock.
+ * Waits until the timer thread confirms the lock before returning.
+ */
 void stop_timers() {
     ontimerthread_lock = 1;
     while (ontimerthread_lock != 2)
         ;
 }
 
+/**
+ * Starts the timer thread by releasing the lock.
+ */
 void start_timers() {
     ontimerthread_lock = 0;
 }
 
+/**
+ * Allocates a new timer index.
+ * Reuses a freed timer if available, otherwise allocates a new one.
+ * @return Timer index (1-based, index 0 cannot be allocated)
+ */
 int32 func__freetimer() {
     if (is_error_pending())
         return 0;
@@ -1421,6 +1722,11 @@ int32 func__freetimer() {
     return i;
 }
 
+/**
+ * Frees a timer index for reuse.
+ * Adds the timer index to the freelist for future allocation.
+ * @param i Timer index to free
+ */
 void freetimer(int32 i) {
     ontimer[i].allocated = 0;
     ontimer[i].id = 0;
@@ -1431,6 +1737,15 @@ void freetimer(int32 i) {
     ontimer_freelist[++ontimer_freelist_available] = i;
 }
 
+/**
+ * Sets up an ON TIMER event handler.
+ * Configures a timer that will trigger an event at the specified interval.
+ * Note: pass is ignored by ids not requiring a pass value.
+ * @param i Timer index (must be allocated via func__freetimer)
+ * @param sec Interval in seconds between timer events
+ * @param id Event handler ID (subroutine line number)
+ * @param pass Optional pass value for the event handler
+ */
 void ontimer_setup(int32 i, double sec, uint32 id, int64 pass) {
     // note: pass is ignored by ids not requiring a pass value
     if (is_error_pending())
@@ -1452,6 +1767,13 @@ void ontimer_setup(int32 i, double sec, uint32 id, int64 pass) {
                         // variable
 }
 
+/**
+ * Controls TIMER event checking and management.
+ * Implements TIMER ON/OFF/STOP/FREE statement. If i is not passed, affects timer 0.
+ * @param i Timer index (0-based), defaults to 0 if not passed
+ * @param option 1=ON, 2=OFF, 3=STOP, 4=FREE
+ * @param passed Whether the timer index parameter was passed
+ */
 void sub_timer(int32 i, int32 option, int32 passed) {
     // ref: "[(?)]{ON|OFF|STOP|FREE}"
     if (is_error_pending())
@@ -1502,6 +1824,12 @@ void sub_timer(int32 i, int32 option, int32 passed) {
     }
 }
 
+/**
+ * Timer thread function that monitors and triggers timer events.
+ * Runs in a separate thread, checking all active timers and setting their state
+ * when the interval has elapsed. Uses mutex locking to prevent race conditions.
+ * @param unused Unused parameter (required for thread function signature)
+ */
 void TIMERTHREAD(void *unused) {
     static int32 i;
     static double time_now = 100000;
@@ -1542,6 +1870,12 @@ void TIMERTHREAD(void *unused) {
     return;
 }
 
+/**
+ * Processes all pending event handlers (ON STRIG, ON KEY, ON TIMER).
+ * Checks for triggered events and calls their associated handlers.
+ * Events are processed in order: onstrig, onkey, ontimer.
+ * No new event calls happen whilst error handling is active.
+ */
 void events() {
     int32 i, x, d, di;
     int64 i64;
@@ -1649,6 +1983,14 @@ extern int64 display_lock_released;
 
 uint32 r;
 
+/**
+ * Main event processing function called during program execution.
+ * Handles display locking, program suspension/stopping, error processing, and event handling.
+ * Called at strategic points in the program to allow event processing and error handling.
+ * @param linenumber Current line number in the main source file
+ * @param inclinenumber Current line number in included file (if any)
+ * @param incfilename Name of included file (if any)
+ */
 void evnt(uint32 linenumber, uint32 inclinenumber, const char *incfilename) {
     if (disableEvents)
         return;
@@ -1686,10 +2028,20 @@ void evnt(uint32 linenumber, uint32 inclinenumber, const char *incfilename) {
 
 uint8 *redim_preserve_cmem_buffer = (uint8 *)malloc(65536); // used for temporary storage only (move to libqbx?)
 
+/**
+ * Signal handler for division by zero (SIGFPE).
+ * Triggers QB64 error 11 (division by zero).
+ * @param ignore Unused parameter (required for signal handler signature)
+ */
 void division_by_zero_handler(int ignore) {
     error(11);
 }
 
+/**
+ * Signal handler for segmentation violations (SIGSEGV).
+ * Logs an error message and exits the program.
+ * @param ignore Unused parameter (required for signal handler signature)
+ */
 void segv_handler(int ignore) {
     libqb_log_error("Recieved SIGSEGV! Review below stacktrace:");
     exit(1);
@@ -1699,6 +2051,13 @@ void segv_handler(int ignore) {
 //    error(256);//assume stack overflow? (the most likely cause)
 //}
 
+/**
+ * Main entry point for QB64 program execution.
+ * Initializes the floating-point unit, sets up signal handlers, processes chained input,
+ * handles pending events, and executes the main program code. The actual program code
+ * is generated and included from main.txt.
+ * @param unused Unused parameter (required for thread function signature)
+ */
 void QBMAIN(void *unused) {
     fpu_reinit();
 #ifdef QB64_WINDOWS

@@ -270,6 +270,35 @@ From `.cursor/commands/code-review.md`:
 3. Add `DEP_[NAME]` flag to Makefile
 4. Update compiler dependency detection
 
+## Code Formatting and Linting
+
+The project uses **clang-format** and **clang-tidy** for C/C++ code quality.
+
+**Quick Commands:**
+```bash
+# Format all C/C++ files
+.\scripts\format-code.ps1          # Windows
+./scripts/format-code.sh           # Linux/macOS
+
+# Check formatting without modifying files
+.\scripts\format-code.ps1 --check  # Windows
+./scripts/format-code.sh --check   # Linux/macOS
+
+# Lint all C/C++ files
+.\scripts\lint-code.ps1            # Windows
+./scripts/lint-code.sh             # Linux/macOS
+
+# Lint and auto-fix issues
+.\scripts\lint-code.ps1 --fix     # Windows
+./scripts/lint-code.sh --fix       # Linux/macOS
+```
+
+**Configuration Files:**
+- `.clang-format` - Code formatting style (4 spaces, 160 char limit, K&R braces)
+- `.clang-tidy` - Static analysis rules (bugprone, cert, cppcoreguidelines, etc.)
+
+**Documentation:** See [docs/CODE_FORMATTING_AND_LINTING.md](docs/CODE_FORMATTING_AND_LINTING.md) for complete details.
+
 ## Common Gotchas
 
 - **Generated files**: `internal/temp/*.txt` are regenerated each compilation (not in git)

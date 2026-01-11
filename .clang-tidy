@@ -1,0 +1,70 @@
+---
+# Clang-Tidy configuration for QB64-PE C/C++ code
+# This file configures static analysis checks for the project
+
+# Enable checks from these categories
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  performance-*,
+  readability-*,
+  modernize-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-macro-parentheses,
+  -cert-err33-c,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-special-member-functions,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-named-parameter
+
+# Warnings as errors (optional - can be disabled for gradual adoption)
+WarningsAsErrors: ''
+
+# Header filter - only check project code, not third-party libraries
+HeaderFilterRegex: '(internal/c/(libqb|parts)|tests/c)/.*'
+
+# System headers to ignore
+SystemHeaders: false
+
+# User headers to ignore
+UserHeaders: false
+
+# Check options
+CheckOptions:
+  # Performance checks
+  - key: performance-for-range-copy.WarnOnAllAutoCopies
+    value: true
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: 'qbs;.*String'
+  
+  # Readability checks
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 50
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelCase
+  - key: readability-identifier-naming.VariableCase
+    value: camelCase
+  
+  # Modernize checks
+  - key: modernize-use-auto.MinTypeNameLength
+    value: 5
+  - key: modernize-loop-convert.MaxCopySize
+    value: 16
+
+# Additional include directories (inherited from .clangd)
+# These are handled by the compile_commands.json or .clangd file

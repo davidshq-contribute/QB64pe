@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Development Tools
+- **Code Formatting and Linting Infrastructure**
+  - Added `.clang-tidy` - Static analysis and linting configuration for C/C++ code
+  - Added `.clangd` - Language server configuration for improved IDE support with Windows-specific compiler flags and include paths
+  - Added `docs/CODE_FORMATTING_AND_LINTING.md` - Comprehensive documentation for code formatting and linting tools (302 lines)
+  - Added `scripts/format-code.ps1` - PowerShell script for automatic code formatting on Windows
+  - Added `scripts/format-code.sh` - Bash script for automatic code formatting on Linux/macOS
+  - Added `scripts/lint-code.ps1` - PowerShell script for code linting and static analysis on Windows
+  - Added `scripts/lint-code.sh` - Bash script for code linting and static analysis on Linux/macOS
+
+### Added
+
 #### Documentation
 - **Documentation Reorganization**
   - Added `OUTSTANDING_TASKS.md` - Consolidated task tracking from all markdown documentation
@@ -110,7 +122,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### Development Tools
+- **Code Formatting Configuration**
+  - Updated `.clang-format` - Added comments clarifying language auto-detection for C and C++ files
+
+#### Source Code
+- **C++ Compiler Source**
+  - Modified `internal/c/qbx.cpp` - Code formatting improvements (362 insertions, 3 deletions)
+
 #### Documentation
+- **Documentation Updates**
+  - Updated `CLAUDE.md` - Added information about code formatting and linting tools (29 lines added)
 - **Documentation Reorganization and Updates**
   - Updated `docs/general/CODE_ANALYSIS.md` - Updated file size metrics (qb64pe.bas: ~20,792 → ~20,945 lines), updated dates to 2026-01-10, updated parser size references
   - Updated `docs/general/IMPROVEMENTS.md` - Updated dates to 2026-01-10
@@ -274,10 +296,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **All tests now passing**: 73/73 tests pass with 100% assertion success rate
 
 ### Statistics
-- **Total Changes**: 146 files changed (77 in this update)
-- **Additions**: 15,936 insertions (+5,834 in this update)
-- **Deletions**: 2,724 deletions (+390 in this update)
-- **Net Change**: +13,212 lines (+5,444 in this update)
+- **Total Changes**: 156 files changed (87 in this update)
+- **Additions**: 17,263 insertions (+7,161 in this update)
+- **Deletions**: 2,727 deletions (+393 in this update)
+- **Net Change**: +14,536 lines (+6,768 in this update)
 
 ---
 
