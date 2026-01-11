@@ -2,6 +2,7 @@
 #define _TEST_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 struct unit_test {
     void (*test)();

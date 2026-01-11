@@ -18,18 +18,21 @@ GLEW_SRCS := $(PATH_INTERNAL_C)/parts/core/glew/glew.c
 
 FREEGLUT_INCLUDE := -I$(PATH_INTERNAL_C)/parts/core/freeglut/include -I$(PATH_INTERNAL_C)/parts/core/glew/include
 
-FREEGLUT_OBJS := $(FREEGLUT_SRCS:.c=.o)
-GLEW_OBJS := $(GLEW_SRCS:.c=.o)
+FREEGLUT_OBJS := $(foreach src,$(FREEGLUT_SRCS),$(call BUILD_OBJ,$(src)))
+GLEW_OBJS := $(call BUILD_OBJ,$(GLEW_SRCS))
 
-FREEGLUT_LIB := $(PATH_INTERNAL_C)/parts/core/freeglut.a
+FREEGLUT_LIB := $(call BUILD_LIB,freeglut)
 
-$(PATH_INTERNAL_C)/parts/core/glew/%.o: $(PATH_INTERNAL_C)/parts/core/glew/%.c
+$(BUILD_OBJ_DIR)/internal/c/parts/core/glew/%.o: $(PATH_INTERNAL_C)/parts/core/glew/%.c | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CC) -O1 $(CFLAGS) $(FREEGLUT_INCLUDE) -DGLEW_STATIC -w $< -c -o $@
 
-$(PATH_INTERNAL_C)/parts/core/freeglut/%.o: $(PATH_INTERNAL_C)/parts/core/freeglut/%.c
+$(BUILD_OBJ_DIR)/internal/c/parts/core/freeglut/%.o: $(PATH_INTERNAL_C)/parts/core/freeglut/%.c | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CC) -O3 $(CFLAGS) $(FREEGLUT_INCLUDE) -DFREEGLUT_STATIC -DHAVE_UNISTD_H -DHAVE_FCNTL_H -w $< -c -o $@
 
-$(FREEGLUT_LIB): $(FREEGLUT_OBJS)
+$(FREEGLUT_LIB): $(FREEGLUT_OBJS) | $(BUILD_LIB_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(AR) rcs $@ $(FREEGLUT_OBJS)
 
 QB_CORE_LIB := $(FREEGLUT_LIB)

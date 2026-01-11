@@ -62,6 +62,9 @@ CONST Debug = 0
 ' These files contain SUB/FUNCTION implementations and will trigger implicit END
 ' They are included after the main program code to ensure proper execution order
 
+' Type system functions (FUNCTION definitions, must be before test suites)
+'$INCLUDE:'../../source/utilities/type.bas'
+
 ' Include provider implementations
 '$INCLUDE:'include_provider_implementations.bas'
 '$INCLUDE:'../../source/utilities/include_provider.bas'
@@ -82,10 +85,15 @@ CONST Debug = 0
 ' Output verification implementations
 '$INCLUDE:'test_output_verification.bas'
 
+' Parser utility functions needed by tests
+'$INCLUDE:'../../source/utilities/parser_utils.bas'
+
 ' Test suite implementations
 '$INCLUDE:'type_system/test_type_system.bas'
+'$INCLUDE:'type_system/test_type_conversion.bas'
 '$INCLUDE:'symbol_table/test_hash.bas'
 '$INCLUDE:'parser/test_parser.bas'
+'$INCLUDE:'parser/test_parser_utils.bas'
 '$INCLUDE:'code_generation/test_code_generation.bas'
 '$INCLUDE:'file_utilities/test_file_utilities.bas'
 '$INCLUDE:'string_utilities/test_string_utilities.bas'
@@ -93,6 +101,7 @@ CONST Debug = 0
 '$INCLUDE:'error_handling/test_error_handling.bas'
 '$INCLUDE:'statevars/test_statevars.bas'
 '$INCLUDE:'build_utilities/test_build_utilities.bas'
+'$INCLUDE:'build_utilities/test_elements.bas'
 '$INCLUDE:'format/test_format.bas'
 
 SUB RunAllTests
@@ -110,11 +119,17 @@ SUB RunAllTests
     PRINT "Running type system tests..."
     RunTypeSystemTests
 
+    PRINT "Running type conversion tests..."
+    RunTypeConversionTests
+
     PRINT "Running symbol table tests..."
     RunSymbolTableTests
 
     PRINT "Running parser tests..."
     RunParserTests
+
+    PRINT "Running parser utility tests..."
+    RunParserUtilityTests
 
     PRINT "Running code generation tests..."
     RunCodeGenerationTests
@@ -136,6 +151,9 @@ SUB RunAllTests
 
     PRINT "Running build utility tests..."
     RunBuildUtilityTests
+
+    PRINT "Running element utility tests..."
+    RunElementTests
 
     PRINT "Running format utility tests..."
     RunFormatTests

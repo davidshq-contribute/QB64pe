@@ -20,6 +20,66 @@ This describes the process that goes on to compile a QB64 program into an execut
     4. All of `qbx.o`, `libqb.o`, and the 3rd party dependencies are linked together to produce the executable.
     5. Debug symbols are stripped from the executable to make it smaller, the symbols are stored into a symbol file ending in `.sym` in `./internal/temp`.
 
+## Build Directory Structure
+
+QB64-PE uses **out-of-source builds**, meaning all build artifacts (object files, libraries, executables) are placed in a separate build directory rather than alongside source files. This keeps the source tree clean and makes it easy to clean build artifacts.
+
+### Build Directory Location
+
+The build directory is named `build-$(OS)$(TEMP_ID)/` where:
+- `$(OS)` is the operating system identifier (`win`, `lnx`, or `osx`)
+- `$(TEMP_ID)` is an optional instance identifier (blank for the default instance, or a number for parallel IDE instances)
+
+For example:
+- `build-lnx/` - Linux build (default instance)
+- `build-win2/` - Windows build (instance 2, for parallel IDE)
+- `build-osx/` - macOS build (default instance)
+
+### Build Directory Contents
+
+```
+build-$(OS)$(TEMP_ID)/
+├── obj/                      # All object files (.o)
+│   └── [mirrors source directory structure]
+│       ├── internal/
+│       │   └── c/
+│       │       ├── libqb/
+│       │       │   └── src/          # libqb object files
+│       │       ├── parts/
+│       │       │   ├── audio/        # audio objects
+│       │       │   ├── core/         # core objects
+│       │       │   └── ...           # other parts
+│       │       ├── qbx$(TEMP_ID).o   # main qbx object
+│       │       └── libqb_make_*.o    # libqb main object
+│       └── temp$(TEMP_ID)/           # Generated source (unchanged)
+├── lib/                      # All library files (.a)
+│   ├── freeglut.a
+│   ├── audio.a
+│   ├── font.a
+│   └── ...
+└── tests/                    # Test executables (if building tests)
+    └── exes/
+        └── cpp/
+```
+
+### Benefits of Out-of-Source Builds
+
+1. **Clean source tree**: No build artifacts mixed with source code
+2. **Easy cleanup**: Remove the entire build directory to clean all artifacts
+3. **Multiple configurations**: Can have separate build directories for different OS/configurations
+4. **Version control**: Build artifacts won't accidentally be committed
+5. **Parallel builds**: Easier to support multiple build configurations simultaneously
+
+### Cleaning Build Artifacts
+
+To clean all build artifacts, use the `clean` target:
+
+```bash
+make clean OS=lnx
+```
+
+This removes the entire `build-$(OS)$(TEMP_ID)/` directory and all its contents.
+
 ## CI Process
 
 This describes how QB64-PE itself is built by the CI process to produce a release of QB64-PE. The actual build scripts that do all of this are located in `.ci/`.

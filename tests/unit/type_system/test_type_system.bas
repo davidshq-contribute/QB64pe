@@ -7,7 +7,7 @@
 ' Note: test_framework_declarations.bi, test_framework_implementations.bas, test_state_manager_declarations.bi, and test_state_manager_implementations.bas are included by test_runner.bas
 ' Note: type.bi is now split and included by test_runner.bas (type_declarations.bi + type_init.bas)
 ''$INCLUDE:'../../../source/utilities/type.bi'  ' Now included globally in test_runner.bas
-'$INCLUDE:'../../../source/utilities/type.bas'
+'$INCLUDE:'../../../source/utilities/type.bas' ' Now included globally in test_runner.bas
 
 SUB Test_TypeSymbolConversion
     Test_Start "Type symbol conversion"

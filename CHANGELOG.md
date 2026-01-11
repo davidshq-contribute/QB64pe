@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Build System
+- **Out-of-Source Builds Implementation**
+  - Implemented out-of-source builds to move all C/C++ build artifacts (object files and libraries) from the source tree to a separate build directory
+  - Added `BUILD_OBJ_DIR` variable and `BUILD_OBJ` helper function for consistent path handling across platforms
+  - Updated `Makefile` and all component `build.mk` files to use build directory structure
+  - Modified 12 component build files: `internal/c/libqb/build.mk`, `internal/c/parts/audio/build.mk`, `internal/c/parts/audio/extras/build.mk`, `internal/c/parts/core/build.mk`, `internal/c/parts/data/build.mk`, `internal/c/parts/gui/build.mk`, `internal/c/parts/input/game_controller/build.mk`, `internal/c/parts/network/http/build.mk`, `internal/c/parts/os/clipboard/build.mk`, `internal/c/parts/video/font/build.mk`, `internal/c/parts/video/image/build.mk`, and `tests/build.mk`
+  - Added `docs/build-system.md` - Comprehensive build system documentation with build directory structure and process details
+  - Added `docs/problems_encountered/out-of-source-builds-path-handling.md` - Documentation of path handling issues and solutions
+  - Added `CODE_REVIEW.md` - Code review documentation for out-of-source builds implementation
+
+#### Testing Infrastructure
+- **Phase 1 Testing Implementation**
+  - Added `tests/unit/PHASE1_TESTING_STATUS.md` - Comprehensive testing status documentation tracking Stage 1-3.1 progress
+  - Added `tests/unit/build_utilities/test_elements.bas` - 39 tests for element manipulation utilities (getelement$, numelements, pushelement, getelements$, getnextelement$, getprevelement$, insertelements, removeelements, and element parsing functions)
+  - Added `tests/unit/parser/test_parser_utils.bas` - 31 tests for parser operator detection (isoperator function)
+  - Added `tests/unit/type_system/test_type_conversion.bas` - 22 tests for type conversion functionality
+  - Added `tests/c/qbs_comprehensive.cpp` - 42 comprehensive tests for QB64 String (QBS) C++ runtime functionality
+  - Updated `tests/unit/test_runner.bas` - Enhanced test runner with additional test suites
+  - Updated `tests/c/test.h` - Added test header definitions for C++ tests
+
+#### Source Code
+- **Type System**
+  - Updated `source/utilities/type.bas` - Minor improvements to type system utilities
+
 #### Development Tools
 - **Code Formatting and Linting Infrastructure**
   - Added `.clang-tidy` - Static analysis and linting configuration for C/C++ code
@@ -121,6 +145,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `tests/integration/performance/test_large_files.output` - Expected output for large file tests
 
 ### Changed
+
+#### Build System
+- **Out-of-Source Builds Migration**
+  - Modified `Makefile` - Updated to use `BUILD_OBJ_DIR` and `BUILD_OBJ` helper function for consistent path handling (76 lines changed)
+  - Modified all component `build.mk` files - Updated to output object files to build directory instead of source directory
+  - Modified `tests/build.mk` - Updated test build system to use out-of-source build structure (38 lines changed)
+  - Fixed Windows path handling - Resolved `ICON_OBJ` path mixing issue (backslash vs forward slash) by using `BUILD_OBJ` helper function
 
 #### Development Tools
 - **Code Formatting Configuration**
@@ -279,6 +310,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `tests/unit/test_runner_simple.bas` - Consolidated into test framework
 
 ### Fixed
+- **Build System Issues**
+  - Fixed Windows `ICON_OBJ` path mixing in `Makefile` - Changed from backslash path to using `BUILD_OBJ` helper function which properly normalizes paths to forward slashes
+
 - **Compiler Issues**
   - Fixed `func_val` forward declaration in `internal/c/qbx.cpp` - Changed from incorrect `static inline` to proper `extern` declaration
 
@@ -296,10 +330,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **All tests now passing**: 73/73 tests pass with 100% assertion success rate
 
 ### Statistics
-- **Total Changes**: 156 files changed (87 in this update)
-- **Additions**: 17,263 insertions (+7,161 in this update)
-- **Deletions**: 2,727 deletions (+393 in this update)
-- **Net Change**: +14,536 lines (+6,768 in this update)
+- **Total Changes**: 181 files changed (25 in this update)
+- **Additions**: 19,968 insertions (+2,705 in this update)
+- **Deletions**: 2,872 deletions (+145 in this update)
+- **Net Change**: +17,096 lines (+2,560 in this update)
 
 ---
 
@@ -349,3 +383,12 @@ This changelog entry represents a significant update focusing on:
 - **Build System**: Updated `.gitignore` to exclude IntelliJ IDEA project files (`.idea/`)
 - **Refactoring Log**: Updated `docs/REFACTORING_LOG.md` with additional refactoring documentation entries
 - **Total Documentation Added**: +5,834 lines of code documentation across 77 files (5,444 net lines after deletions)
+
+### Recent Updates (2026-01-11 - Out-of-Source Builds & Phase 1 Testing)
+- **Out-of-Source Builds**: Implemented complete out-of-source build system moving all C/C++ build artifacts to separate build directories, keeping source tree clean and enabling easy cleanup
+- **Build System Documentation**: Added comprehensive build system documentation and code review tracking for out-of-source builds implementation
+- **Phase 1 Testing**: Added 92 new unit tests across 3 test files (element utilities: 39 tests, parser utilities: 31 tests, type conversion: 22 tests) with 91.8% pass rate (123/134 tests)
+- **C++ Runtime Testing**: Added comprehensive QBS (QB64 String) test suite with 42 tests for C++ runtime functionality
+- **Testing Status Documentation**: Created comprehensive Phase 1 testing status documentation tracking progress across all testing stages
+- **Build System Fixes**: Fixed Windows path handling issues in build system (ICON_OBJ path mixing)
+- **Total Changes**: 25 files changed, +2,705 insertions, +145 deletions

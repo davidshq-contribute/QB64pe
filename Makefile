@@ -10,6 +10,29 @@ endif
 # This is blank for the 'normal' files
 TEMP_ID ?=
 
+# Build directory for out-of-source builds
+# Structure: build-$(OS)$(TEMP_ID)/ with obj/ and lib/ subdirectories
+BUILD_DIR ?= build-$(OS)$(TEMP_ID)
+BUILD_OBJ_DIR := $(BUILD_DIR)/obj
+BUILD_LIB_DIR := $(BUILD_DIR)/lib
+
+# Helper function to transform source file path to build object path
+# Usage: $(call BUILD_OBJ,path/to/source.cpp) -> $(BUILD_OBJ_DIR)/path/to/source.o
+# Normalizes paths: converts backslashes to forward slashes, removes ./ prefix, changes extension
+BUILD_OBJ = $(BUILD_OBJ_DIR)/$(patsubst ./%,%,$(subst \,/,$(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(patsubst %.mm,%.o,$(patsubst %.rc,%.o,$1))))))
+
+# Helper function to transform source file path to build library path
+# Usage: $(call BUILD_LIB,name) -> $(BUILD_LIB_DIR)/name.a
+BUILD_LIB = $(BUILD_LIB_DIR)/$1.a
+
+# Helper function to create directory (Windows-safe)
+# Usage: $(call MKDIR_SAFE,path)
+ifeq ($(OS),win)
+MKDIR_SAFE = @if not exist $(call FIXPATH,$1) mkdir $(call FIXPATH,$1)
+else
+MKDIR_SAFE = @$(MKDIR) $(call FIXPATH,$1)
+endif
+
 # Extra flags go at the beginning of the library list
 #
 # This is important for libraries, since they could potentially be referencing
@@ -78,9 +101,11 @@ ifeq ($(OS),win)
 		OBJCOPY := $(PATH_INTERNAL_C)\c_compiler\bin\objcopy.exe
 		WINDRES := $(PATH_INTERNAL_C)\c_compiler\bin\windres.exe
 	endif
-	ICON_OBJ := $(PATH_INTERNAL_TEMP)\icon.o
+	ICON_OBJ := $(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/icon.rc)
 	RM := del /Q
+	RMDIR := rmdir /S /Q
 	MKDIR := mkdir
+	MKDIR_P := if not exist $(call FIXPATH,$1) mkdir $(call FIXPATH,$1)
 	FIXPATH = $(subst /,\,$1)
 	ESCAPENAME = $1
 	ADDQUOTES = "$1"
@@ -147,6 +172,21 @@ LICENSE_IN_USE := qb64 tinyfiledialogs
 .PHONY: exe
 all: exe
 
+# Build directory initialization
+$(BUILD_OBJ_DIR):
+ifeq ($(OS),win)
+	@if not exist $(call FIXPATH,$@) mkdir $(call FIXPATH,$@)
+else
+	@$(MKDIR) $(call FIXPATH,$@)
+endif
+
+$(BUILD_LIB_DIR):
+ifeq ($(OS),win)
+	@if not exist $(call FIXPATH,$@) mkdir $(call FIXPATH,$@)
+else
+	@$(MKDIR) $(call FIXPATH,$@)
+endif
+
 CLEAN_LIST :=
 CLEAN_DEP_LIST :=
 
@@ -189,7 +229,7 @@ endif
 endif
 
 QB_QBX_SRC := $(PATH_INTERNAL_C)/qbx$(TEMP_ID).cpp
-QB_QBX_OBJ := $(patsubst %.cpp,%.o,$(QB_QBX_SRC))
+QB_QBX_OBJ := $(call BUILD_OBJ,$(QB_QBX_SRC))
 
 $(QB_QBX_OBJ): $(wildcard $(PATH_INTERNAL)/temp$(TEMP_ID)/*.txt)
 
@@ -235,7 +275,7 @@ include $(PATH_INTERNAL_C)/parts/os/clipboard/build.mk
 
 QBLIB_NAME := libqb_make_
 
-CLEAN_LIST += $(wildcard $(PATH_INTERNAL_C)/$(QBLIB_NAME)*.o)
+CLEAN_LIST += $(wildcard $(BUILD_OBJ_DIR)/$(QBLIB_NAME)*.o)
 
 ifneq ($(filter y,$(DEP_GL)),)
 	CXXFLAGS += -DDEPENDENCY_GL
@@ -396,44 +436,58 @@ ifeq ($(OS),win)
 endif
 
 ifneq ($(filter y,$(DEP_EMBED)),)
-	EXE_OBJS += $(PATH_INTERNAL_TEMP)/embedded.o
+	EXE_OBJS += $(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/embedded.cpp)
 endif
 
-QBLIB := $(PATH_INTERNAL_C)/$(QBLIB_NAME).o
+QBLIB := $(BUILD_OBJ_DIR)/$(QBLIB_NAME).o
 
-$(QBLIB): $(PATH_INTERNAL_C)/libqb.cpp
+$(QBLIB): $(PATH_INTERNAL_C)/libqb.cpp | $(BUILD_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 ifeq ($(OS),win)
 CLEAN_LIST += $(ICON_OBJ)
-$(ICON_OBJ): $(PATH_INTERNAL_TEMP)\icon.rc
+$(ICON_OBJ): $(PATH_INTERNAL_TEMP)\icon.rc | $(BUILD_OBJ_DIR)
 	$(WINDRES) -i $< -o $@
 endif
 
 # QBLIB has to go first to ensure correct linking
 EXE_OBJS := $(QBLIB) $(EXE_OBJS)
 
-%.o: %.cpp
+# Pattern rules for out-of-source builds
+# Note: These are fallback rules; specific rules in build.mk files take precedence
+$(BUILD_OBJ_DIR)/%.o: %.cpp | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 # qbx produces thousands of warnings due to passing NULL for every unused parameter
-$(QB_QBX_OBJ): $(QB_QBX_SRC)
+$(QB_QBX_OBJ): $(QB_QBX_SRC) | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 ifeq ($(OS),osx)
-%.o: %.mm
+$(BUILD_OBJ_DIR)/%.o: %.mm | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 endif
 
-$(PATH_INTERNAL_TEMP)/embedded.o: $(PATH_INTERNAL_TEMP)/embedded.cpp
+$(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/embedded.cpp): $(PATH_INTERNAL_TEMP)/embedded.cpp | $(BUILD_OBJ_DIR)
+	$(call MKDIR_SAFE,$(dir $@))
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 # Clean all files out of ./internal/temp except for temp.bin
 CLEAN_LIST += $(wildcard $(PATH_INTERNAL_TEMP)/*)
 CLEAN_LIST := $(filter-out $(PATH_INTERNAL_TEMP)/temp.bin,$(CLEAN_LIST))
 
+# Add build directory to clean list
+CLEAN_LIST += $(BUILD_DIR)
+
 clean: $(CLEAN_DEP_LIST)
+ifeq ($(OS),win)
+	@if exist $(call FIXPATH,$(BUILD_DIR)) $(RMDIR) $(call FIXPATH,$(BUILD_DIR)) 2>nul || exit 0
+	$(RM) $(call FIXPATH,$(filter-out $(BUILD_DIR),$(CLEAN_LIST))) 2>nul || exit 0
+else
 	$(RM) $(call FIXPATH,$(CLEAN_LIST))
+endif
 
 ifeq ($(GENERATE_LICENSE),y)
 LICENSE_FILES := $(patsubst %,licenses/license_%.txt,$(LICENSE_IN_USE))
