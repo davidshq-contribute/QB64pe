@@ -42,9 +42,12 @@ SUB Test_FilesystemProviderFileExists
         result = Test_Assert&(exists = 0, "Should not detect non-existent file")
     END IF
     
-    ' Cleanup
-    IF _FILEEXISTS(testFile$) THEN KILL testFile$
-    
+    ' Cleanup - add small delay to ensure file is fully closed
+    IF _FILEEXISTS(testFile$) THEN
+        _DELAY 0.1  ' 100ms delay to ensure file handle is released
+        KILL testFile$
+    END IF
+
     Test_End result
 END SUB
 
@@ -106,10 +109,13 @@ SUB Test_FilesystemProviderOpenReadClose
         line$ = IncludeProvider_Filesystem_ReadLine$(level)
         result = Test_AssertEqualString&("", line$, "Should return empty after close")
     END IF
-    
-    ' Cleanup
-    IF _FILEEXISTS(testFile$) THEN KILL testFile$
-    
+
+    ' Cleanup - add small delay to ensure file is fully closed
+    IF _FILEEXISTS(testFile$) THEN
+        _DELAY 0.1  ' 100ms delay to ensure file handle is released
+        KILL testFile$
+    END IF
+
     Test_End result
 END SUB
 

@@ -32,8 +32,11 @@ FUNCTION IncludeProvider_Filesystem_Open& (fileName$, level AS LONG)
     fh = 199 + level + 1
 
     ' Close handle if already open (shouldn't happen, but be safe)
-    IF EOF(fh) = 0 THEN
-        CLOSE #fh
+    ' Check if handle is open by checking the includeProviderStates instead of using EOF()
+    IF level >= 0 AND level <= UBOUND(includeProviderStates) THEN
+        IF includeProviderStates(level).isOpen AND includeProviderStates(level).fileHandle = fh THEN
+            CLOSE #fh
+        END IF
     END IF
 
     ' Attempt to open the file

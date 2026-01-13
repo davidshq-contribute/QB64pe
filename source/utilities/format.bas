@@ -122,7 +122,10 @@ FUNCTION apply_layout_indent$ (original$)
                 ELSE
                     ' Handle case difference (equivalent to original line 97)
                     las% = _IIF(LEN(lch$), ASC(lch$), 0): oas% = _IIF(LEN(och$), ASC(och$), 0)
-                    IF isalpha(las%) AND isalpha(oas%) AND ABS(las% - oas%) = 32 THEN MID$(layout2$, lcnt, 1) = och$ 'KW case diff
+                    ' Add bounds check to prevent subscript out of range error
+                    IF lcnt <= LEN(layout2$) THEN
+                        IF isalpha(las%) AND isalpha(oas%) AND ABS(las% - oas%) = 32 THEN MID$(layout2$, lcnt, 1) = och$ 'KW case diff
+                    END IF
                 END IF
             LOOP WHILE lcnt <= LEN(layout2$)
         END IF
