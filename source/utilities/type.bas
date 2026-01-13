@@ -1,6 +1,7 @@
 $INCLUDEONCE
 
-FUNCTION typevalue2symbol$ (t)
+FUNCTION typevalue2symbol$ (t AS LONG)
+    DIM s$, b AS LONG
 
     IF t AND ISSTRING THEN
         IF t AND ISFIXEDLENGTH THEN Give_Error "Cannot convert expression type to symbol": EXIT FUNCTION
@@ -37,6 +38,7 @@ FUNCTION typevalue2symbol$ (t)
 END FUNCTION
 
 FUNCTION id2fulltypename$
+    DIM t AS LONG, size AS LONG, bits AS LONG, a$
     t = id.t
     IF t = 0 THEN t = id.arraytype
     size = id.tsize
@@ -73,6 +75,7 @@ FUNCTION id2fulltypename$
 END FUNCTION
 
 FUNCTION id2shorttypename$
+    DIM t AS LONG, size AS LONG, bits AS LONG, a$
     t = id.t
     IF t = 0 THEN t = id.arraytype
     size = id.tsize
