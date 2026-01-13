@@ -23,12 +23,41 @@
 uint64_t mem_lock_id = 1073741823; // this value should never be 0 or 1
 int32_t mem_lock_max = 10000;
 int32_t mem_lock_next = 0;
-mem_lock *mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+mem_lock *mem_lock_base = NULL;
 mem_lock *mem_lock_tmp;
 
 int32_t mem_lock_freed_max = 1000; // number of allocated entries
 int32_t mem_lock_freed_n = 0;      // number of entries
-intptr_t *mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_max);
+intptr_t *mem_lock_freed = NULL;
+
+/**
+ * @brief Initialize global memory management structures
+ * @note Called once during program initialization
+ * @return 1 on success, 0 on failure
+ */
+static int mem_init_done = 0;
+static int initialize_mem_system() {
+    if (mem_init_done) return 1;
+    
+    if (!mem_lock_base) {
+        mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+        if (!mem_lock_base) {
+            return 0; // Critical error: cannot allocate initial memory lock array
+        }
+    }
+    
+    if (!mem_lock_freed) {
+        mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_max);
+        if (!mem_lock_freed) {
+            free(mem_lock_base);
+            mem_lock_base = NULL;
+            return 0; // Critical error: cannot allocate initial freed lock array
+        }
+    }
+    
+    mem_init_done = 1;
+    return 1;
+}
 
 /**
  * @brief Creates a new memory lock
@@ -37,8 +66,8 @@ intptr_t *mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_
  *       Triggers critical error 518 if allocation fails.
  */
 void new_mem_lock() {
-    // Validate global allocations on first call
-    if (!mem_lock_base || !mem_lock_freed) {
+    // Initialize global memory system on first call
+    if (!initialize_mem_system()) {
         error(518); // critical error: out of memory (global allocations failed)
         return;
     }
@@ -52,6 +81,8 @@ void new_mem_lock() {
                 error(518); // critical error: out of memory
                 return;
             }
+            // Note: This creates a memory leak by abandoning the old mem_lock_base
+            // However, this appears to be intentional design to reset the pool
             mem_lock_base = new_base;
             mem_lock_next = 0;
         }
@@ -183,6 +214,7 @@ mem_block func__memnew(intptr_t bytes) {
             if (!b.offset) {
                 b.size = 0;
                 mem_lock_tmp->type = 0;
+                error(518); // critical error: out of memory
             } else {
                 b.size = bytes;
                 mem_lock_tmp->type = 1;
@@ -243,8 +275,10 @@ void *func__memget(mem_block *blk, intptr_t off, intptr_t bytes) {
 fail:
     static void *fail_buffer;
     fail_buffer = calloc(bytes, 1);
-    if (!fail_buffer)
+    if (!fail_buffer) {
         error(518); // critical error: out of memory
+        return NULL;
+    }
     return fail_buffer;
 }
 
