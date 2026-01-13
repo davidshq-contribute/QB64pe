@@ -21,6 +21,33 @@
 void error(int32_t error_number);
 
 /**
+ * @brief Checks if an error code is a critical out-of-memory error
+ * @param error_number Error code to check
+ * @return true if the error is a critical OOM error (257 or 502-518), false otherwise
+ * @note Error 257 is the generic "Out of memory" error, while errors 502-518 are
+ *       traceable OOM errors that help identify the specific allocation site.
+ */
+bool is_critical_oom_error(int32_t error_number);
+
+/**
+ * @brief Gets the error index for a critical out-of-memory error
+ * @param error_number Error code (must be a critical OOM error)
+ * @return Error index (1-18) for display in error message
+ * @note Returns 1 for error 257, and (error_number - 500) for errors 502-518.
+ *       This provides a sequential index for diagnostic purposes.
+ */
+int get_critical_oom_error_index(int32_t error_number);
+
+/**
+ * @brief Handles a critical out-of-memory error by displaying an alert and exiting
+ * @param error_number Error code (must be a critical OOM error)
+ * @note This function displays a GUI alert with the error index and exits the program.
+ *       The error index helps developers identify which memory allocation failed.
+ *       NOTE: This function calls exit() and does not return.
+ */
+void handle_critical_oom_error(int32_t error_number);
+
+/**
  * @brief Attempts to fix or recover from the current error
  * @note This function is called during error recovery. Behavior depends on the error type
  *       and whether error handlers are active.

@@ -20,9 +20,153 @@ SUB InitOSTestVars_FileUtilities
     IF os$ = "LNX" THEN pathsep$ = "/"
 END SUB
 
+SUB Test_FindLastPathSeparator
+    Test_Start "FindLastPathSeparator& - Helper function edge cases"
+
+    DIM result AS LONG
+    DIM testPath$
+    DIM actual AS LONG, expected AS LONG
+
+    ' Test with forward slash
+    testPath$ = "path/to/file.bas"
+    actual = FindLastPathSeparator&(testPath$)
+    expected = 8 ' Position of last "/"
+    result = Test_AssertEqual&(expected, actual, "Should find last forward slash")
+
+    ' Test with backslash
+    IF result THEN
+        testPath$ = "path\to\file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 8 ' Position of last "\"
+        result = Test_AssertEqual&(expected, actual, "Should find last backslash")
+    END IF
+
+    ' Test with no separator
+    IF result THEN
+        testPath$ = "filename.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 0
+        result = Test_AssertEqual&(expected, actual, "Should return 0 when no separator")
+    END IF
+
+    ' Test with empty string
+    IF result THEN
+        testPath$ = ""
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 0
+        result = Test_AssertEqual&(expected, actual, "Should return 0 for empty string")
+    END IF
+
+    ' Test with single character (no separator)
+    IF result THEN
+        testPath$ = "a"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 0
+        result = Test_AssertEqual&(expected, actual, "Should return 0 for single char without separator")
+    END IF
+
+    ' Test with only separator
+    IF result THEN
+        testPath$ = "/"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 1
+        result = Test_AssertEqual&(expected, actual, "Should find single separator")
+    END IF
+
+    ' Test with separator at beginning
+    IF result THEN
+        testPath$ = "/file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 1
+        result = Test_AssertEqual&(expected, actual, "Should find separator at beginning")
+    END IF
+
+    ' Test with separator at end
+    IF result THEN
+        testPath$ = "path/to/dir/"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 12 ' Last character
+        result = Test_AssertEqual&(expected, actual, "Should find separator at end")
+    END IF
+
+    ' Test with consecutive separators
+    IF result THEN
+        testPath$ = "path//to//file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 9 ' Last "/" before "file"
+        result = Test_AssertEqual&(expected, actual, "Should find last separator with consecutives")
+    END IF
+
+    ' Test with mixed separators (/ and \)
+    IF result THEN
+        testPath$ = "path/to\file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 8 ' Position of "\"
+        result = Test_AssertEqual&(expected, actual, "Should find last separator with mixed types")
+    END IF
+
+    ' Test with Windows drive path
+    IF result THEN
+        testPath$ = "C:\Windows\System32\file.dll"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 19 ' Last "\" before "file"
+        result = Test_AssertEqual&(expected, actual, "Should handle Windows drive path")
+    END IF
+
+    ' Test with root path (Unix)
+    IF result THEN
+        testPath$ = "/usr/local/bin/app"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 15 ' Last "/" before "app"
+        result = Test_AssertEqual&(expected, actual, "Should handle Unix root path")
+    END IF
+
+    ' Test with multiple dots but separator
+    IF result THEN
+        testPath$ = "path.to.dir/file.name.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 12 ' Position of "/"
+        result = Test_AssertEqual&(expected, actual, "Should find separator ignoring dots")
+    END IF
+
+    ' Test with UNC path (Windows network share)
+    IF result THEN
+        testPath$ = "\\server\share\file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 15 ' Last "\" before "file"
+        result = Test_AssertEqual&(expected, actual, "Should handle UNC path")
+    END IF
+
+    ' Test with very long path
+    IF result THEN
+        testPath$ = "very/long/path/with/many/segments/and/subdirectories/file.bas"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 54 ' Last "/" before "file"
+        result = Test_AssertEqual&(expected, actual, "Should handle long paths")
+    END IF
+
+    ' Test with only backslash
+    IF result THEN
+        testPath$ = "\"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 1
+        result = Test_AssertEqual&(expected, actual, "Should find single backslash")
+    END IF
+
+    ' Test with path ending with multiple separators
+    IF result THEN
+        testPath$ = "path/to/dir///"
+        actual = FindLastPathSeparator&(testPath$)
+        expected = 15 ' Last character (last "/")
+        result = Test_AssertEqual&(expected, actual, "Should find last of multiple trailing separators")
+    END IF
+
+    Test_End result
+END SUB
+
 SUB Test_GetFilePath
     Test_Start "getfilepath$ - Path extraction"
-    
+
     InitOSTestVars_FileUtilities
     DIM result AS LONG
     DIM testPath$, expected$, actual$
@@ -385,6 +529,7 @@ END SUB
 
 ' Run all file utility tests
 SUB RunFileUtilityTests
+    Test_FindLastPathSeparator ' NEW: Comprehensive helper function tests
     Test_GetFilePath
     Test_FileHasExtension
     Test_RemoveFileExtension

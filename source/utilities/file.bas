@@ -14,18 +14,34 @@ FUNCTION CopyFile& (sourceFile$, destFile$)
 END FUNCTION
 
 '
+' Finds the position of the last path separator in a filepath
+'
+' Returns: Position of last "/" or "\" separator, or 0 if no separator found
+' Note: This is a helper function used by getfilepath$, FileHasExtension,
+'       RemoveFileExtension$, and GetFileExtension$ to eliminate code duplication
+FUNCTION FindLastPathSeparator& (filepath$)
+    FOR i = LEN(filepath$) TO 1 STEP -1
+        a = ASC(filepath$, i)
+        IF a = 47 OR a = 92 THEN ' "/" = 47, "\" = 92
+            FindLastPathSeparator& = i
+            EXIT FUNCTION
+        END IF
+    NEXT
+    FindLastPathSeparator& = 0
+END FUNCTION
+
+'
 ' Splits the filename from its path, and returns the path
 '
 ' Returns: The path + trailing separator, or empty if no path
 FUNCTION getfilepath$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a$ = MID$(f$, i, 1)
-        IF a$ = "/" OR a$ = "\" THEN
-            getfilepath$ = LEFT$(f$, i)
-            EXIT FUNCTION
-        END IF
-    NEXT
-    getfilepath$ = ""
+    DIM sep_pos AS LONG
+    sep_pos = FindLastPathSeparator&(f$)
+    IF sep_pos > 0 THEN
+        getfilepath$ = LEFT$(f$, sep_pos)
+    ELSE
+        getfilepath$ = ""
+    END IF
 END FUNCTION
 
 '
@@ -33,11 +49,16 @@ END FUNCTION
 '
 ' Returns: True if provided filename has an extension
 FUNCTION FileHasExtension (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN FileHasExtension = -1: EXIT FUNCTION
+    DIM sep_pos AS LONG, i AS LONG
+    sep_pos = FindLastPathSeparator&(f$)
+    ' Search for "." after the last separator (or from start if no separator)
+    FOR i = LEN(f$) TO sep_pos + 1 STEP -1
+        IF ASC(f$, i) = 46 THEN ' "." = 46
+            FileHasExtension = -1
+            EXIT FUNCTION
+        END IF
     NEXT
+    FileHasExtension = 0
 END FUNCTION
 
 '
@@ -45,10 +66,14 @@ END FUNCTION
 '
 ' Returns: Provided filename without extension on the end
 FUNCTION RemoveFileExtension$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN RemoveFileExtension$ = LEFT$(f$, i - 1): EXIT FUNCTION
+    DIM sep_pos AS LONG, i AS LONG
+    sep_pos = FindLastPathSeparator&(f$)
+    ' Search for "." after the last separator
+    FOR i = LEN(f$) TO sep_pos + 1 STEP -1
+        IF ASC(f$, i) = 46 THEN ' "." = 46
+            RemoveFileExtension$ = LEFT$(f$, i - 1)
+            EXIT FUNCTION
+        END IF
     NEXT
     RemoveFileExtension$ = f$
 END FUNCTION
@@ -59,10 +84,14 @@ END FUNCTION
 ' Returns "" if there is no extension
 '
 FUNCTION GetFileExtension$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN GetFileExtension$ = MID$(f$, i + 1): EXIT FUNCTION
+    DIM sep_pos AS LONG, i AS LONG
+    sep_pos = FindLastPathSeparator&(f$)
+    ' Search for "." after the last separator
+    FOR i = LEN(f$) TO sep_pos + 1 STEP -1
+        IF ASC(f$, i) = 46 THEN ' "." = 46
+            GetFileExtension$ = MID$(f$, i + 1)
+            EXIT FUNCTION
+        END IF
     NEXT
     GetFileExtension$ = ""
 END FUNCTION

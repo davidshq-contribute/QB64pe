@@ -335,6 +335,45 @@ void fix_error() {
 }
 
 /**
+ * @brief Checks if an error code is a critical out-of-memory error
+ * @param error_number Error code to check
+ * @return true if the error is a critical OOM error (257 or 502-518), false otherwise
+ * @note Error 257 is the generic "Out of memory" error, while errors 502-518 are
+ *       traceable OOM errors that help identify the specific allocation site.
+ */
+bool is_critical_oom_error(int32_t error_number) {
+    return error_number == 257 || (error_number >= 502 && error_number <= 518);
+}
+
+/**
+ * @brief Gets the error index for a critical out-of-memory error
+ * @param error_number Error code (must be a critical OOM error)
+ * @return Error index (1-18) for display in error message
+ * @note Returns 1 for error 257, and (error_number - 500) for errors 502-518.
+ *       This provides a sequential index for diagnostic purposes.
+ */
+int get_critical_oom_error_index(int32_t error_number) {
+    if (error_number == 257) {
+        return 1;
+    }
+    return error_number - 500;
+}
+
+/**
+ * @brief Handles a critical out-of-memory error by displaying an alert and exiting
+ * @param error_number Error code (must be a critical OOM error)
+ * @note This function displays a GUI alert with the error index and exits the program.
+ *       The error index helps developers identify which memory allocation failed.
+ */
+void handle_critical_oom_error(int32_t error_number) {
+    int error_index = get_critical_oom_error_index(error_number);
+    char message[64];
+    snprintf(message, sizeof(message), "Critical Error #%d", error_index);
+    gui_alert("Out of memory", message, "ok");
+    exit(0);
+}
+
+/**
  * @brief Reports an error and initiates error handling
  * @param error_number Error code (see error code constants)
  * @note This is the main error reporting function. It:
@@ -348,79 +387,9 @@ void error(int32_t error_number) {
 
     // critical errors:
 
-    // out of memory errors
-    if (error_number == 257) {
-        gui_alert("Out of memory", "Critical Error #1", "ok");
-        exit(0);
-    } // generic "Out of memory" error
-    // tracable "Out of memory" errors
-    if (error_number == 502) {
-        gui_alert("Out of memory", "Critical Error #2", "ok");
-        exit(0);
-    }
-    if (error_number == 503) {
-        gui_alert("Out of memory", "Critical Error #3", "ok");
-        exit(0);
-    }
-    if (error_number == 504) {
-        gui_alert("Out of memory", "Critical Error #4", "ok");
-        exit(0);
-    }
-    if (error_number == 505) {
-        gui_alert("Out of memory", "Critical Error #5", "ok");
-        exit(0);
-    }
-    if (error_number == 506) {
-        gui_alert("Out of memory", "Critical Error #6", "ok");
-        exit(0);
-    }
-    if (error_number == 507) {
-        gui_alert("Out of memory", "Critical Error #7", "ok");
-        exit(0);
-    }
-    if (error_number == 508) {
-        gui_alert("Out of memory", "Critical Error #8", "ok");
-        exit(0);
-    }
-    if (error_number == 509) {
-        gui_alert("Out of memory", "Critical Error #9", "ok");
-        exit(0);
-    }
-    if (error_number == 510) {
-        gui_alert("Out of memory", "Critical Error #10", "ok");
-        exit(0);
-    }
-    if (error_number == 511) {
-        gui_alert("Out of memory", "Critical Error #11", "ok");
-        exit(0);
-    }
-    if (error_number == 512) {
-        gui_alert("Out of memory", "Critical Error #12", "ok");
-        exit(0);
-    }
-    if (error_number == 513) {
-        gui_alert("Out of memory", "Critical Error #13", "ok");
-        exit(0);
-    }
-    if (error_number == 514) {
-        gui_alert("Out of memory", "Critical Error #14", "ok");
-        exit(0);
-    }
-    if (error_number == 515) {
-        gui_alert("Out of memory", "Critical Error #15", "ok");
-        exit(0);
-    }
-    if (error_number == 516) {
-        gui_alert("Out of memory", "Critical Error #16", "ok");
-        exit(0);
-    }
-    if (error_number == 517) {
-        gui_alert("Out of memory", "Critical Error #17", "ok");
-        exit(0);
-    }
-    if (error_number == 518) {
-        gui_alert("Out of memory", "Critical Error #18", "ok");
-        exit(0);
+    // Handle all out of memory errors (257, 502-518)
+    if (is_critical_oom_error(error_number)) {
+        handle_critical_oom_error(error_number);
     }
 
     // other critical errors
