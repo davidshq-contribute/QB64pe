@@ -629,7 +629,8 @@ static const char *FS_GetDirectoryEntryName(DirectoryContext *ctx, const char *f
                 // No path. Use the current path
                 strncpy(ctx->pattern, fileSpec, FS_PATHNAME_LENGTH_MAX);
                 ctx->pattern[FS_PATHNAME_LENGTH_MAX - 1] = '\0';
-                strcpy(dirName, "./");
+                strncpy(dirName, "./", FS_PATHNAME_LENGTH_MAX);
+                dirName[FS_PATHNAME_LENGTH_MAX - 1] = '\0';
             }
         } else {
             // No pattern. Check if this is a file and simply return the name if it exists
@@ -643,7 +644,8 @@ static const char *FS_GetDirectoryEntryName(DirectoryContext *ctx, const char *f
             // Else, We'll just assume it's a directory
             strncpy(dirName, fileSpec, FS_PATHNAME_LENGTH_MAX);
             dirName[FS_PATHNAME_LENGTH_MAX - 1] = '\0';
-            strcpy(ctx->pattern, "*");
+            strncpy(ctx->pattern, "*", FS_PATHNAME_LENGTH_MAX);
+            ctx->pattern[FS_PATHNAME_LENGTH_MAX - 1] = '\0';
         }
 
         ctx->directory = opendir(dirName);
