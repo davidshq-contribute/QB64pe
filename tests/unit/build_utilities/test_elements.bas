@@ -365,8 +365,9 @@ END SUB
 SUB Test_CountFunctionElements_Multiple
     Test_Start "countFunctionElements - multiple arguments"
     DIM testString AS STRING
-    ' Simulate: func(x, y, z) where elements are: ( x , y , z )
-    testString = "(" + sp + "x" + sp + "," + sp + "y" + sp + "," + sp + "z" + sp + ")"
+    ' Simulate: func(x, y, z) where elements are: x , y , z (without the outer parens)
+    ' Note: countFunctionElements expects the argument list WITHOUT the enclosing parentheses
+    testString = "x" + sp + "," + sp + "y" + sp + "," + sp + "z"
 
     DIM result AS LONG
     result = Test_AssertEqual&(3, countFunctionElements(testString), "Three arguments")
@@ -376,8 +377,8 @@ END SUB
 SUB Test_HasFunctionElement_Present
     Test_Start "hasFunctionElement - element present"
     DIM testString AS STRING
-    ' Simulate: func(x, y, z)
-    testString = "(" + sp + "x" + sp + "," + sp + "y" + sp + "," + sp + "z" + sp + ")"
+    ' Simulate: func(x, y, z) - argument list without the enclosing parentheses
+    testString = "x" + sp + "," + sp + "y" + sp + "," + sp + "z"
 
     DIM result AS LONG
     result = Test_Assert&(hasFunctionElement(testString, 1) <> 0, "First argument present")
@@ -389,8 +390,8 @@ END SUB
 SUB Test_HasFunctionElement_Missing
     Test_Start "hasFunctionElement - element missing"
     DIM testString AS STRING
-    ' Simulate: func(x, , z) - second argument omitted
-    testString = "(" + sp + "x" + sp + "," + sp + "," + sp + "z" + sp + ")"
+    ' Simulate: func(x, , z) - second argument omitted, without the enclosing parentheses
+    testString = "x" + sp + "," + sp + "," + sp + "z"
 
     DIM result AS LONG
     result = Test_Assert&(hasFunctionElement(testString, 2) = 0, "Second argument missing")
