@@ -199,7 +199,7 @@ finish:
         qbs_val_built_number[i] = 'E';
         i++;
         // Add exponent
-        i += sprintf((char *)&qbs_val_built_number[i], "%i", exponent_value);
+        i += snprintf((char *)&qbs_val_built_number[i], sizeof(qbs_val_built_number) - i, "%i", exponent_value);
     } else {
         qbs_val_built_number[i] = '0';
         i++;

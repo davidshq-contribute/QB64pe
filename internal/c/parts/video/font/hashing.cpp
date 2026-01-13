@@ -32,7 +32,7 @@ qbs *func__md5(qbs *text) {
     auto result = qbs_new(MD5_DIGEST_STRING_LENGTH, 1);
 
     for (auto i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        sprintf((char *)&result->chr[i << 1], "%02X", md5[i]);
+        snprintf((char *)&result->chr[i << 1], 3, "%02X", md5[i]);
     }
 
     return result;

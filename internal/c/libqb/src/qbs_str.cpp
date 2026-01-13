@@ -31,7 +31,7 @@
 qbs *qbs_str(int64_t value) {
     qbs *tqbs;
     tqbs = qbs_new(20, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, "% " PRId64, value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, "% " PRId64, value);
     return tqbs;
 }
 
@@ -43,7 +43,7 @@ qbs *qbs_str(int64_t value) {
 qbs *qbs_str(int32_t value) {
     qbs *tqbs;
     tqbs = qbs_new(11, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, "% i", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, "% i", value);
     return tqbs;
 }
 
@@ -55,7 +55,7 @@ qbs *qbs_str(int32_t value) {
 qbs *qbs_str(int16_t value) {
     qbs *tqbs;
     tqbs = qbs_new(6, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, "% i", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, "% i", value);
     return tqbs;
 }
 
@@ -67,7 +67,7 @@ qbs *qbs_str(int16_t value) {
 qbs *qbs_str(int8_t value) {
     qbs *tqbs;
     tqbs = qbs_new(4, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, "% i", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, "% i", value);
     return tqbs;
 }
 
@@ -79,7 +79,7 @@ qbs *qbs_str(int8_t value) {
 qbs *qbs_str(uint64_t value) {
     qbs *tqbs;
     tqbs = qbs_new(21, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, " %" PRIu64, value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, " %" PRIu64, value);
     return tqbs;
 }
 
@@ -91,7 +91,7 @@ qbs *qbs_str(uint64_t value) {
 qbs *qbs_str(uint32_t value) {
     qbs *tqbs;
     tqbs = qbs_new(11, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, " %u", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, " %u", value);
     return tqbs;
 }
 
@@ -103,7 +103,7 @@ qbs *qbs_str(uint32_t value) {
 qbs *qbs_str(uint16_t value) {
     qbs *tqbs;
     tqbs = qbs_new(6, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, " %u", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, " %u", value);
     return tqbs;
 }
 
@@ -115,7 +115,7 @@ qbs *qbs_str(uint16_t value) {
 qbs *qbs_str(uint8_t value) {
     qbs *tqbs;
     tqbs = qbs_new(4, 1);
-    tqbs->len = sprintf((char *)tqbs->chr, " %u", value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, " %u", value);
     return tqbs;
 }
 ///@}
@@ -147,7 +147,7 @@ qbs *qbs_str(float value) {
     static qbs *tqbs;
     tqbs = qbs_new(16, 1);
     static int32_t l, i, i2, i3, digits, exponent;
-    l = sprintf((char *)&qbs_str_buffer, "% .6E", value);
+    l = snprintf((char *)&qbs_str_buffer, sizeof(qbs_str_buffer), "% .6E", value);
     // IMPORTANT: assumed l==14
     if (l == 13) {
         memmove(&qbs_str_buffer[12], &qbs_str_buffer[11], 2);
@@ -217,7 +217,7 @@ asdecimal:
     func_str_fmt[3] = i + 48;
     func_str_fmt[4] = 102; //"f"
     func_str_fmt[5] = 0;
-    tqbs->len = sprintf((char *)tqbs->chr, (const char *)&func_str_fmt, value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, (const char *)&func_str_fmt, value);
     if (tqbs->chr[1] == 48) { // must manually cull leading 0
         memmove(tqbs->chr + 1, tqbs->chr + 2, tqbs->len - 2);
         tqbs->len--;
@@ -239,7 +239,7 @@ qbs *qbs_str(double value) {
     tqbs = qbs_new(32, 1);
     static int32_t l, i, i2, i3, digits, exponent;
 
-    l = sprintf((char *)&qbs_str_buffer, "% .15E", value);
+    l = snprintf((char *)&qbs_str_buffer, sizeof(qbs_str_buffer), "% .15E", value);
     // IMPORTANT: assumed l==23
     if (l == 22) {
         memmove(&qbs_str_buffer[21], &qbs_str_buffer[20], 2);
@@ -249,7 +249,7 @@ qbs *qbs_str(double value) {
 
     // check if the 16th significant digit is 9, if it is round to 15 significant digits
     if (qbs_str_buffer[17] == 57) {
-        sprintf((char *)&qbs_str_buffer2, "% .14E", value);
+        snprintf((char *)&qbs_str_buffer2, sizeof(qbs_str_buffer2), "% .14E", value);
         memmove(&qbs_str_buffer, &qbs_str_buffer2, 17);
         qbs_str_buffer[17] = 48;
     }
@@ -322,7 +322,7 @@ asdecimal:
     }
     func_str_fmt[5] = 102; //"f"
     func_str_fmt[6] = 0;
-    tqbs->len = sprintf((char *)tqbs->chr, (const char *)&func_str_fmt, value);
+    tqbs->len = snprintf((char *)tqbs->chr, tqbs->len, (const char *)&func_str_fmt, value);
     if (tqbs->chr[1] == 48) { // must manually cull leading 0
         memmove(tqbs->chr + 1, tqbs->chr + 2, tqbs->len - 2);
         tqbs->len--;

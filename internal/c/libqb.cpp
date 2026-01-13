@@ -4,6 +4,8 @@
 #ifdef QB64_WINDOWS
 #    include <fcntl.h>
 #    include <shellapi.h>
+#else
+#    include <unistd.h> // for isatty
 #endif
 
 #ifdef QB64_MACOSX
@@ -11465,7 +11467,7 @@ void qbs_print(qbs *str, int32 finish_on_new_line) {
     entered_new_line = 0;
     static uint32 character;
 
-    if (write_page->console) {
+    if (write_page->console || console) {
         static qbs *strz;
         if (!strz)
             strz = qbs_new(0, 0);
@@ -14570,7 +14572,7 @@ int32 n_float() {
     }
     built[i] = 69;
     i++; // E
-    i2 = sprintf((char *)&built[i], "%" PRId64, n_exp);
+    i2 = snprintf((char *)&built[i], sizeof(built) - i, "%" PRId64, n_exp);
     i = i + i2;
     built[i] = 0; // NULL terminate for sscanf
 
@@ -20858,7 +20860,7 @@ numeric_spacer:
             z3 = -1;
         z = z2 - z3; // combine to calculate actual exponent which will be "printed"
         z3 = abs(z);
-        z2 = sprintf((char *)pu_buf, "%u", z3); // use pu_buf to convert exponent to a string
+        z2 = snprintf((char *)pu_buf, sizeof(pu_buf), "%u", z3); // use pu_buf to convert exponent to a string
         if (z2 > exponent_digits) {
             cant_fit = 1;
             exponent_digits = z2;
@@ -21201,7 +21203,7 @@ invalid_string_format:
 int32 print_using_integer64(qbs *format, int64 value, int32 start, qbs *output) {
     if (is_error_pending())
         return 0;
-    pu_ndig = sprintf((char *)pu_buf, "% " PRId64, value);
+    pu_ndig = snprintf((char *)pu_buf, sizeof(pu_buf), "% " PRId64, value);
     if (pu_buf[0] == 45)
         pu_neg = 1;
     else
@@ -21216,7 +21218,7 @@ int32 print_using_integer64(qbs *format, int64 value, int32 start, qbs *output) 
 int32 print_using_uinteger64(qbs *format, uint64 value, int32 start, qbs *output) {
     if (is_error_pending())
         return 0;
-    pu_ndig = sprintf((char *)pu_dig, "%" PRIu64, value);
+    pu_ndig = snprintf((char *)pu_dig, sizeof(pu_dig), "%" PRIu64, value);
     pu_neg = 0;
     pu_dp = 0;
     start = print_using(format, start, output, NULL);
@@ -21229,7 +21231,7 @@ int32 print_using_single(qbs *format, float value, int32 start, qbs *output) {
     static int32 i, len, neg_exp;
     static uint8 c;
     static int64 exp;
-    len = sprintf((char *)&pu_buf, "% .255E", value); // 256 character limit ([1].[255])
+    len = snprintf((char *)&pu_buf, sizeof(pu_buf), "% .255E", value); // 256 character limit ([1].[255])
     pu_dp = 0;
     pu_ndig = 0;
     // 1. sign
@@ -21311,7 +21313,7 @@ int32 print_using_double(qbs *format, double value, int32 start, qbs *output) {
     static int32 i, len, neg_exp;
     static uint8 c;
     static int64 exp;
-    len = sprintf((char *)&pu_buf, "% .255E", value); // 256 character limit ([1].[255])
+    len = snprintf((char *)&pu_buf, sizeof(pu_buf), "% .255E", value); // 256 character limit ([1].[255])
     pu_dp = 0;
     pu_ndig = 0;
     // 1. sign
@@ -21401,7 +21403,7 @@ int32 print_using_float(qbs *format, long double value, int32 start, qbs *output
 #ifdef QB64_MINGW
     len = __mingw_sprintf((char *)&pu_buf, "% .255Lf", value); // 256 character limit ([1].[255])
 #else
-    len = sprintf((char *)&pu_buf, "% .255Lf", value); // 256 character limit ([1].[255])
+    len = snprintf((char *)&pu_buf, sizeof(pu_buf), "% .255Lf", value); // 256 character limit ([1].[255])
 #endif
 
     // qbs_print(qbs_new_txt((char*)&pu_buf),1);
@@ -27493,11 +27495,11 @@ void GLUT_DISPLAY_REQUEST() {
         static char game_mode_string[1000];
         static int32 game_mode_string_i;
         game_mode_string_i=0;
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        display_frame[i].w); game_mode_string[game_mode_string_i++]=120;//"x"
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        display_frame[i].h); game_mode_string[game_mode_string_i++]=58;//":"
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        32); glutGameModeString(game_mode_string);
         if(glutGameModeGet(GLUT_GAME_MODE_POSSIBLE)){
         //full screen using native dimensions which match the frame size
@@ -27512,11 +27514,11 @@ void GLUT_DISPLAY_REQUEST() {
         static int32 w; w=glutGet(GLUT_SCREEN_WIDTH);
         static int32 h; h=glutGet(GLUT_SCREEN_HEIGHT);
         game_mode_string_i=0;
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        w); game_mode_string[game_mode_string_i++]=120;//"x"
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        h); game_mode_string[game_mode_string_i++]=58;//":"
-        game_mode_string_i+=sprintf(&game_mode_string[game_mode_string_i], "%d",
+        game_mode_string_i+=snprintf(&game_mode_string[game_mode_string_i], sizeof(game_mode_string) - game_mode_string_i, "%d",
        32); glutGameModeString(game_mode_string);
         if(glutGameModeGet(GLUT_GAME_MODE_POSSIBLE)){
         //full screen using desktop dimensions
