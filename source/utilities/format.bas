@@ -111,13 +111,20 @@ FUNCTION apply_layout_indent$ (original$)
                     recheck_needed = -1 ' Recheck without incrementing again
                 ELSEIF lch$ = "?" AND UCASE$(MID$(olay$, ocnt, 5)) = "PRINT" THEN
                     ' ? = PRINT special case (equivalent to original lines 87-91)
-                    ps$ = "print": nlch$ = MID$(layout2$, lcnt + 1, 1)
-                    IF nlch$ <> " " AND nlch$ <> "" THEN ps$ = ps$ + " "
-                    layout2$ = LEFT$(layout2$, lcnt - 1) + ps$ + RIGHT$(layout2$, LEN(layout2$) - lcnt)
+                    ' Add bounds check to prevent subscript errors
+                    IF lcnt >= 1 AND lcnt <= LEN(layout2$) THEN
+                        ps$ = "print"
+                        IF lcnt + 1 <= LEN(layout2$) THEN nlch$ = MID$(layout2$, lcnt + 1, 1) ELSE nlch$ = ""
+                        IF nlch$ <> " " AND nlch$ <> "" THEN ps$ = ps$ + " "
+                        layout2$ = LEFT$(layout2$, lcnt - 1) + ps$ + RIGHT$(layout2$, LEN(layout2$) - lcnt)
+                    END IF
                     recheck_needed = -1 ' Recheck without incrementing (original GOTO recheckdiff)
                 ELSEIF och$ = CHR$(34) AND llch$ = loch$ THEN
                     ' Auto-add string closing quote special case (equivalent to original lines 93-95)
-                    layout2$ = LEFT$(layout2$, lcnt - 1) + CHR$(34) + RIGHT$(layout2$, LEN(layout2$) - lcnt)
+                    ' Add bounds check to prevent subscript errors
+                    IF lcnt >= 1 AND lcnt <= LEN(layout2$) THEN
+                        layout2$ = LEFT$(layout2$, lcnt - 1) + CHR$(34) + RIGHT$(layout2$, LEN(layout2$) - lcnt)
+                    END IF
                     recheck_needed = -1 ' Recheck without incrementing (original GOTO recheckdiff)
                 ELSE
                     ' Handle case difference (equivalent to original line 97)

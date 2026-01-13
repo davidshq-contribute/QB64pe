@@ -14,8 +14,11 @@
 ' This label is normally defined in qb64pe.bas, but we need it for test compilation
 ' Must be defined before any SUB/FUNCTION declarations
 ' Note: Error handler must be in main program section
+' Skip over error handler during normal execution
+GOTO SkipErrorHandler
 qberror_test:
     RESUME NEXT
+SkipErrorHandler:
 
 ' ============================================================================
 ' PHASE 1: Include declaration files (CONST, TYPE, DIM SHARED, DECLARE only)

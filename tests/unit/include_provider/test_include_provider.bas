@@ -101,10 +101,10 @@ SUB Test_FilesystemProviderOpenReadClose
         line$ = IncludeProvider_Filesystem_ReadLine$(level)
         result = Test_AssertEqualString&("", line$, "Should return empty string at EOF")
     END IF
-    
-    ' Test close
+
+    ' Test close - always close the file even if tests failed
+    IncludeProvider_Filesystem_Close level
     IF result THEN
-        IncludeProvider_Filesystem_Close level
         ' Try to read after close (should return empty)
         line$ = IncludeProvider_Filesystem_ReadLine$(level)
         result = Test_AssertEqualString&("", line$, "Should return empty after close")
