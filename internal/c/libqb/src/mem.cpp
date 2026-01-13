@@ -34,13 +34,25 @@ intptr_t *mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_
  * @brief Creates a new memory lock
  * @note Allocates a lock from the pool or reuses a freed lock.
  *       Assigns a unique ID to the lock for validation.
+ *       Triggers critical error 518 if allocation fails.
  */
 void new_mem_lock() {
+    // Validate global allocations on first call
+    if (!mem_lock_base || !mem_lock_freed) {
+        error(518); // critical error: out of memory (global allocations failed)
+        return;
+    }
+
     if (mem_lock_freed_n) {
         mem_lock_tmp = (mem_lock *)mem_lock_freed[--mem_lock_freed_n];
     } else {
         if (mem_lock_next == mem_lock_max) {
-            mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+            mem_lock *new_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+            if (!new_base) {
+                error(518); // critical error: out of memory
+                return;
+            }
+            mem_lock_base = new_base;
             mem_lock_next = 0;
         }
         mem_lock_tmp = &mem_lock_base[mem_lock_next++];
@@ -53,6 +65,7 @@ void new_mem_lock() {
  * @param lock Lock to free
  * @note Invalidates the lock ID. Frees malloc'ed memory if type is 1.
  *       Adds the lock to the freed list for reuse.
+ *       Triggers critical error 518 if realloc fails.
  */
 void free_mem_lock(mem_lock *lock) {
     lock->id = 0; // invalidate lock
@@ -61,7 +74,14 @@ void free_mem_lock(mem_lock *lock) {
     // add to freed list
     if (mem_lock_freed_n == mem_lock_freed_max) {
         mem_lock_freed_max *= 2;
-        mem_lock_freed = (intptr_t *)realloc(mem_lock_freed, sizeof(intptr_t) * mem_lock_freed_max);
+        intptr_t *new_freed = (intptr_t *)realloc(mem_lock_freed, sizeof(intptr_t) * mem_lock_freed_max);
+        if (!new_freed) {
+            // realloc failed - restore original size and trigger critical error
+            mem_lock_freed_max /= 2;
+            error(518); // critical error: out of memory
+            return;
+        }
+        mem_lock_freed = new_freed;
     }
     mem_lock_freed[mem_lock_freed_n++] = (intptr_t)lock;
 }
