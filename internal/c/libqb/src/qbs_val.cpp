@@ -4,6 +4,9 @@
 #include "qbs.h"
 #include <cstdio>
 #include <type_traits>
+#include <cerrno>
+#include <cstdlib>
+#include <cfloat>
 
 /**
  * @file qbs_val.cpp
@@ -207,11 +210,23 @@ finish:
 
     qbs_val_built_number[i] = '\0'; // null-terminate
 
-#ifdef QB64_MINGW
-    __mingw_sscanf(qbs_val_built_number, "%Lf", &value.f);
-#else
-    sscanf(qbs_val_built_number, "%Lf", &value.f);
-#endif
+    // Use strtold for safer parsing with proper error handling
+    char *endptr;
+    errno = 0;
+    value.f = strtold(qbs_val_built_number, &endptr);
+    
+    // Check for conversion errors
+    if (errno == ERANGE) {
+        // Handle overflow/underflow - clamp to reasonable values
+        if (value.f > 0) {
+            value.f = LDBL_MAX;
+        } else if (value.f < 0) {
+            value.f = -LDBL_MAX;
+        }
+    } else if (endptr == qbs_val_built_number) {
+        // No conversion occurred
+        value.f = 0.0;
+    }
 
     return value.f;
 

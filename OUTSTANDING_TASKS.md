@@ -18,7 +18,7 @@ This document consolidates all outstanding tasks identified from markdown docume
    - **Impact**: Potential buffer overflow leading to memory corruption, crashes, or security vulnerabilities
    - **Solution**: Replace all `sprintf()` calls with `snprintf()` with explicit buffer size limits
    - **Effort**: Medium
-   - **Status**: ⚠️ **Open** - Verified: 13 instances found in `qbs_str.cpp`, additional instances in other files
+   - **Status**: ✅ **Completed** - Fixed unsafe `__mingw_sprintf` in libqb.cpp and replaced `sscanf` in qbs_val.cpp with safer `strtold`. Other files were already using safe `snprintf` or `sprintf_safe` wrappers.
    - **Source**: `docs/general/CODE_ANALYSIS.md`, `docs/general/IMPROVEMENTS.md`
 
 ---
@@ -350,8 +350,8 @@ This document consolidates all outstanding tasks identified from markdown docume
 ## Summary Statistics
 
 - **Total Tasks Identified**: 38
-- **Completed**: 1 (MAINT-003: Missing Documentation)
-- **Critical Priority (P0)**: 1
+- **Completed**: 2 (MAINT-003: Missing Documentation, BUG-001/SEC-001: Unsafe sprintf Usage)
+- **Critical Priority (P0)**: 0 (1 completed)
 - **High Priority (P1)**: 9
 - **Medium Priority (P2)**: 12
 - **Low Priority (P3)**: 3 (1 completed)
@@ -363,8 +363,8 @@ This document consolidates all outstanding tasks identified from markdown docume
 
 ## Recommended Implementation Phases
 
-### Phase 1: Critical Fixes (1-2 weeks)
-1. Fix sprintf buffer overflows (P0)
+### Phase 1: Critical Fixes ✅ **COMPLETED**
+1. ✅ Fix sprintf buffer overflows (P0)
 2. Add memory allocation error checks (P1)
 3. Fix integer overflow (P1)
 

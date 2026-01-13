@@ -21401,7 +21401,7 @@ int32 print_using_float(qbs *format, long double value, int32 start, qbs *output
     static int64 exp;
 // len=sprintf((char*)&pu_buf,"% .255E",value);//256 character limit ([1].[255])
 #ifdef QB64_MINGW
-    len = __mingw_sprintf((char *)&pu_buf, "% .255Lf", value); // 256 character limit ([1].[255])
+    len = __mingw_snprintf((char *)&pu_buf, sizeof(pu_buf), "% .255Lf", value); // 256 character limit ([1].[255])
 #else
     len = snprintf((char *)&pu_buf, sizeof(pu_buf), "% .255Lf", value); // 256 character limit ([1].[255])
 #endif
