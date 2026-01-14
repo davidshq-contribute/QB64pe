@@ -16,7 +16,8 @@ This document outlines a comprehensive plan to modularize `internal/c/libqb.cpp`
 | **Color** | `color.cpp`, `color.h` | ✅ Complete | `matchcol`, `func__rgb`, `func__rgba`, `func__red`, `func__green`, `func__blue`, `func__alpha`, `sub__clearcolor`, `func__clearcolor`, `func__defaultcolor`, `func__backgroundcolor`, `func__palettecolor`, `sub__palettecolor`, `sub__copypalette` |
 | **Screen** | `screen.cpp`, `screen.h` | ✅ Complete | `sub__display`, `sub__autodisplay`, `sub__fullscreen`, `func__fullscreen`, `func__fullscreensmooth`, `sub__allowfullscreen`, `sub__resize`, `func__resize`, `func__resizewidth`, `func__resizeheight`, `func__scaledwidth`, `func__scaledheight`, `func__screenx`, `func__screeny` |
 | **Memory Legacy** | `mem_legacy.cpp`, `mem_legacy.h` | ✅ Complete | `sub_defseg`, `func_peek`, `sub_poke` |
-| **Graphics** | `graphics.h` (declarations only) | ✅ Partial | Added declarations for drawing primitives; implementations remain in libqb.cpp due to complex dependencies |
+| **Keyboard** | `keyboard.cpp`, `keyboard.h` | ✅ Complete | `func__capslock`, `func__scrolllock`, `func__numlock`, `sub__capslock`, `sub__scrolllock`, `sub__numlock` |
+| **Drawing** | `graphics.cpp`, `graphics.h` | ✅ Complete | `sub_line`, `sub_circle`, `sub_paint` (all variants), `sub_pset`, `sub_preset`, `func_point`, `point` |
 
 ### Deferred Modules
 
@@ -28,11 +29,11 @@ This document outlines a comprehensive plan to modularize `internal/c/libqb.cpp`
 | **Control Flow** | Cross-cutting dependencies on display, fonts, QBS string system; key functions already extracted to datetime.cpp |
 
 ### Build System Updates
-- `libqb/build.mk` updated with: `fileio.o`, `color.o`, `screen.o`, `mem_legacy.o`
+- `libqb/build.mk` updated with: `fileio.o`, `color.o`, `screen.o`, `mem_legacy.o`, `keyboard.o`
 
 ### libqb.cpp Size Reduction
 - Original: ~31,111 lines
-- Current: ~30,800 lines (functions replaced with comments indicating new locations)
+- Current: ~27,261 lines (reduced by ~3,850 lines through modularization)
 
 ## Current State Analysis
 
@@ -217,27 +218,25 @@ These global variables must be carefully managed during extraction:
 5. ✅ Created `handles.h` for file handle definitions
 6. ✅ Update include statements in `libqb.cpp`
 
-#### Module 2: Graphics Drawing ✅ PARTIAL (Declarations Only)
-**Target:** `libqb/src/graphics_drawing.cpp` (~3,500+ lines)
+#### Module 2: Graphics Drawing ✅ COMPLETE
+**Target:** `libqb/src/graphics.cpp` (~1,420 lines added)
 
 | Item | Description |
 |------|-------------|
-| **Functions** | `sub_line`, `sub_circle`, `sub_pset`, `sub_paint`, `sub_paint32`, drawing primitives |
-| **Dependencies** | `graphics.h`, `image.h`, palette system |
+| **Functions** | `sub_line`, `sub_circle`, `sub_pset`, `sub_preset`, `sub_paint` (all variants), `func_point`, `point` |
+| **Dependencies** | `graphics.h`, `rounding.h`, `qbs.h`, `os.h` |
 | **Rationale** | Drawing operations form a cohesive unit. High impact on code organization. |
 
-**Status:** Declarations added to `graphics.h`. Full extraction deferred due to complex interdependencies with:
-- `pset_and_clip` internal helper
-- `lineclip` clipping functions
-- Palette and image system globals
+**Status:** Drawing primitives extracted to existing `graphics.cpp`. Helper functions (`pset`, `pset_and_clip`, `fast_line`, `fast_boxfill`, `qb32_line`, `qb32_boxfill`) remain in libqb.cpp and are accessed via extern declarations.
 
 **Tasks:**
 1. ✅ Added declarations to `libqb/include/graphics.h`
-2. ⏸️ Extract line drawing functions - DEFERRED (complex dependencies)
-3. ⏸️ Extract circle/ellipse drawing functions - DEFERRED
-4. ⏸️ Extract point operations - DEFERRED
-5. ⏸️ Extract fill/paint operations - DEFERRED
-6. ⏸️ Define interface for accessing image and palette globals - DEFERRED
+2. ✅ Extract line drawing functions (`sub_line`)
+3. ✅ Extract circle drawing functions (`sub_circle`)
+4. ✅ Extract point operations (`point`, `func_point`)
+5. ✅ Extract fill/paint operations (`sub_paint`, `sub_paint32`, `sub_paint32x`)
+6. ✅ Extract pset/preset operations (`sub_pset`, `sub_preset`)
+7. ✅ Added extern declarations for helper functions in graphics.cpp
 
 ---
 
@@ -519,7 +518,7 @@ Functions that proved difficult to extract:
 4. **Batch related functions** - Extract tightly-coupled function groups together
 5. **Test incrementally** - Compile after each function extraction
 
-### Files Created
+### Files Created/Modified
 
 | File | Purpose |
 |------|---------|
@@ -532,6 +531,10 @@ Functions that proved difficult to extract:
 | `libqb/include/screen.h` | Screen function declarations |
 | `libqb/src/mem_legacy.cpp` | Legacy memory access (peek/poke/defseg) |
 | `libqb/include/mem_legacy.h` | Legacy memory function declarations |
+| `libqb/src/keyboard.cpp` | Keyboard lock key functions |
+| `libqb/include/keyboard.h` | Keyboard function declarations |
+| `libqb/src/graphics.cpp` | Drawing primitives (extended existing file) |
+| `libqb/include/graphics.h` | Drawing primitive declarations (extended) |
 
 ### Build System Notes
 

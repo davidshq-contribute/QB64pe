@@ -13,6 +13,9 @@
 
 #include <stdint.h>
 
+// Current segment pointer (exported for call_absolute in libqb.cpp)
+extern uint8_t *defseg;
+
 // DEF SEG - Set segment for PEEK/POKE operations
 void sub_defseg(int32_t segment, int32_t passed);
 

@@ -26,8 +26,8 @@
 // External reference to conventional memory block
 extern uint8 cmem[1114099];
 
-// Current segment pointer for PEEK/POKE operations
-static uint8 *defseg = &cmem[1280]; // set to base of DBLOCK
+// Current segment pointer for PEEK/POKE operations (exported for call_absolute)
+uint8 *defseg = &cmem[1280]; // set to base of DBLOCK
 
 // DEF SEG - Set segment for PEEK/POKE operations
 void sub_defseg(int32_t segment, int32_t passed) {
