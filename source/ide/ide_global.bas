@@ -1,9 +1,14 @@
+'setup optional codepages
+' Note: CONST idecpnum& is now defined in global/constants_ide.bas
+'$INCLUDE:'..\global\constants_ide.bas'
+
 'Allow the window to be resized
 $RESIZE:ON
 
 _CONTROLCHR OFF
 
 '$INCLUDE:'wiki\wiki_global.bas'
+'$INCLUDE:'..\subs_functions\syntax_highlighter_list.bas'
 
 DIM SHARED AltSpecial AS _BYTE
 
@@ -68,9 +73,7 @@ DIM SHARED block_chr(255) AS INTEGER
 block_chr(10) = 1
 block_chr(13) = 1
 
-'setup optional codepages
 DIM SHARED idecpindex
-CONST idecpnum& = 27
 DIM SHARED idecpname(1 TO idecpnum) AS STRING
 DIM SHARED idecp(1 TO idecpnum) AS STRING
 '

@@ -1,62 +1,464 @@
 'All variables will be of type LONG unless explicitly defined
 DEFLNG A-Z
 
-'All arrays will be dynamically allocated so they can be REDIM-ed
-'$DYNAMIC
+'TYPE declarations needed for DIM SHARED variables
+TYPE idstruct
+    n AS STRING * 256 'name
+    cn AS STRING * 256 'case sensitive version of n
+    arraytype AS LONG
+    arrayelements AS INTEGER
+    staticarray AS INTEGER
+    mayhave AS STRING * 8
+    musthave AS STRING * 8
+    isglobal AS INTEGER
+    isreference AS INTEGER
+    isbyval AS INTEGER
+    linenumber AS LONG
+    offset AS LONG
+    subfunc AS INTEGER
+    typ AS LONG
+    ret AS LONG
+    args AS INTEGER
+    arg AS STRING * 80
+END TYPE
 
-'We need console access to support command-line compilation via the -x command line compile option
-$CONSOLE
+TYPE IncludeProviderState
+    providerType AS LONG
+    fileHandle AS LONG
+    content AS STRING
+    currentLine AS LONG
+    fileName AS STRING
+    isOpen AS LONG
+END TYPE
 
-'Initially the "SCREEN" will be hidden, if the -x option is used it will never be created
-$SCREENHIDE
+TYPE MemoryFile
+    fileName AS STRING
+    content AS STRING
+END TYPE
 
-$EXEICON:'./qb64pe.ico'
+TYPE TestProviderCall
+    callType AS STRING * 20
+    fileName AS STRING
+    callOrder AS LONG
+END TYPE
 
-$VERSIONINFO:CompanyName='QB64 Phoenix Edition'
-$VERSIONINFO:FileDescription='QB64 IDE and Compiler'
-$VERSIONINFO:InternalName='qb64pe.bas'
-$VERSIONINFO:LegalCopyright='MIT'
-$VERSIONINFO:LegalTrademarks=''
-$VERSIONINFO:OriginalFilename='qb64pe.exe'
-$VERSIONINFO:ProductName='QB64-PE'
-$VERSIONINFO:Comments='QB64 is a modern extended BASIC programming language that retains QB4.5/QBasic compatibility and compiles native binaries for Windows, Linux and macOS.'
+TYPE TestProviderPathMap
+    fromPath AS STRING
+    toPath AS STRING
+END TYPE
 
-'$INCLUDE:'global\version.bas'
-'$INCLUDE:'global\settings.bas'
-'$INCLUDE:'global\constants.bas'
-'$INCLUDE:'subs_functions\extensions\opengl\opengl_global.bas'
-'$INCLUDE:'utilities\ini-manager\ini.bi'
-'$INCLUDE:'utilities\s-buffer\simplebuffer.bi'
-'$INCLUDE:'utilities\const_eval.bi'
-'$INCLUDE:'utilities\give_error.bi'
-'$INCLUDE:'utilities\statevars.bi'
-'$INCLUDE:'utilities\type.bi'
-'$INCLUDE:'utilities\include_provider.bi'
+TYPE RuntimeStub
+    functionName AS STRING * 50
+    returnValue AS STRING
+    callCount AS LONG
+END TYPE
 
-DEFLNG A-Z
+TYPE HashListItem
+    Flags AS LONG
+    Reference AS LONG
+    NextItem AS LONG
+    PrevItem AS LONG
+    LastItem AS LONG
+END TYPE
 
-'-------- Optional IDE Component (1/2) --------
-'$INCLUDE:'ide\ide_global.bas'
+TYPE GL_idstruct
+    cn AS STRING * 64
+    subfunc AS INTEGER
+    callname AS STRING * 64
+    args AS INTEGER
+    arg AS STRING * 80
+    ret AS LONG
+END TYPE
 
+TYPE ConstFunction
+    nam AS STRING
+    ArgCount AS INTEGER
+END TYPE
+
+TYPE ParseNum
+    f AS _FLOAT
+    i AS _INTEGER64
+    ui AS _UNSIGNED _INTEGER64
+    s AS STRING
+    typ AS LONG
+END TYPE
+
+TYPE idedbptype
+    x AS LONG
+    y AS LONG
+    w AS LONG
+    h AS LONG
+    nam AS LONG
+END TYPE
+
+TYPE idedbotype
+    par AS idedbptype
+    x AS LONG
+    y AS LONG
+    w AS LONG
+    h AS LONG
+    typ AS LONG
+END TYPE
+
+' Hash flag constants (must be declared before executable code)
+CONST HASHFLAG_LABEL = 2
+CONST HASHFLAG_TYPE = 4
+CONST HASHFLAG_RESERVED = 8
+CONST HASHFLAG_OPERATOR = 16
+CONST HASHFLAG_CUSTOMSYNTAX = 32
+CONST HASHFLAG_SUB = 64
+CONST HASHFLAG_FUNCTION = 128
+CONST HASHFLAG_UDT = 256
+CONST HASHFLAG_UDTELEMENT = 512
+CONST HASHFLAG_CONSTANT = 1024
+CONST HASHFLAG_VARIABLE = 2048
+CONST HASHFLAG_ARRAY = 4096
+CONST HASHFLAG_XELEMENTNAME = 8192
+CONST HASHFLAG_XTYPENAME = 16384
+
+CONST Debug = 0
+
+'All DIM SHARED declarations (must be before any SUB/FUNCTION boundaries)
 DIM SHARED NoExeSaved AS _BYTE
-
 DIM SHARED vWatchErrorCall$, vWatchNewVariable$, vWatchVariableExclusions$
-vWatchErrorCall$ = "if (stop_program) {*__LONG_VWATCH_LINENUMBER=0; SUB_VWATCH((ptrszint*)vwatch_global_vars,(ptrszint*)vwatch_local_vars);};if(new_error){bkp_new_error=new_error;new_error=0;*__LONG_VWATCH_LINENUMBER=-1; SUB_VWATCH((ptrszint*)vwatch_global_vars,(ptrszint*)vwatch_local_vars);new_error=bkp_new_error;};"
-vWatchVariableExclusions$ = "@__LONG_VWATCH_LINENUMBER@__LONG_VWATCH_SUBLEVEL@__LONG_VWATCH_GOTO@" + _
-              "@__STRING_VWATCH_SUBNAME@__STRING_VWATCH_CALLSTACK@__ARRAY_BYTE_VWATCH_BREAKPOINTS" + _
-              "@__ARRAY_BYTE_VWATCH_SKIPLINES@__STRING_VWATCH_INTERNALSUBNAME@__ARRAY_STRING_VWATCH_STACK@"
-
 DIM SHARED nativeDataTypes$
-nativeDataTypes$ = "@_OFFSET@_UNSIGNED _OFFSET@_BIT@_UNSIGNED _BIT@_BYTE@_UNSIGNED _BYTE@INTEGER@_UNSIGNED INTEGER@LONG@_UNSIGNED LONG@_INTEGER64@_UNSIGNED _INTEGER64@SINGLE@DOUBLE@_FLOAT@STRING@"
 
+' Type system flags
+DIM SHARED ISSTRING AS LONG
+DIM SHARED ISFLOAT AS LONG
+DIM SHARED ISUNSIGNED AS LONG
+DIM SHARED ISPOINTER AS LONG
+DIM SHARED ISFIXEDLENGTH AS LONG
+DIM SHARED ISINCONVENTIONALMEMORY AS LONG
+DIM SHARED ISOFFSETINBITS AS LONG
+DIM SHARED ISARRAY AS LONG
+DIM SHARED ISREFERENCE AS LONG
+DIM SHARED ISUDT AS LONG
+DIM SHARED ISOFFSET AS LONG
+
+' Type constants
+DIM SHARED STRINGTYPE AS LONG
+DIM SHARED BITTYPE AS LONG
+DIM SHARED UBITTYPE AS LONG
+DIM SHARED BYTETYPE AS LONG
+DIM SHARED UBYTETYPE AS LONG
+DIM SHARED INTEGERTYPE AS LONG
+DIM SHARED UINTEGERTYPE AS LONG
+DIM SHARED LONGTYPE AS LONG
+DIM SHARED ULONGTYPE AS LONG
+DIM SHARED INTEGER64TYPE AS LONG
+DIM SHARED UINTEGER64TYPE AS LONG
+DIM SHARED SINGLETYPE AS LONG
+DIM SHARED DOUBLETYPE AS LONG
+DIM SHARED FLOATTYPE AS LONG
+DIM SHARED OFFSETTYPE AS LONG
+DIM SHARED UOFFSETTYPE AS LONG
+DIM SHARED UDTTYPE AS LONG
+
+' UDT arrays (will be REDIM'd later)
+DIM SHARED udtxname() AS STRING * 256
+DIM SHARED udtxcname() AS STRING * 256
+DIM SHARED udtxsize() AS LONG
+DIM SHARED udtxnext() AS LONG
+DIM SHARED udtxvariable() AS INTEGER
+DIM SHARED udtename() AS STRING * 256
+DIM SHARED udtecname() AS STRING * 256
+DIM SHARED udtesize() AS LONG
+DIM SHARED udtetype() AS LONG
+DIM SHARED udtetypesize() AS LONG
+DIM SHARED udtearrayelements() AS LONG
+DIM SHARED udtenext() AS LONG
+
+' Global id variable
+DIM SHARED id AS idstruct
+
+' Simple buffer
+DIM SHARED simplebuffer_array$()
+
+' Include provider
+DIM SHARED includeProviderType AS LONG
+DIM SHARED skipIncludes AS LONG
+DIM SHARED includeProviderStates(100) AS IncludeProviderState
+DIM SHARED memoryFiles(1000) AS MemoryFile
+DIM SHARED memoryFileCount AS LONG
+DIM SHARED testProviderCalls(1000) AS TestProviderCall
+DIM SHARED testProviderCallCount AS LONG
+DIM SHARED testProviderErrorFile$
+DIM SHARED testProviderErrorType AS LONG
+DIM SHARED testProviderPathMaps(100) AS TestProviderPathMap
+DIM SHARED testProviderPathMapCount AS LONG
+DIM SHARED runtimeStubs(100) AS RuntimeStub
+DIM SHARED runtimeStubCount AS LONG
+
+' Hash system
+DIM SHARED HashFind_NextListItem AS LONG
+DIM SHARED HashFind_Reverse AS LONG
+DIM SHARED HashFind_SearchFlags AS LONG
+DIM SHARED HashFind_Name AS STRING
+DIM SHARED HashRemove_LastFound AS LONG
+DIM SHARED HashListSize AS LONG
+DIM SHARED HashListNext AS LONG
+DIM SHARED HashListFreeSize AS LONG
+DIM SHARED HashListFreeLast AS LONG
+DIM SHARED hash1char(255) AS INTEGER
+DIM SHARED hash2char(65535) AS INTEGER
+DIM SHARED HashList() AS HashListItem
+DIM SHARED HashListName() AS STRING * 256
+DIM SHARED HashListFree() AS LONG
+DIM SHARED HashTable() AS LONG
+DIM SHARED constmax AS LONG
+DIM SHARED constlast AS LONG
+DIM SHARED constname() AS STRING
+DIM SHARED constcname() AS STRING
+DIM SHARED constnamesymbol() AS STRING
+DIM SHARED consttype() AS LONG
+DIM SHARED constinteger() AS _INTEGER64
+DIM SHARED constuinteger() AS _UNSIGNED _INTEGER64
+DIM SHARED constfloat() AS _FLOAT
+DIM SHARED conststring() AS STRING
+DIM SHARED constsubfunc() AS LONG
+DIM SHARED constdefined() AS LONG
+
+' Syntax highlighter
+DIM SHARED listOfKeywords$, listOfCustomKeywords$, customKeywordsLength AS LONG
+
+' OpenGL
+DIM SHARED GL_HELPER_CODE AS STRING
+DIM SHARED GL_COMMANDS_LAST
+DIM SHARED GL_DEFINES_LAST
+DIM SHARED GL_KIT
+
+' From global/version.bas
+DIM SHARED Version AS STRING
+DIM SHARED IsCiVersion AS _BYTE
+
+' From global/constants.bas
+DIM SHARED sp AS STRING * 1, sp2 AS STRING * 1, sp3 AS STRING * 1
+DIM SHARED sp_asc AS LONG, sp2_asc AS LONG, sp3_asc AS LONG
+DIM SHARED CHR_QUOTE AS STRING * 1
+DIM SHARED CHR_TAB AS STRING * 1
+DIM SHARED CRLF AS STRING
+DIM SHARED NATIVE_LINEENDING AS STRING
+DIM SHARED OS_BITS AS LONG
+
+' From utilities/s-buffer/sb_qb64pe_extension.bi
+REDIM SHARED SBufN(0 TO 99) AS STRING
+
+' From utilities/const_eval.bi
+REDIM SHARED ConstFuncs(1000) AS ConstFunction
+
+' Hash system REDIM declarations (from utilities/hash.bi)
+REDIM SHARED HashList(1 TO 65536) AS HashListItem
+REDIM SHARED HashListName(1 TO 65536) AS STRING * 256
+REDIM SHARED HashListFree(1 TO 1024) AS LONG
+REDIM SHARED HashTable(16777215) AS LONG
+REDIM SHARED constname(100) AS STRING
+REDIM SHARED constcname(100) AS STRING
+REDIM SHARED constnamesymbol(100) AS STRING
+REDIM SHARED consttype(100) AS LONG
+REDIM SHARED constinteger(100) AS _INTEGER64
+REDIM SHARED constuinteger(100) AS _UNSIGNED _INTEGER64
+REDIM SHARED constfloat(100) AS _FLOAT
+REDIM SHARED conststring(100) AS STRING
+REDIM SHARED constsubfunc(100) AS LONG
+REDIM SHARED constdefined(100) AS LONG
+
+' From utilities/type.bi
+REDIM SHARED udtxname(1000) AS STRING * 256
+REDIM SHARED udtxcname(1000) AS STRING * 256
+REDIM SHARED udtxsize(1000) AS LONG
+REDIM SHARED udtxnext(1000) AS LONG
+REDIM SHARED udtxvariable(1000) AS INTEGER
+REDIM SHARED udtename(1000) AS STRING * 256
+REDIM SHARED udtecname(1000) AS STRING * 256
+REDIM SHARED udtesize(1000) AS LONG
+REDIM SHARED udtetype(1000) AS LONG
+REDIM SHARED udtearrayelements(1000) AS LONG
+REDIM SHARED udtenext(1000) AS LONG
+
+' From ide/config/cfg_global.bas
+DIM SHARED AS LONG IDEAutoLayout, IDEAutoLayoutKwStyle, IDEAutoIndent, IDEAutoIndentSize, IDEIndentSubs
+DIM SHARED AS LONG DEFAutoLayout, DEFAutoIndent
+DIM SHARED IDECommentColor AS _UNSIGNED LONG, IDEMetaCommandColor AS _UNSIGNED LONG
+DIM SHARED IDEQuoteColor AS _UNSIGNED LONG, IDETextColor AS _UNSIGNED LONG
+DIM SHARED IDEBackgroundColor AS _UNSIGNED LONG, IDEChromaColor AS _UNSIGNED LONG
+DIM SHARED IDEBackgroundColor2 AS _UNSIGNED LONG, IDEBracketHighlightColor AS _UNSIGNED LONG
+DIM SHARED IDEKeywordColor AS _UNSIGNED LONG, IDENumbersColor AS _UNSIGNED LONG
+DIM SHARED IDEErrorColor AS _UNSIGNED LONG
+DIM SHARED BracketHighlight AS _BYTE, MultiHighlight AS _BYTE, KeywordHighlight AS _BYTE
+DIM SHARED IDEAutoPosition AS _BYTE, IDETopPosition AS INTEGER, IDELeftPosition AS INTEGER
+DIM SHARED IDEBypassAutoPosition AS _BYTE, IDESortSubs AS _BYTE, IDESubsLength AS _BYTE
+DIM SHARED IDENormalCursorStart AS LONG, IDENormalCursorEnd AS LONG
+DIM SHARED IDEUseFont8 AS _BYTE, IDECustomFont AS _BYTE
+DIM SHARED IDECustomFontFile$, IDECustomFontHeight AS _BYTE, IDECustomFontHandle AS LONG
+DIM SHARED MouseButtonSwapped AS _BYTE
+DIM SHARED PasteCursorAtEnd AS _BYTE
+DIM SHARED AutoCloseBrackets AS _BYTE
+DIM SHARED DefaultExeSaveFolder$, SaveExeWithSource AS LONG, EnableQuickNav AS _BYTE
+DIM SHARED IDEShowErrorsImmediately AS _BYTE
+DIM SHARED ShowLineNumbers AS _BYTE, ShowLineNumbersSeparator AS _BYTE, ShowLineNumbersUseBG AS _BYTE
+DIM SHARED IgnoreWarnings AS _BYTE, QB64VersionPrinted AS _BYTE
+DIM SHARED DisableSyntaxHighlighter AS _BYTE, ExeToSourceFolderFirstTimeMsg AS _BYTE
+DIM SHARED WhiteListQB64FirstTimeMsg AS _BYTE
+DIM SHARED WatchListToConsole AS _BYTE
+DIM SHARED windowSettingsSection$, colorSettingsSection$, customDictionarySection$
+DIM SHARED mouseSettingsSection$, generalSettingsSection$, displaySettingsSection$, loggingSettingsSection$
+DIM SHARED colorSchemesSection$, debugSettingsSection$, compilerSettingsSection$, vwatchPanelSection$
+DIM SHARED ConfigFolder$, askToCopyOther AS _BYTE
+DIM SHARED ConfigFile$, DebugFile$, AutosaveFile$, RecentFile$, SearchedFile$, BookmarksFile$, UndoFile$
+DIM SHARED idebaseTcpPort AS LONG, AutoAddDebugCommand AS _BYTE
+DIM SHARED wikiBaseAddress$, DefaultTerminal$
+DIM SHARED GenerateLicenseFile AS LONG
+DIM SHARED MaxParallelProcesses AS LONG
+DIM SHARED ExtraCppFlags$, ExtraLinkerFlags$
+DIM SHARED StripDebugSymbols AS LONG
+DIM SHARED OptimizeCppProgram AS LONG
+DIM SHARED IncludeDebugInfo AS LONG
+DIM SHARED UseSystemMinGW AS LONG
+DIM SHARED UseGuiDialogs AS _BYTE
+DIM SHARED LoggingEnabled AS _BYTE, LogToConsole AS _BYTE
+DIM SHARED LogMinLevel$, LogScopes$, LogHandlers$, LogFileName$
+
+' From subs_functions/extensions/opengl/opengl_global.bas
+REDIM SHARED GL_COMMANDS(2000) AS GL_idstruct
+
+' Additional DIM/REDIM SHARED declarations that were after second DEFLNG
+REDIM SHARED UserDefine(1, 100) AS STRING '0 element is name, 1 element is string value
+REDIM SHARED InvalidLine(10000) AS _BYTE 'True for lines to be excluded due to preprocessor commands
+DIM SHARED UserDefineCount AS INTEGER, UserDefineCountPresets AS INTEGER, UserDefineList$, UserDefineListPresets$
+DIM SHARED QB64_uptime#
+DIM SHARED DEPENDENCY_LAST
+DIM SHARED DEPENDENCY(1 TO DEPENDENCY_LAST)
+DIM SHARED UseGL 'declared SUB _GL (no params)
+DIM SHARED WindowTitle AS STRING
+DIM SHARED tempfolderindexstr AS STRING 'appended to "Untitled"
+DIM SHARED seperateargs_error
+DIM SHARED seperateargs_error_message AS STRING
+DIM SHARED compfailed
+DIM SHARED reginternalsubfunc
+DIM SHARED reginternalvariable
+DIM SHARED symboltype_size
+DIM SHARED use_global_byte_elements
+DIM SHARED idecommand AS STRING 'a 1 byte message-type code, followed by optional string data
+DIM SHARED idereturn AS STRING 'used to pass formatted-lines and return information back to the IDE
+DIM SHARED ideerror AS LONG
+
+' Additional REDIM/DIM statements that were after second DEFLNG
 REDIM EveryCaseSet(100), SelectCaseCounter AS _UNSIGNED LONG
 REDIM SelectCaseHasCaseBlock(100)
 DIM ExecLevel(255), ExecCounter AS INTEGER
-REDIM SHARED UserDefine(1, 100) AS STRING '0 element is the name, 1 element is the string value
-REDIM SHARED InvalidLine(10000) AS _BYTE 'True for lines to be excluded due to preprocessor commands
 DIM DefineElse(255) AS _BYTE
-DIM SHARED UserDefineCount AS INTEGER, UserDefineCountPresets AS INTEGER, UserDefineList$, UserDefineListPresets$
+
+' More DIM/REDIM SHARED declarations found after second DEFLNG
+DIM SHARED AS _BYTE NoIDEMode, ConsoleMode, FormatMode, NoCCompileMode, QuietMode
+DIM SHARED AS _BYTE MonochromeLoggingMode, ShowWarnings, ForceOptExpl
+DIM SHARED CMDLineSrcFile$, CMDLineOutFile$
+TYPE usedVarList
+    AS LONG id, linenumber, includeLevel, includedLine, scope, localIndex
+    AS LONG arrayElementSize
+    AS _BYTE used, watch, isarray, displayFormat 'displayFormat: 0=DEC;1=HEX;2=BIN;3=OCT
+    AS STRING name, cname, varType, includedFile, subfunc
+    AS STRING watchRange, indexes, elements, elementTypes 'for Arrays and UDTs
+    AS STRING elementOffset, storage
+END TYPE
+REDIM SHARED backupUsedVariableList(1000) AS usedVarList
+DIM SHARED typeDefinitions$, backupTypeDefinitions$
+DIM SHARED totalVariablesCreated AS LONG, totalMainVariablesCreated AS LONG
+DIM SHARED totalWarnings AS LONG, warningListItems AS LONG, lastWarningHeader AS STRING
+
+' Even more DIM/REDIM SHARED declarations
+DIM SHARED duplicateConstWarning AS _BYTE, warningsissued AS _BYTE
+DIM SHARED emptySCWarning AS _BYTE, maxLineNumber AS LONG
+DIM SHARED ExeIconSet AS LONG
+DIM SHARED VersionInfoSet AS _BYTE
+
+'Array to handle $EMBED metacommand:
+REDIM SHARED embedFileList$(3, 10)
+
+'Array to handle $USELIBRARY metacommand:
+REDIM SHARED useLibList$(4, 10)
+
+' Variables to handle $VERSIONINFO metacommand:
+DIM SHARED viFileVersionNum$, viProductVersionNum$, viCompanyName$
+DIM SHARED viFileDescription$, viFileVersion$, viInternalName$
+DIM SHARED viLegalCopyright$, viLegalTrademarks$, viOriginalFilename$
+DIM SHARED viProductName$, viProductVersion$, viComments$, viWeb$
+
+DIM SHARED ColorSet AS RCStateVar
+DIM SHARED OptExpl AS RCStateVar
+DIM SHARED OptExplArr AS RCStateVar
+
+DIM SHARED AssertsOn AS RCStateVar
+DIM SHARED ConsoleOn AS RCStateVar
+DIM SHARED vWatchOn AS RCStateVar
+DIM SHARED SockDepOn AS RCStateVar
+DIM SHARED CheckingOn
+DIM SHARED ScreenHideOn
+DIM SHARED ResizeOn, ResizeScale
+
+DIM SHARED OptMax AS LONG
+
+' Option handling arrays
+REDIM SHARED Opt(1 TO OptMax, 1 TO 10) AS STRING * 256
+'   (1,1)="READ"
+'   (1,2)="WRITE"
+'   (1,3)="READ WRITE"
+REDIM SHARED OptWords(1 TO OptMax, 1 TO 10) AS INTEGER 'The number of words of each opt () element
+'   (1,1)=1 '"READ"
+'   (1,2)=1 '"WRITE"
+'   (1,3)=2 '"READ WRITE"
+REDIM SHARED T(1 TO OptMax) AS INTEGER 'The type of the entry
+
+' Option level tracking arrays
+REDIM SHARED Lev(1 TO OptMax) AS INTEGER 'The indwelling level of each opt () element (the lowest is 0)
+REDIM SHARED EntryLev(1 TO OptMax) AS INTEGER 'The level required from which this opt () can be validly be entered/checked-for
+REDIM SHARED DitchLev(1 TO OptMax) AS INTEGER 'The lowest level recorded between the previous Opt and this Opt
+REDIM SHARED DontPass(1 TO OptMax) AS INTEGER 'Set to 1 or 0, with 1 meaning don't pass
+'Determines whether the opt () entry needs to actually be passed to the C++ sub/function
+REDIM SHARED TempList(1 TO OptMax) AS INTEGER
+
+' Pass rule and level tracking arrays
+REDIM SHARED PassRule(1 TO OptMax) AS LONG
+'0 means no pass rule
+'negative values refer to an opt () element
+'positive values refer to a flag value
+REDIM SHARED LevelEntered(OptMax) 'up to 64 levels supported
+REDIM SHARED separgs(OptMax + 1) AS STRING
+REDIM SHARED separgslayout(OptMax + 1) AS STRING
+REDIM SHARED separgs2(OptMax + 1) AS STRING
+REDIM SHARED separgslayout2(OptMax + 1) AS STRING
+
+' Error handling variable
+DIM SHARED E
+
+' Static function resolution arrays
+DIM SHARED ResolveStaticFunctions
+REDIM SHARED ResolveStaticFunction_File(1 TO 100) AS STRING
+REDIM SHARED ResolveStaticFunction_Name(1 TO 100) AS STRING
+REDIM SHARED ResolveStaticFunction_Method(1 TO 100) AS LONG
+
+' OS and path variables
+DIM SHARED os AS STRING
+DIM SHARED MacOSX AS LONG
+DIM SHARED BATCHFILE_EXTENSION AS STRING
+DIM SHARED extension AS STRING
+DIM SHARED path.exe$, path.source$, lastBinaryGenerated$
+DIM SHARED pathsep AS STRING * 1
+DIM SHARED tmpdir AS STRING, tmpdir2 AS STRING
+DIM SHARED tempfolderindex
+
+' Variable assignments
+vWatchErrorCall$ = "if (stop_program) {*__LONG_VWATCH_LINENUMBER=0; SUB_VWATCH((ptrszint*)vwatch_global_vars,(ptrszint*)vwatch_local_vars);};if(is_error_pending()){bkp_new_error=new_error;new_error=0;*__LONG_VWATCH_LINENUMBER=-1; SUB_VWATCH((ptrszint*)vwatch_global_vars,(ptrszint*)vwatch_local_vars);new_error=bkp_new_error;};"
+vWatchVariableExclusions$ = "@__LONG_VWATCH_LINENUMBER@__LONG_VWATCH_SUBLEVEL@__LONG_VWATCH_GOTO@" + _
+              "@__STRING_VWATCH_SUBNAME@__STRING_VWATCH_CALLSTACK@__ARRAY_BYTE_VWATCH_BREAKPOINTS" + _
+              "@__ARRAY_BYTE_VWATCH_SKIPLINES@__STRING_VWATCH_INTERNALSUBNAME@__ARRAY_STRING_VWATCH_STACK@"
+nativeDataTypes$ = "@_OFFSET@_UNSIGNED _OFFSET@_BIT@_UNSIGNED _BIT@_BYTE@_UNSIGNED _BYTE@INTEGER@_UNSIGNED INTEGER@LONG@_UNSIGNED LONG@_INTEGER64@_UNSIGNED _INTEGER64@SINGLE@DOUBLE@_FLOAT@STRING@"
+
+' Initialize moved variables
+Version$ = "4.3.0"
+sp = _CHR_CR: sp2 = _CHR_LF: sp3 = _CHR_SUB
 UserDefineListPresets$ = "@DEFINED@UNDEFINED@WINDOWS@WIN@LINUX@MAC@MACOSX@32BIT@64BIT@VERSION@_QB64PE_@_ARM_@"
+' Initialize UserDefine arrays
 UserDefine(0, 0) = "WINDOWS": UserDefine(0, 1) = "WIN"
 UserDefine(0, 2) = "LINUX"
 UserDefine(0, 3) = "MAC": UserDefine(0, 4) = "MACOSX"
@@ -72,198 +474,61 @@ IF INSTR(_OS$, "ARM") THEN UserDefine(1, 9) = "-1" ELSE UserDefine(1, 9) = "0"
 'Whatever values get added/changed in the future, make sure to keep
 'the VERSION on index #7 to avoid problems.
 UserDefineCountPresets = 9 'the last index of the defines above
+sp_asc = _ASC_CR: sp2_asc = _ASC_LF: sp3_asc = _ASC_SUB
+CHR_QUOTE = _CHR_QUOTE
+CHR_TAB = _CHR_HT
+CRLF = _STR_CRLF
+IF INSTR(_OS$, "WIN") THEN NATIVE_LINEENDING = _STR_CRLF ELSE NATIVE_LINEENDING = _STR_LF
+OS_BITS = 64
+IF INSTR(_OS$, "[32BIT]") THEN OS_BITS = 32
 
-DIM SHARED QB64_uptime#
+' Initialize hash system
+HashListSize = 65536
+HashListNext = 1
+HashListFreeSize = 1024
+HashListFreeLast = 0
+constmax = 100
+constlast = -1
 
+' Initialize UserDefine system
+UserDefineCount = 0
+UserDefineCountPresets = 9
+UserDefineList$ = ""
+UserDefineListPresets$ = "@DEFINED@UNDEFINED@WINDOWS@WIN@LINUX@MAC@MACOSX@32BIT@64BIT@VERSION@_QB64PE_@_ARM_@"
+
+' Initialize QB64 uptime
 QB64_uptime# = TIMER(0.001)
 
-NoInternalFolder:
-IF _DIREXISTS("internal") = 0 THEN
-    _SCREENSHOW
-    PRINT "QB64-PE cannot locate the 'internal' folder"
-    PRINT
-    PRINT "Check that QB64-PE has been extracted properly."
-    PRINT "For MacOSX, launch 'qb64pe_start.command' or enter './qb64pe' in Terminal."
-    PRINT "For Linux, in the console enter './qb64pe'."
-    DO
-        _LIMIT 1
-    LOOP UNTIL INKEY$ <> ""
-    SYSTEM 1
-END IF
-
-DIM SHARED DEPENDENCY_LAST
-CONST DEPENDENCY_LOADFONT = 1: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_MINIAUDIO = 2: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_GL = 3: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_IMAGE_CODEC = 4: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_CONSOLE_ONLY = 5: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_SOCKETS = 6: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_PRINTER = 7: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_ICON = 8: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_SCREENIMAGE = 9: DEPENDENCY_LAST = DEPENDENCY_LAST + 1
-CONST DEPENDENCY_DEVICEINPUT = 10: DEPENDENCY_LAST = DEPENDENCY_LAST + 1 'removes support for gamepad input if not present
-CONST DEPENDENCY_ZLIB = 11: DEPENDENCY_LAST = DEPENDENCY_LAST + 1 'ZLIB library linkage, if desired, for compression/decompression.
-CONST DEPENDENCY_EMBED = 12: DEPENDENCY_LAST = DEPENDENCY_LAST + 1 '$EMBED stuff, trigger make of internal\temp\embedded.cpp
-
-
-
-DIM SHARED DEPENDENCY(1 TO DEPENDENCY_LAST)
-
-DIM SHARED UseGL 'declared SUB _GL (no params)
-
-
-DIM SHARED WindowTitle AS STRING
-
+' OS and window title initialization
 IF INSTR(_OS$, "ARM") THEN
     WindowTitle = "QB64 Phoenix Edition " + _IIF(OS_BITS = 32, "(ARM)", "(ARM64)")
 ELSE
     WindowTitle = "QB64 Phoenix Edition " + _IIF(OS_BITS = 32, "(x86)", "(x64)")
 END IF
-
 _TITLE WindowTitle
-
-CONST METACOMMAND_STRING_ENCLOSING_PAIR = "''"
-
-DIM SHARED AS _BYTE NoIDEMode, ConsoleMode, FormatMode, NoCCompileMode, QuietMode
-DIM SHARED AS _BYTE MonochromeLoggingMode, ShowWarnings, ForceOptExpl
-DIM SHARED CMDLineSrcFile$, CMDLineOutFile$
-
-TYPE usedVarList
-    AS LONG id, linenumber, includeLevel, includedLine, scope, localIndex
-    AS LONG arrayElementSize
-    AS _BYTE used, watch, isarray, displayFormat 'displayFormat: 0=DEC;1=HEX;2=BIN;3=OCT
-    AS STRING name, cname, varType, includedFile, subfunc
-    AS STRING watchRange, indexes, elements, elementTypes 'for Arrays and UDTs
-    AS STRING elementOffset, storage
-END TYPE
-
-REDIM SHARED backupUsedVariableList(1000) AS usedVarList
-DIM SHARED typeDefinitions$, backupTypeDefinitions$
-DIM SHARED totalVariablesCreated AS LONG, totalMainVariablesCreated AS LONG
-DIM SHARED totalWarnings AS LONG, warningListItems AS LONG, lastWarningHeader AS STRING
-DIM SHARED duplicateConstWarning AS _BYTE, warningsissued AS _BYTE
-DIM SHARED emptySCWarning AS _BYTE, maxLineNumber AS LONG
-DIM SHARED ExeIconSet AS LONG
-DIM SHARED VersionInfoSet AS _BYTE
-
-'Array to handle $EMBED metacommand:
-REDIM SHARED embedFileList$(3, 10)
-CONST eflLine = 0, eflUsed = 1, eflFile = 2, eflHand = 3 '1st index IDs
-
-'Array to handle $USELIBRARY metacommand:
-REDIM SHARED useLibList$(4, 10)
-CONST ullName = 0, ullNeedy = 1, ullTop = 2, ullMain = 3, ullBottom = 4 '1st index IDs
-
-'Variables to handle $VERSIONINFO metacommand:
-DIM SHARED viFileVersionNum$, viProductVersionNum$, viCompanyName$
-DIM SHARED viFileDescription$, viFileVersion$, viInternalName$
-DIM SHARED viLegalCopyright$, viLegalTrademarks$, viOriginalFilename$
-DIM SHARED viProductName$, viProductVersion$, viComments$, viWeb$
-
-DIM SHARED ColorSet AS RCStateVar
-DIM SHARED OptExpl AS RCStateVar
-DIM SHARED OptExplArr AS RCStateVar
-DIM SHARED AssertsOn AS RCStateVar
-DIM SHARED ConsoleOn AS RCStateVar
-DIM SHARED vWatchOn AS RCStateVar
-DIM SHARED SockDepOn AS RCStateVar
-DIM SHARED CheckingOn
-DIM SHARED ScreenHideOn
-DIM SHARED ResizeOn, ResizeScale
-
-DIM SHARED OptMax AS LONG
 OptMax = 256
-REDIM SHARED Opt(1 TO OptMax, 1 TO 10) AS STRING * 256
-'   (1,1)="READ"
-'   (1,2)="WRITE"
-'   (1,3)="READ WRITE"
-REDIM SHARED OptWords(1 TO OptMax, 1 TO 10) AS INTEGER 'The number of words of each opt () element
-'   (1,1)=1 '"READ"
-'   (1,2)=1 '"WRITE"
-'   (1,3)=2 '"READ WRITE"
-REDIM SHARED T(1 TO OptMax) AS INTEGER 'The type of the entry
-'   t is 0 for ? opts
-'   ---------- 0 means ? , 1+ means a symbol or {}block ----------
-'   t is 1 for symbol opts
-'   t is the number of rhs opt () index entries for {READ|WRITE|READ WRITE} like opts
-REDIM SHARED Lev(1 TO OptMax) AS INTEGER 'The indwelling level of each opt () element (the lowest is 0)
-REDIM SHARED EntryLev(1 TO OptMax) AS INTEGER 'The level required from which this opt () can be validly be entered/checked-for
-REDIM SHARED DitchLev(1 TO OptMax) AS INTEGER 'The lowest level recorded between the previous Opt and this Opt
-REDIM SHARED DontPass(1 TO OptMax) AS INTEGER 'Set to 1 or 0, with 1 meaning don't pass
-'Determines whether the opt () entry needs to actually be passed to the C++ sub/function
-REDIM SHARED TempList(1 TO OptMax) AS INTEGER
-REDIM SHARED PassRule(1 TO OptMax) AS LONG
-'0 means no pass rule
-'negative values refer to an opt () element
-'positive values refer to a flag value
-REDIM SHARED LevelEntered(OptMax) 'up to 64 levels supported
-REDIM SHARED separgs(OptMax + 1) AS STRING
-REDIM SHARED separgslayout(OptMax + 1) AS STRING
-REDIM SHARED separgs2(OptMax + 1) AS STRING
-REDIM SHARED separgslayout2(OptMax + 1) AS STRING
-
-
-
-
-'E is used with the 'qberror_test' handler. If the handler is called (i.e. when an error
-'occures), then E is simply set to 1. Properly resetting E to 0 prior error testing is
-'up to the code which uses the 'qberror_test' handler for checking.
-DIM SHARED E
-
-
-
-
-
-
-
-
-
-
-DIM SHARED ResolveStaticFunctions
-REDIM SHARED ResolveStaticFunction_File(1 TO 100) AS STRING
-REDIM SHARED ResolveStaticFunction_Name(1 TO 100) AS STRING
-REDIM SHARED ResolveStaticFunction_Method(1 TO 100) AS LONG
-
-
-
-
-
-DIM SHARED os AS STRING
 os$ = "WIN"
 IF INSTR(_OS$, "[LINUX]") THEN os$ = "LNX"
-
-DIM SHARED MacOSX AS LONG
 IF INSTR(_OS$, "[MACOSX]") THEN MacOSX = 1
-
-
-DIM SHARED BATCHFILE_EXTENSION AS STRING
 BATCHFILE_EXTENSION = ".bat"
 IF os$ = "LNX" THEN BATCHFILE_EXTENSION = ".sh"
 IF MacOSX THEN BATCHFILE_EXTENSION = ".command"
+extension$ = ".exe"
+IF os$ = "LNX" THEN extension$ = "" 'no extension under Linux
+pathsep$ = "\"
+IF os$ = "LNX" THEN pathsep$ = "/"
+'note: QB64 handles OS specific path separators automatically except under SHELL calls
 
-
+' Initialize inline data strings
 DIM inlinedatastr(0 TO 255) AS STRING
 FOR i = 0 TO 255
     inlinedatastr(i) = _TOSTR$(i) + ","
 NEXT
 
-
-DIM SHARED extension AS STRING
-DIM SHARED path.exe$, path.source$, lastBinaryGenerated$
-extension$ = ".exe"
-IF os$ = "LNX" THEN extension$ = "" 'no extension under Linux
-
-DIM SHARED pathsep AS STRING * 1
-pathsep$ = "\"
-IF os$ = "LNX" THEN pathsep$ = "/"
-'note: QB64 handles OS specific path separators automatically except under SHELL calls
-
+' Initialize temp directories and PID
 ON ERROR GOTO qberror_test
-
-DIM SHARED tmpdir AS STRING, tmpdir2 AS STRING
 IF os$ = "WIN" THEN tmpdir$ = ".\internal\temp\": tmpdir2$ = "..\\temp\\"
 IF os$ = "LNX" THEN tmpdir$ = "./internal/temp/": tmpdir2$ = "../temp/"
-
 IF NOT _DIREXISTS(tmpdir$) THEN MKDIR tmpdir$
 
 DECLARE LIBRARY
@@ -271,8 +536,8 @@ DECLARE LIBRARY
 END DECLARE
 
 thisinstancepid = getpid&
-DIM SHARED tempfolderindex
 
+' Linux temp folder initialization
 IF INSTR(_OS$, "LINUX") THEN
     fh = FREEFILE
     OPEN ".\internal\temp\tempfoldersearch.bin" FOR RANDOM AS #fh LEN = LEN(tempfolderindex)
@@ -327,7 +592,6 @@ ELSE
     LOOP
 END IF
 
-
 'temp folder established
 tempfolderindex = i
 IF i > 1 THEN
@@ -357,32 +621,72 @@ END IF
 
 ON ERROR GOTO qberror
 
-
-
-DIM SHARED tempfolderindexstr AS STRING 'appended to "Untitled"
+' Initialize temp folder index string
 IF tempfolderindex <> 1 THEN tempfolderindexstr$ = "(" + _TOSTR$(tempfolderindex) + ")"
 
+'All arrays will be dynamically allocated so they can be REDIM-ed
+'$DYNAMIC
 
-DIM SHARED seperateargs_error
-DIM SHARED seperateargs_error_message AS STRING
+'We need console access to support command-line compilation via the -x command line compile option
+$CONSOLE
 
-DIM SHARED compfailed
+'Initially the "SCREEN" will be hidden, if the -x option is used it will never be created
+$SCREENHIDE
 
-DIM SHARED reginternalsubfunc
-DIM SHARED reginternalvariable
+$EXEICON:'./qb64pe.ico'
 
+$VERSIONINFO:CompanyName='QB64 Phoenix Edition'
+$VERSIONINFO:FileDescription='QB64 IDE and Compiler'
+$VERSIONINFO:InternalName='qb64pe.bas'
+$VERSIONINFO:LegalCopyright='MIT'
+$VERSIONINFO:LegalTrademarks=''
+$VERSIONINFO:OriginalFilename='qb64pe.exe'
+$VERSIONINFO:ProductName='QB64-PE'
+$VERSIONINFO:Comments='QB64 is a modern extended BASIC programming language that retains QB4.5/QBasic compatibility and compiles native binaries for Windows, Linux and macOS.'
 
-DIM SHARED symboltype_size
+'$INCLUDE:'global\version.bas'
+'$INCLUDE:'global\constants.bas'
+'$INCLUDE:'global\constants_ide.bas'
+'$INCLUDE:'subs_functions\extensions\opengl\opengl_global.bas'
+'$INCLUDE:'utilities\ini-manager\ini.bi'
+'$INCLUDE:'utilities\s-buffer\simplebuffer.bi'
+'$INCLUDE:'utilities\const_eval.bi'
+'$INCLUDE:'utilities\give_error.bi'
+'$INCLUDE:'utilities\statevars.bi'
+'$INCLUDE:'utilities\type.bi'
+
+DEFLNG A-Z
+
+'-------- Optional IDE Component (1/2) --------
+' All REDIM/DIM statements moved to beginning of file
+' All variable assignments moved to initialization section
+'Whatever values get added/changed in the future, make sure to keep
+'the VERSION on index #7 to avoid problems.
+' UserDefineCountPresets assignment moved to initialization section
+
+' All DIM SHARED declarations moved to beginning of file
+
+NoInternalFolder:
+IF _DIREXISTS("internal") = 0 THEN
+    _SCREENSHOW
+    PRINT "QB64-PE cannot locate the 'internal' folder"
+    PRINT
+    PRINT "Check that QB64-PE has been extracted properly."
+    PRINT "For MacOSX, launch 'qb64pe_start.command' or enter './qb64pe' in Terminal."
+    PRINT "For Linux, in the console enter './qb64pe'."
+    DO
+        _LIMIT 1
+    LOOP UNTIL INKEY$ <> ""
+    SYSTEM 1
+END IF
+
+' All DIM SHARED declarations moved to beginning of file
+
+' OS and window title initialization moved to initialization section
+
+' All executable code moved to initialization section
 symboltype_size = 0
-
-DIM SHARED use_global_byte_elements
 use_global_byte_elements = 0
-
-'compiler-side IDE data & definitions
-'SHARED variables "passed" to/from the compiler & IDE
-DIM SHARED idecommand AS STRING 'a 1 byte message-type code, followed by optional string data
-DIM SHARED idereturn AS STRING 'used to pass formatted-lines and return information back to the IDE
-DIM SHARED ideerror AS LONG
 DIM SHARED idecompiled AS LONG
 DIM SHARED idemode '1 if using the IDE to compile
 DIM SHARED ideerrorline AS LONG 'set by qb64-error(...) to the line number it would have reported, this number
@@ -412,8 +716,6 @@ ELSE
     _SCREENSHOW
     _ICON
 END IF
-
-'$INCLUDE:'utilities\hash.bi'
 
 TYPE Label_Type
     State AS _UNSIGNED _BYTE '0=label referenced, 1=label created
@@ -483,7 +785,6 @@ DIM SHARED layoutcontinuations AS STRING 'Any physical lines logically part of t
 
 DIM SHARED tlayout AS STRING 'temporary layout string set by supporting functions
 DIM SHARED layoutdone AS LONG 'tracks status of single command
-
 
 DIM SHARED fooindwel
 
@@ -556,54 +857,7 @@ DIM SHARED commonarraylistn AS LONG
 DIM SHARED lasttype AS LONG
 DIM SHARED lasttypeelement AS LONG
 
-TYPE idstruct
-
-    n AS STRING * 256 'name
-    cn AS STRING * 256 'case sensitive version of n
-
-    arraytype AS LONG 'similar to t
-    arrayelements AS INTEGER
-    staticarray AS INTEGER 'set for arrays declared in the main module with static elements
-
-    mayhave AS STRING * 8 'mayhave and musthave are exclusive of each other
-    musthave AS STRING * 8
-    t AS LONG 'type
-
-    tsize AS LONG
-
-
-    subfunc AS INTEGER 'if function=1, sub=2 (max 100 arguments)
-    Dependency AS INTEGER
-    internal_subfunc AS INTEGER
-
-    callname AS STRING * 256
-    ccall AS INTEGER
-    overloaded AS _BYTE
-    args AS INTEGER
-    minargs AS INTEGER
-    arg AS STRING * 400 'similar to t
-    argsize AS STRING * 400 'similar to tsize (used for fixed length strings)
-    specialformat AS STRING * 256
-    secondargmustbe AS STRING * 256
-    secondargcantbe AS STRING * 256
-    ret AS LONG 'the value it returns if it is a function (again like t)
-
-    insubfunc AS STRING * 256
-    insubfuncn AS LONG
-
-    share AS INTEGER
-    nele AS STRING * 100
-    nelereq AS STRING * 100
-    linkid AS LONG
-    linkarg AS INTEGER
-    staticscope AS INTEGER
-    'For variables which are arguments passed to a sub/function
-    sfid AS LONG 'id number of variable's parent sub/function
-    sfarg AS INTEGER 'argument/parameter # within call (1=first)
-
-    hr_syntax AS STRING
-END TYPE
-
+' Duplicate TYPE idstruct definition removed - using the one at the beginning of the file
 DIM SHARED id AS idstruct
 
 DIM SHARED idn AS LONG
@@ -1347,6 +1601,7 @@ layoutok = 0
 inclevel = 0
 errorLineInInclude = 0
 addmetainclude$ = ""
+'$INCLUDE:'utilities\include_provider.bi'
 IncludeProvider_Init ' Initialize include provider system
 nextrunlineindex = 1
 lasttype = 0
@@ -3049,8 +3304,8 @@ DIM SHARED ErrTxtBuf: ErrTxtBuf = OpenBuffer%("O", tmpdir$ + "mainerr.txt")
 'i. check the value of error_line
 'ii. jump to the appropriate label
 errorlabels = 0
-WriteBufLine ErrTxtBuf, "if (!error_handler_history) error_handler_history = qbs_new(0, 0);"
-WriteBufLine ErrTxtBuf, "if (error_occurred){ error_occurred=0;"
+WriteBufLine ErrTxtBuf, "if (!get_error_handler_history()) set_error_handler_history(qbs_new(0, 0));"
+WriteBufLine ErrTxtBuf, "if (get_error_occurred()){ set_error_occurred(false);"
 
 DIM SHARED ChainTxtBuf: ChainTxtBuf = OpenBuffer%("O", tmpdir$ + "chain.txt")
 DIM SHARED InpChainTxtBuf: InpChainTxtBuf = OpenBuffer%("O", tmpdir$ + "inpchain.txt")
@@ -9276,7 +9531,7 @@ DO
                 resumeprev:
 
 
-                WriteBufLine MainTxtBuf, "if (!error_handling){error(20);}else{error_retry=1; qbevent=1; error_handling=0; error_err=0; return;}"
+                WriteBufLine MainTxtBuf, "if (!is_error_handling()){error(20);}else{set_error_retry(true); qbevent=1; set_error_handling(false); set_error_err(0); return;}"
 
                 layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
                 GOTO finishedline
@@ -9286,7 +9541,7 @@ DO
             IF UCASE$(s$) = "NEXT" THEN
 
 
-                WriteBufLine MainTxtBuf, "if (!error_handling){error(20);}else{error_handling=0; error_err=0; return;}"
+                WriteBufLine MainTxtBuf, "if (!is_error_handling()){error(20);}else{set_error_handling(false); set_error_err(0); return;}"
 
                 l$ = l$ + sp + SCase$("Next")
                 layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
@@ -9322,7 +9577,7 @@ DO
 
             l$ = l$ + sp + tlayout$
             layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
-            WriteBufLine MainTxtBuf, "if (!error_handling){error(20);}else{error_handling=0; error_err=0; goto LABEL_" + s$ + ";}"
+            WriteBufLine MainTxtBuf, "if (!is_error_handling()){error(20);}else{set_error_handling(false); set_error_err(0); goto LABEL_" + s$ + ";}"
             GOTO finishedline
         END IF
     END IF
@@ -9339,8 +9594,8 @@ DO
                 IF lbl$ = "0" THEN a$ = "Zero not allowed after _NEWHANDLER": GOTO errmes
             END IF
             IF lbl$ = "0" THEN 'independent from hhc$ (i.e. always clear history)
-                WriteBufLine MainTxtBuf, "error_goto_line=0;"
-                WriteBufLine MainTxtBuf, "qbs_set(error_handler_history, qbs_new_txt_len(" + MKI$(&H2222) + ", 0));"
+                WriteBufLine MainTxtBuf, "set_error_goto_line(0);"
+                WriteBufLine MainTxtBuf, "set_error_handler_history(qbs_new_txt_len(" + MKI$(&H2222) + ", 0));"
                 WriteBufLine MainTxtBuf, "qbs_cleanup(qbs_tmp_base, 0);"
                 l$ = l$ + sp + "0"
                 layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
@@ -9349,8 +9604,8 @@ DO
                 IF n = 4 THEN a$ = "Expected: ON ERROR GOTO [_NEWHANDLER] label": GOTO errmes
                 l$ = l$ + sp + SCase$("_NewHandler")
             ELSEIF hhc$ = "_LASTHANDLER" THEN
-                WriteBufLine MainTxtBuf, "error_goto_line = qbr(qbs_val<uint64_t>(error_handler_history));"
-                WriteBufLine MainTxtBuf, "qbs_set(error_handler_history, func_mid(error_handler_history, func_instr(NULL, error_handler_history, qbs_new_txt_len(" + CHR$(34) + "|" + CHR$(34) + ", 1), 0) + 1 , NULL, 0));"
+                WriteBufLine MainTxtBuf, "set_error_goto_line(qbr(qbs_val<uint64_t>(get_error_handler_history())));"
+                WriteBufLine MainTxtBuf, "set_error_handler_history(func_mid(get_error_handler_history(), func_instr(NULL, get_error_handler_history(), qbs_new_txt_len(" + CHR$(34) + "|" + CHR$(34) + ", 1), 0) + 1 , NULL, 0));"
                 WriteBufLine MainTxtBuf, "qbs_cleanup(qbs_tmp_base, 0);"
                 l$ = l$ + sp + SCase$("_LastHandler")
                 layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
@@ -9390,11 +9645,11 @@ DO
             layoutdone = 1: IF LEN(layout$) THEN layout$ = layout$ + sp + l$ ELSE layout$ = l$
             errorlabels = errorlabels + 1
             IF hhc$ = "_NEWHANDLER" THEN
-                WriteBufLine MainTxtBuf, "qbs_set(error_handler_history, qbs_add(qbs_add(qbs_str((int32)(error_goto_line)), qbs_new_txt_len(" + CHR$(34) + "|" + CHR$(34) + ", 1)), error_handler_history));"
+                WriteBufLine MainTxtBuf, "set_error_handler_history(qbs_add(qbs_add(qbs_str((int32)(get_error_goto_line())), qbs_new_txt_len(" + CHR$(34) + "|" + CHR$(34) + ", 1)), get_error_handler_history()));"
                 WriteBufLine MainTxtBuf, "qbs_cleanup(qbs_tmp_base, 0);"
             END IF
-            WriteBufLine MainTxtBuf, "error_goto_line=" + _TOSTR$(errorlabels) + ";"
-            WriteBufLine ErrTxtBuf, "if (error_goto_line==" + _TOSTR$(errorlabels) + "){error_handling=1; goto LABEL_" + lbl$ + ";}"
+            WriteBufLine MainTxtBuf, "set_error_goto_line(" + _TOSTR$(errorlabels) + ");"
+            WriteBufLine ErrTxtBuf, "if (get_error_goto_line()==" + _TOSTR$(errorlabels) + "){set_error_handling(true); goto LABEL_" + lbl$ + ";}"
             GOTO finishedline
         END IF
     END IF
@@ -14061,7 +14316,7 @@ FUNCTION allocarray (n2$, elements$, elementsize, udt)
             'REDIM (not DIM) must be used to redefine an array
             IF redimoption = 0 THEN
                 f12$ = f12$ + CRLF + "if (" + n$ + "[2]&1){" 'array is defined
-                f12$ = f12$ + CRLF + "if (!error_occurred) error(10);" 'cannot redefine an array without using REDIM!
+                f12$ = f12$ + CRLF + "if (!is_error_pending()) error(10);" 'cannot redefine an array without using REDIM!
                 f12$ = f12$ + CRLF + "}else{"
             ELSE
                 '--------ERASE EXISTING ARRAY IF NECESSARY--------

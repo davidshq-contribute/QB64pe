@@ -5,7 +5,7 @@
 ' This file contains executable code to initialize hash tables and must be
 ' included in Phase 2 (main program section) after hash_declarations.bi
 
-'Initialize hash lookup tables
+'Initialize hash lookup tables (moved from hash.bi)
 FOR x = 1 TO 26
     hash1char(64 + x) = x
     hash1char(96 + x) = x
@@ -32,22 +32,10 @@ HashListSize = 65536
 HashListNext = 1
 HashListFreeSize = 1024
 HashListFreeLast = 0
-REDIM SHARED HashList(1 TO HashListSize) AS HashListItem
-REDIM SHARED HashListName(1 TO HashListSize) AS STRING * 256
-REDIM SHARED HashListFree(1 TO HashListFreeSize) AS LONG
-REDIM SHARED HashTable(16777215) AS LONG '64MB lookup table with indexes to the hashlist
+' All REDIM SHARED declarations moved to qb64pe.bas
 
 'Initialize CONST support arrays
 constmax = 100
 constlast = -1
-REDIM SHARED constname(constmax) AS STRING
-REDIM SHARED constcname(constmax) AS STRING
-REDIM SHARED constnamesymbol(constmax) AS STRING
-REDIM SHARED consttype(constmax) AS LONG
-REDIM SHARED constinteger(constmax) AS _INTEGER64
-REDIM SHARED constuinteger(constmax) AS _UNSIGNED _INTEGER64
-REDIM SHARED constfloat(constmax) AS _FLOAT
-REDIM SHARED conststring(constmax) AS STRING
-REDIM SHARED constsubfunc(constmax) AS LONG
-REDIM SHARED constdefined(constmax) AS LONG
+' All REDIM SHARED declarations moved to qb64pe.bas
 

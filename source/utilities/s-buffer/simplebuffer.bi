@@ -54,7 +54,7 @@ CONST SBF_IgnoreCase = -1
 '--- The internal array for data storage
 '-----
 'never access this directly, use functions in simplebuffer.bm
-REDIM SHARED simplebuffer_array$(0 TO 10599)
+'Will be REDIM'd in simplebuffer_init.bas
+' All DIM SHARED declarations moved to qb64pe.bas
 
 '$INCLUDE: 'sb_qb64pe_extension.bi'
-

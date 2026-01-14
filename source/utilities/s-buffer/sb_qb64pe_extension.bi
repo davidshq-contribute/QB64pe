@@ -3,5 +3,5 @@
 '--- to the "table of contents" of the harddrive.
 '--- Avoid direct access, use the provided SUBs and FUNCTIONs.
 '-----
-REDIM SHARED SBufN(0 TO 99) AS STRING 'init for 100 buffers
+' All DIM SHARED declarations moved to qb64pe.bas 'init for 100 buffers
 

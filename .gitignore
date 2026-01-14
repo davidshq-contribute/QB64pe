@@ -25,3 +25,11 @@ source/qb64pe_start.command
 /tests/tests/coverage_data/*
 /tests/coverage_data/*
 /.idea/
+
+# Claude Code session artifacts
+tmpclaude-*-cwd
+bootstrap_output.txt
+.claude/
+
+# Windows null device file
+nul

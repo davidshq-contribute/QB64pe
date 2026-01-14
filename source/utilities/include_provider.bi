@@ -34,70 +34,36 @@ CONST INCLUDE_PROVIDER_MEMORY = 1
 CONST INCLUDE_PROVIDER_TEST = 2
 
 ' Global variable to track current provider type
-DIM SHARED includeProviderType AS LONG
-
-' Global variable to track whether includes should be skipped (for unit testing)
-DIM SHARED skipIncludes AS LONG
+' All DIM SHARED declarations moved to qb64pe.bas
 
 ' Include provider state structure
 ' This tracks the state of an open include file at each include level
 ' Each nested include has its own state entry (indexed by include level)
-TYPE IncludeProviderState
-    providerType AS LONG      ' Type of provider (FILESYSTEM, MEMORY, TEST)
-    fileHandle AS LONG        ' File handle for filesystem provider (file #199+level+1)
-    content AS STRING         ' Content for memory/test providers
-    currentLine AS LONG       ' Current line position in content (for memory/test providers)
-    fileName AS STRING        ' Full file name/path being included
-    isOpen AS LONG            ' Whether this state is active (-1=open, 0=closed)
-END TYPE
+' TYPE definitions moved to qb64pe.bas
 
 ' Array to track include provider states (one per include level)
-DIM SHARED includeProviderStates(100) AS IncludeProviderState
+' All DIM SHARED declarations moved to qb64pe.bas
 
 ' ============================================
 ' Memory Provider Type Definitions
 ' ============================================
 ' These must be declared before any SUB/FUNCTION declarations
 
-' In-memory file storage for testing
-TYPE MemoryFile
-    fileName AS STRING
-    content AS STRING
-END TYPE
+' TYPE definitions moved to qb64pe.bas
 
-DIM SHARED memoryFiles(1000) AS MemoryFile
-DIM SHARED memoryFileCount AS LONG
+' All DIM SHARED declarations moved to qb64pe.bas
 
-' Test provider call tracking type
-TYPE TestProviderCall
-    callType AS STRING * 20    ' "FileExists", "Open", "ReadLine", etc.
-    fileName AS STRING
-    callOrder AS LONG          ' Sequence number (0-based) indicating call order for deterministic test verification
-END TYPE
+' TYPE definitions moved to qb64pe.bas
 
-DIM SHARED testProviderCalls(1000) AS TestProviderCall
-DIM SHARED testProviderCallCount AS LONG
-DIM SHARED testProviderErrorFile$
-DIM SHARED testProviderErrorType AS LONG  ' 0 = none, 1 = file not found, 2 = read error
+' All DIM SHARED declarations moved to qb64pe.bas  ' 0 = none, 1 = file not found, 2 = read error
 
-' Path mapping for test scenarios
-TYPE TestProviderPathMap
-    fromPath AS STRING
-    toPath AS STRING
-END TYPE
+' TYPE definitions moved to qb64pe.bas
 
-DIM SHARED testProviderPathMaps(100) AS TestProviderPathMap
-DIM SHARED testProviderPathMapCount AS LONG
+' All DIM SHARED declarations moved to qb64pe.bas
 
-' Runtime function stub registry
-TYPE RuntimeStub
-    functionName AS STRING * 50
-    returnValue AS STRING
-    callCount AS LONG
-END TYPE
+' TYPE definitions moved to qb64pe.bas
 
-DIM SHARED runtimeStubs(100) AS RuntimeStub
-DIM SHARED runtimeStubCount AS LONG
+' All DIM SHARED declarations moved to qb64pe.bas
 
 ' Initialize include provider system
 ' Sets default provider to filesystem

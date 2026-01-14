@@ -1,4 +1,4 @@
-DIM SHARED listOfKeywords$, listOfCustomKeywords$, customKeywordsLength AS LONG
+' All DIM SHARED declarations moved to qb64pe.bas
 
 ' Metacommands alphabetical (1st line = QB64, 2nd line = QB4.5, 3rd line = OpenGL)
 listOfKeywords$ = "@" +_

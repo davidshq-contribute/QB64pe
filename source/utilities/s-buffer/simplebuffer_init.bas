@@ -21,5 +21,5 @@
 
 '--- Initialize the internal array for data storage
 '-----
-REDIM SHARED simplebuffer_array$(0 TO 10599)
+' All REDIM SHARED declarations moved to qb64pe.bas
 

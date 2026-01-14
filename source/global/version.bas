@@ -1,5 +1,4 @@
-DIM SHARED Version AS STRING
-DIM SHARED IsCiVersion AS _BYTE
+' All DIM SHARED declarations moved to qb64pe.bas
 
 Version$ = "4.3.0"
 $VERSIONINFO:FILEVERSION#=4,3,0,0

@@ -1101,11 +1101,12 @@ SUB PreParse (e$)
 
     'Modify so that NOT will process properly
     FOR l = 1 TO numelements(t$)
-        'FIXME: This doesn't account for `x ^ NOT y + 2`, where it evaluates as `x ^ (NOT y) + 2`
+        'Fixed: Account for operator precedence - NOT should not bind to higher-precedence operators
         IF getelement$(t$, l) = "NOT" THEN
             FOR l2 = l TO numelements(t$)
                 ele$ = getelement$(t$, l2)
-                IF ele$ = "AND" OR ele$ = "OR" OR ele$ = "XOR" OR ele$ = "EQV" OR ele$ = "IMP" OR ele$ = ")" THEN
+                ' Stop at operators with higher or equal precedence to NOT
+                IF ele$ = "^" OR ele$ = "AND" OR ele$ = "OR" OR ele$ = "XOR" OR ele$ = "EQV" OR ele$ = "IMP" OR ele$ = ")" THEN
                     EXIT FOR
                 END IF
             NEXT
