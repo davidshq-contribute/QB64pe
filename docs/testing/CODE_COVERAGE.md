@@ -227,6 +227,6 @@ If you see JSON parsing errors:
 
 ## Related Documentation
 
-- [Test Discovery System](TEST_DISCOVERY.md)
-- [Test Reporting](TESTING_IMPLEMENTATION.md)
-- [Testing Implementation and Strategy](TESTING_IMPLEMENTATION.md)
+- [Test Discovery System](../tests/test_discovery.sh) - Test discovery and categorization
+- [Test Reporting](../tests/test_report.sh) - Test report generation
+- [Testing Implementation and Strategy](../testing/TESTING_IMPLEMENTATION.md) - Testing framework details

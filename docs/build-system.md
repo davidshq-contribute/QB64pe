@@ -40,7 +40,7 @@ ICON_OBJ := $(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/icon.rc)
 
 - [Auto-Including](auto-including.md) - How support files are automatically included
 - [Architecture](ARCHITECTURE.md) - Overall compiler architecture
-- [Testing](testing.md) - Testing infrastructure
+- [Testing Documentation](testing/TESTING_IMPLEMENTATION.md) - Comprehensive testing infrastructure
 
 ## Build Process
 

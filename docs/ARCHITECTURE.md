@@ -487,59 +487,6 @@ If no → Generate C++ code
    - Generate symbol files for debugging
    - Create license attribution file
 
-## Build System
-
-### Makefile Parameters
-
-**Platform Selection:**
-- `OS`: `win`, `lnx`, or `osx` (required)
-
-**Executable Configuration:**
-- `EXE`: Output executable name (required)
-- `TEMP_ID`: Instance identifier for parallel compilations
-- `BUILD_QB64`: Build QB64-PE itself from `internal/source`
-
-**Dependency Flags:**
-- `DEP_GL`: OpenGL support
-- `DEP_SCREENIMAGE`: Screen image capture
-- `DEP_IMAGE_CODEC`: Image loading/saving
-- `DEP_SOCKETS`: Network support
-- `DEP_HTTP`: HTTP client (requires `DEP_SOCKETS`)
-- `DEP_FONT`: Font rendering
-- `DEP_AUDIO_MINIAUDIO`: Audio playback
-- `DEP_DEVICEINPUT`: Game controller support
-- `DEP_CONSOLE`: Console mode (Windows)
-- `DEP_CONSOLE_ONLY`: Console-only mode (no graphics)
-- `DEP_ZLIB`: Compression support
-- `DEP_EMBED`: Embedded data support
-- `DEP_PRINTER`: Print image support
-- `DEP_ICON`: Icon support
-- `DEP_ICON_RC`: Windows resource support
-
-**Compiler Flags:**
-- `CXXFLAGS_EXTRA`: Additional C++ compiler flags
-- `CXXLIBS_EXTRA`: Additional linker flags
-- `CFLAGS_EXTRA`: Additional C compiler flags
-- `STRIP_SYMBOLS`: Control symbol stripping (`n` to disable)
-- `GENERATE_LICENSE`: Generate license attribution file
-
-### Build Process Flow
-
-```
-User runs: qb64pe -c program.bas
-    │
-    ├─> QB64 Compiler analyzes program.bas
-    │   ├─> Detects dependencies
-    │   ├─> Generates C++ code → internal/temp/
-    │   └─> Writes dependency flags
-    │
-    └─> Makefile execution
-        ├─> Compile dependencies (if needed)
-        ├─> Compile libqb with flags
-        ├─> Compile qbx.cpp (includes generated code)
-        └─> Link everything → program.exe
-```
-
 ## Directory Structure
 
 ### Overview
@@ -1129,6 +1076,49 @@ The compiler tracks external dependencies to trigger recompiles when needed:
 - Cocoa/AppKit for GUI
 - CoreAudio for audio
 - Framework-based linking
+
+### Recent Architectural Improvements (2026)
+
+QB64-PE has undergone significant architectural improvements in January 2026, documented through Architecture Decision Records (ADRs):
+
+#### Security and Quality Improvements
+- **ADR-004**: Security Improvements - Defensive Programming Implementation
+  - Replaced unsafe strcpy() calls with strncpy()
+  - Added memory allocation error checking
+  - Implemented defensive programming patterns
+
+- **ADR-005**: Memory Management and Buffer Security Implementation  
+  - Comprehensive memory allocation validation patterns
+  - Buffer security framework with bounds checking
+  - Dedicated memory security testing infrastructure
+
+- **ADR-006**: Error Handling API Modernization
+  - Replaced 31 direct variable references with 13 modern API functions
+  - Type-safe error state management with comprehensive testing (166 tests, 100% pass rate)
+  - Eliminated all deprecated error handling variables
+
+- **ADR-008**: Code Quality and Refactoring Framework
+  - Eliminated 90+ lines of duplicate code through systematic refactoring
+  - Automated quality tools (clang-format, clang-tidy, clangd)
+  - Cross-platform code quality automation scripts
+
+#### Build System and Testing
+- **ADR-001**: Out-of-Source Builds Implementation
+  - Clean separation of source and build artifacts
+  - Cross-platform path handling with TEMP_ID support for parallel builds
+  - Multiple build configurations support
+
+- **ADR-002**: Comprehensive Testing Infrastructure Implementation
+  - Multi-tier testing system (unit, integration, runtime, compile tests)
+  - Continuous testing and test discovery capabilities
+  - Automated test reporting and coverage analysis
+
+- **ADR-003**: Code Formatting and Linting Infrastructure
+  - clang-format, clang-tidy, and clangd configuration
+  - Cross-platform automation scripts
+  - IDE and CI/CD pipeline integration
+
+For complete details on these improvements, see the [Architecture Decision Records](adr/README.md).
 
 ## Extension Points
 

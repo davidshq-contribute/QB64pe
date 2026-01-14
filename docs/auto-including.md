@@ -121,6 +121,6 @@ The auto-include logic is implemented in the QB64-PE compiler source code. Key f
 
 ## See Also
 
-- [Build System Documentation](build-system.md) - How programs are compiled
-- [Architecture Documentation](ARCHITECTURE.md) - Compiler architecture overview
-- [Testing Documentation](testing.md) - Testing infrastructure
+- [Build System Documentation](../build-system.md) - How programs are compiled
+- [Architecture Documentation](../ARCHITECTURE.md) - Compiler architecture overview
+- [Testing Documentation](../testing/TESTING_IMPLEMENTATION.md) - Testing infrastructure

@@ -136,108 +136,86 @@ For comprehensive architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE
 
 ## Directory Structure
 
-Understanding the project layout will help you navigate the codebase:
+For complete directory structure information, see [Architecture Documentation](ARCHITECTURE.md#directory-structure).
 
-```
-QB64pe/
-├── source/                 # QB64 compiler source code
-│   ├── qb64pe.bas         # Main compiler entry point
-│   ├── subs_functions/    # Parser and function implementations
-│   │   ├── subs_functions.bas    # Core parser (large file)
-│   │   ├── syntax_highlighter_list.bas  # IDE syntax highlighting
-│   │   └── extensions/    # Extension system (e.g., OpenGL)
-│   ├── utilities/         # Utility modules
-│   │   ├── hash.bas       # Symbol table (hash-based)
-│   │   ├── type.bas       # Type system
-│   │   ├── const_eval.bas # Constant evaluation
-│   │   ├── give_error.bas # Error reporting
-│   │   └── ...            # Other utilities
-│   ├── emit/              # Code generation
-│   │   └── logging.bas    # Code emission
-│   ├── ide/               # IDE component (optional)
-│   │   ├── ide_global.bas  # IDE initialization
-│   │   ├── ide_methods.bas # IDE functionality
-│   │   └── ...            # IDE modules
-│   └── global/            # Global constants and settings
-│       ├── version.bas    # Version information
-│       ├── constants.bas  # Compiler constants
-│       └── settings.bas   # Compiler settings
-│
-├── internal/
-│   ├── c/                 # C++ runtime and dependencies
-│   │   ├── libqb/         # Runtime library source
-│   │   │   ├── include/   # Header files (41 headers)
-│   │   │   └── src/       # Implementation (48 source files)
-│   │   ├── parts/         # Third-party dependencies
-│   │   │   ├── audio/     # Audio libraries
-│   │   │   ├── video/     # Graphics/image libraries
-│   │   │   ├── network/   # Networking libraries
-│   │   │   └── ...        # Other dependencies
-│   │   ├── qbx.cpp        # Generated code entry point
-│   │   ├── libqb.cpp      # Main runtime library file
-│   │   └── c_compiler/    # MinGW (Windows only, downloaded by setup)
-│   ├── source/            # Pre-compiled C++ source of QB64-PE
-│   │                       # (used for bootstrap compilation)
-│   └── temp/              # Temporary files during compilation
-│       └── *.cpp         # Generated C++ source files
-│
-├── docs/                  # Documentation
-│   ├── ARCHITECTURE.md    # Detailed system architecture
-│   ├── build-system.md    # Build process documentation
-│   ├── testing.md         # Testing framework details
-│   ├── auto-including.md  # Auto-include system
-│   └── GETTING_STARTED.md # This file
-│
-├── tests/                 # Test suites
-│   ├── compile_tests/     # QB64-based compiler tests
-│   │   └── [category]/   # Test categories (audio, graphics, etc.)
-│   ├── c/                 # C++ runtime tests
-│   │   ├── test.h         # Test framework
-│   │   └── *.cpp         # Individual test files
-│   ├── qbasic_testcases/  # QBasic compatibility tests
-│   ├── compile_tests.sh   # Run compile tests
-│   ├── run_c_tests.sh     # Run C++ tests
-│   └── run_tests.sh       # Run all tests
-│
-├── licenses/              # Third-party license information
-│   └── README.md          # License summary
-│
-├── .ci/                   # CI build scripts (for releases)
-│   ├── bootstrap.bat      # Windows bootstrap build script
-│   ├── bootstrap.sh        # Linux/macOS bootstrap build script
-│   ├── compile.bat         # Windows compilation script
-│   ├── compile.sh          # Linux/macOS compilation script
-│   ├── calculate_version.sh # Version calculation script
-│   ├── make-dist.sh        # Distribution creation script
-│   └── push-internal-source.sh # Updates internal/source in CI
-│
-├── Makefile               # Build system for C++ compilation
-├── setup_win.cmd          # Windows setup script
-├── setup_lnx.sh           # Linux setup script
-└── setup_osx.command      # macOS setup script
+### Key Directories for Development
+
+- **`source/`**: QB64 compiler source code - where you'll make most changes
+- **`internal/c/libqb/`**: C++ runtime library - for runtime changes
+- **`tests/`**: Test suites - for verifying changes
+- **`docs/`**: Documentation - including this guide and references below
+
+## Quick Development Workflow
+
+### Environment Setup Commands
+
+```bash
+# Windows
+setup_win.cmd
+
+# Linux  
+./setup_lnx.sh
+
+# macOS
+./setup_osx.command
 ```
 
-### Key Directories Explained
+### Making Changes
 
-- **`source/`**: Contains all QB64 source code for the compiler itself. This is where you'll make most changes when modifying compiler behavior.
+**Compiler Changes (`source/`):**
+1. Edit QB64 source files
+2. Rebuild: `setup_win.cmd` or `./setup_lnx.sh` or `./setup_osx.command`
+3. Test changes
 
-- **`internal/c/libqb/`**: The C++ runtime library. Changes here affect how compiled QB64 programs execute at runtime.
+**Runtime Changes (`internal/c/libqb/`):**
+1. Edit C++ source files  
+2. Compile test program to rebuild libqb
+3. Run C++ tests: `cd tests && make OS=win build-tests && ./run_c_tests.sh`
 
-- **`internal/c/parts/`**: Third-party dependencies. Each subdirectory contains a library that can be conditionally included in compiled programs.
+### Common Development Commands
 
-- **`internal/source/`**: Pre-generated C++ source of a previous version of QB64-PE, stored as `.txt` files (approximately 1,200 files). This is used to bootstrap the compiler (compile the compiler with itself). These files are automatically updated by the CI process.
+```bash
+# Build QB64-PE itself
+mingw32-make EXE=qb64pe.exe BUILD_QB64=y
 
-- **`internal/temp/`**: Temporary directory where generated C++ code is placed during compilation of user programs. The compiler generates multiple `.txt` files containing C++ code segments that are included by `qbx.cpp` during compilation.
+# Build with debug symbols
+mingw32-make EXE=qb64pe.exe BUILD_QB64=y DEBUG=1
 
-- **`tests/compile_tests/`**: Test cases for the compiler. Each test has a `.bas` file and either a `.output` or `.err` file showing expected results.
+# Clean build artifacts
+mingw32-make clean
+
+# Run all tests
+./tests/run_tests.sh
+
+# Run specific test suites
+./tests/compile_tests.sh
+./tests/run_c_tests.sh
+```
 
 ## Development Workflow
+
+### File System Critical Paths
+
+- `source/qb64pe.bas` - Master compiler source
+- `internal/source/` - Bootstrap C++ sources (used by running compiler)
+- `internal/temp/` - Generated during user program compilation (ephemeral)
+- `build-*/` - Out-of-source build directories
+
+### Common Pitfalls to Avoid
+
+1. **Don't edit `internal/temp/` files directly** - They're regenerated each compilation
+2. **Remember bootstrap requirement** - Changes in `source/` won't take effect without bootstrap
+3. **Check CONST placement** - QB64 requires CONST before executable statements
+4. **Use proper testing** - Always run relevant test suites after changes
 
 ### Bootstrap Process
 
 For detailed bootstrap process information, see [ARCHITECTURE.md](ARCHITECTURE.md#bootstrap-process).
 
 **Quick Overview:**
+- Running compiler uses `internal/source/` (pre-generated C++ files)
+- Source changes require bootstrap compilation to update `internal/source/`
+- CI automatically updates `internal/source/` after successful builds
 1. Bootstrap compilation from `internal/source/` (pre-generated C++ files)
 2. Self-compilation using the bootstrap compiler
 3. CI updates `internal/source/` for future bootstraps
@@ -295,67 +273,26 @@ The Makefile is invoked automatically by QB64-PE. See [build-system.md](build-sy
 
 ## Testing
 
-QB64-PE has two separate testing frameworks to ensure code quality:
+QB64-PE has comprehensive testing infrastructure. For complete information:
 
-### QB64-Based Tests
+- **Testing Framework**: See [Testing Implementation](testing/TESTING_IMPLEMENTATION.md)
+- **Component Testing**: See [Component Testing Strategy](testing/COMPONENT_TESTING_STRATEGY.md) 
+- **Test Coverage**: See [Code Coverage Analysis](CODE_COVERAGE.md)
+- **Test Consolidation**: See [Test Consolidation Summary](testing/CONSOLIDATION_SUMMARY.md)
 
-Located in `tests/compile_tests/`, these test the compiler itself:
-
-- **Structure**: Each test folder contains `.bas` files with corresponding `.output` or `.err` files
-- **`.output` files**: Contain the expected output when the program runs
-- **`.err` files**: Contain the expected compiler error message
-- **`.flags` files**: Optional command-line arguments for the compiler
-
-**Running QB64 tests:**
-```bash
-./tests/compile_tests.sh
-```
-
-**Writing a new test:**
-1. Create a `.bas` file in an appropriate test category folder (e.g., `tests/compile_tests/audio_test/`)
-2. Create a corresponding `.output` or `.err` file with the same base name
-   - `.output` files contain the expected program output
-   - `.err` files contain the expected compiler error message
-3. Ensure output files don't have trailing spaces or empty lines at the end (these cause test failures)
-4. Optionally create a `.flags` file to pass command-line arguments to the compiler
-
-### C++-Based Tests
-
-Located in `tests/c/`, these test the runtime library (`libqb`):
-
-- Each test is a standalone `.cpp` file with its own `main()`
-- Tests use `test.h` for test framework functionality
-- Tests are compiled using `tests/build.mk`
-
-**Running C++ tests:**
-```bash
-cd tests
-make OS=win build-tests    # Windows: OS=win
-make OS=lnx build-tests    # Linux: OS=lnx
-make OS=osx build-tests   # macOS: OS=osx
-./run_c_tests.sh
-```
-
-Note: Replace `OS=win`, `OS=lnx`, or `OS=osx` with the appropriate value for your platform.
-
-**Writing a new C++ test:**
-1. Create a `.cpp` file in `tests/c/`
-2. Add the test executable to the list in `run_c_tests.sh`
-3. Update `tests/build.mk` to build your test
-
-### Running All Tests
+### Quick Test Commands
 
 ```bash
+# All tests
 ./tests/run_tests.sh
+
+# With discovery system
+./tests/run_tests_with_discovery.sh
+
+# Individual test suites
+./tests/compile_tests.sh      # Compiler tests
+./tests/run_c_tests.sh         # C++ runtime tests
 ```
-
-This runs all test suites including:
-- Compile tests
-- C++ tests
-- QBasic compatibility tests
-- Distribution tests
-
-> **For detailed testing information**, see [testing.md](testing.md).
 
 ## Key Concepts for Developers
 
@@ -420,7 +357,49 @@ New functions can be added through the extension system (`source/subs_functions/
 - Extensions integrate with the parser (`subs_functions.bas`) and code generator
 - Extensions allow modular addition of features without modifying core compiler code
 
+## Debugging Common Issues
+
+### Generated Code Problems
+- Check `internal/temp/main.txt` and related generated files
+- Review `internal/temp/compilelog.txt` for compilation errors
+- Use logging framework in `internal/c/libqb/src/logging/`
+
+### Build Failures  
+- Verify Makefile parameters (OS, EXE, DEP_* flags)
+- Check dependency availability in `internal/c/parts/`
+- Ensure build directories exist and are writable
+
+## Code Quality Practices
+
+### Style Guidelines
+- **QB64 code**: Follow existing patterns, use `DEFLNG A-Z`, add comments
+- **C++ code**: Standard C++ conventions, match libqb style, use `#ifdef` for platform code
+
+### Testing Requirements
+- All changes must pass: `./tests/run_tests.sh`
+- Add new tests for new functionality
+- Verify both compiler and C++ runtime tests pass
+
 ## Common Development Tasks
+
+### Essential Reference Files
+
+- `source/qb64pe.bas` - Main compiler entry point
+- `source/subs_functions/subs_functions.bas` - Core parser (~3,865 lines)
+- `internal/c/libqb.cpp` - Runtime library entry point
+- `Makefile` - Build system orchestration
+- `tests/run_tests.sh` - Master test runner
+
+### Recent Architectural Improvements
+
+For details on recent major improvements, see the [Architecture Decision Records](adr/README.md):
+- **ADR-001**: Out-of-source builds implementation
+- **ADR-002**: Comprehensive testing infrastructure  
+- **ADR-003**: Code formatting and linting tools
+- **ADR-004**: Security improvements and defensive programming
+- **ADR-005**: Memory management and buffer security
+- **ADR-006**: Error handling API modernization
+- **ADR-008**: Code quality refactoring framework
 
 ### Adding a New BASIC Statement or Function
 
@@ -553,6 +532,23 @@ Now that you're familiar with the project:
 4. **Read the detailed docs**: Review [ARCHITECTURE.md](ARCHITECTURE.md) for deep technical details
 5. **Join the community**: Participate in forum discussions or Discord to ask questions
 6. **Pick an issue**: Look for beginner-friendly issues labeled "good first issue" on GitHub
+
+### Troubleshooting Quick Reference
+
+| Issue | Solution |
+|--------|----------|
+| Bootstrap fails | Check `internal/source/` exists, verify C++ compiler |
+| Build errors | Verify DEP_* flags, check dependency availability |
+| Test failures | Run specific test suites, check generated code |
+| Path issues | Use forward slashes, check directory permissions |
+
+### Getting Help
+
+### Resources
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Build System**: [build-system.md](build-system.md)
+- **Testing**: [testing/TESTING_IMPLEMENTATION.md](testing/TESTING_IMPLEMENTATION.md)
+- **Community**: [Forum](https://qb64phoenix.com/forum), [Discord](https://discord.gg/D2M7hepTSx)
 
 ## Troubleshooting
 
