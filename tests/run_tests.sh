@@ -304,7 +304,7 @@ fi
 
 # Run distribution tests
 print_test_header "Distribution Tests"
-"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/run_dist_tests.sh" "$QB64_EXE"
+"$ROOT_DIR/tests/assert.sh" "$ROOT_DIR/tests/run_dist_tests.sh" "$ROOT_DIR" "win"
 test_result=$?
 total_tests=$((total_tests + 1))
 if [ $test_result -eq 0 ]; then

@@ -23,7 +23,7 @@ static void test_clear_error() {
     // Clear error should reset error state
     clear_error();
     test_assert(!is_error_pending());
-    test_assert_ints(0, new_error);
+    test_assert_ints(0, get_error_goto_line());
 }
 
 static void test_get_error_erl() {

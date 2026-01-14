@@ -94,12 +94,14 @@ ifeq ($(OS),win)
 		CXX := c++.exe
 		OBJCOPY := objcopy.exe
 		WINDRES := windres.exe
+		LLVMRC := llvm-rc.exe
 	else
 		AR := $(PATH_INTERNAL_C)\c_compiler\bin\ar.exe
 		CC := $(PATH_INTERNAL_C)\c_compiler\bin\gcc.exe
 		CXX := $(PATH_INTERNAL_C)\c_compiler\bin\c++.exe
 		OBJCOPY := $(PATH_INTERNAL_C)\c_compiler\bin\objcopy.exe
 		WINDRES := $(PATH_INTERNAL_C)\c_compiler\bin\windres.exe
+		LLVMRC := $(PATH_INTERNAL_C)\c_compiler\bin\llvm-rc.exe
 	endif
 	ICON_OBJ := $(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/icon.rc)
 	RM := del /Q
@@ -447,7 +449,8 @@ $(QBLIB): $(PATH_INTERNAL_C)/libqb.cpp | $(BUILD_OBJ_DIR)
 ifeq ($(OS),win)
 CLEAN_LIST += $(ICON_OBJ)
 $(ICON_OBJ): $(PATH_INTERNAL_TEMP)\icon.rc | $(BUILD_OBJ_DIR)
-	$(WINDRES) -i $< -o $@
+	$(call MKDIR_SAFE,$(dir $@))
+	$(LLVMRC) /FO $@ $<
 endif
 
 # QBLIB has to go first to ensure correct linking

@@ -21,6 +21,9 @@ echo.
 rem Change to the correct drive & path
 cd /d %~dp0
 
+rem Ensure bundled toolchain is on PATH (required for tools like llvm-rc)
+set "PATH=%~dp0internal\c\c_compiler\bin;%PATH%"
+
 rem Check if the C++ compiler is there and skip MINGW setup if it exists
 if exist "internal\c\c_compiler\bin\c++.exe" goto build_qb64pe
 

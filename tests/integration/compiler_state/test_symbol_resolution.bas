@@ -14,14 +14,14 @@ testVar = 42
 ' Test that global variable is accessible
 PRINT "Global variable value: "; testVar
 
+CALL TestSub
+
 ' Test that local variables work
 SUB TestSub
     DIM localVar AS LONG
     localVar = 100
     PRINT "Local variable value: "; localVar
 END SUB
-
-CALL TestSub
 
 ' Expected output:
 ' Global variable value: 42
