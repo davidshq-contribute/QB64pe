@@ -22,6 +22,10 @@ libqb-objs-y += $(PATH_LIBQB)/src/qbs_mk_cv.o
 libqb-objs-y += $(PATH_LIBQB)/src/qbs_val.o
 libqb-objs-y += $(PATH_LIBQB)/src/string_functions.o
 libqb-objs-y += $(PATH_LIBQB)/src/graphics.o
+libqb-objs-y += $(PATH_LIBQB)/src/fileio.o
+libqb-objs-y += $(PATH_LIBQB)/src/color.o
+libqb-objs-y += $(PATH_LIBQB)/src/screen.o
+libqb-objs-y += $(PATH_LIBQB)/src/mem_legacy.o
 
 libqb-objs-y += $(PATH_LIBQB)/src/logging/logging.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/qb64pe_symbol.o

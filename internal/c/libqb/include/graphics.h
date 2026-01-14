@@ -199,3 +199,19 @@ double func__bri32(uint32_t argb);
 void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed);
 void sub__maptriangle(int32_t cull_options, float sx1, float sy1, float sx2, float sy2, float sx3, float sy3, int32_t si, float dx1, float dy1, float dz1,
                       float dx2, float dy2, float dz2, float dx3, float dy3, float dz3, int32_t di, int32_t smooth_options, int32_t passed);
+
+// Drawing primitives - declarations for functions still in libqb.cpp
+// NOTE: These have complex dependencies (pset, lineclip, etc.) and remain in libqb.cpp
+// Future work: extract these along with their helper functions
+void pset_and_clip(int32_t x, int32_t y, uint32_t col);
+void qb32_boxfill(float x1f, float y1f, float x2f, float y2f, uint32_t col);
+void qb32_line(float x1f, float y1f, float x2f, float y2f, uint32_t col, uint32_t style);
+void sub_line(float x1, float y1, float x2, float y2, uint32_t col, int32_t bf, uint32_t style, int32_t passed);
+void sub_circle(double x, double y, double r, uint32_t col, double start, double end, double aspect, int32_t passed);
+void sub_pset(float x, float y, uint32_t col, int32_t passed);
+void sub_preset(float x, float y, uint32_t col, int32_t passed);
+
+// Paint functions (two overloads for color fill vs pattern fill)
+struct qbs;
+void sub_paint(float x, float y, uint32_t fillcol, uint32_t bordercol, qbs *backgroundstr, int32_t passed);
+void sub_paint(float x, float y, qbs *fillstr, uint32_t bordercol, qbs *backgroundstr, int32_t passed);
