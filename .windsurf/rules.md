@@ -1,0 +1,7 @@
+- Check what Operating System you are using before attempting to run OS commands.
+    - One Windows you may have access to Windows Subsystem for Linux (WSL) and Git Bash.
+- Create a document with lessons you learn and keep it updated.
+- Whenever you work on a complex problem and it is taking a while for you to solve it, document the process and the solution.
+- Write critical path tests as you make changes to the codebase.
+- Create/update documentation as you go.
+- As you learn things about the environment, add them to a doc and refer to them as needed. For example, what tools are available, how to write commands, etc.

@@ -175,8 +175,15 @@ make test-memory-security
 
 ## Integration with Other ADRs
 - **ADR-004**: Builds on defensive programming foundation
+- **ADR-006**: Integrates with Error Handling API for comprehensive memory error reporting
 - **ADR-002**: Integrates with comprehensive testing infrastructure
 - **ADR-003**: Code quality tools support memory security validation
+
+### Error Handling API Integration
+- **Memory Error Reporting**: Uses modern error handling API for memory allocation failures
+- **Consistent Error Codes**: Standardized error 518 for out-of-memory conditions
+- **Error Recovery**: Proper error state management through API functions
+- **Debugging Support**: Enhanced error context for memory-related issues
 
 ## References
 - Commits: Multiple commits for memory security fixes (Jan 2026)
@@ -184,6 +191,9 @@ make test-memory-security
 - Test Files: tests/c/mem_allocation_test.cpp, tests/c/buffer_overflow_test.cpp
 - Security Review: .windsurf/workflows/security-review.md
 - Implementation Plan: IMPLEMENTATION_PLAN.md
+- Related ADR: ADR-006 (Error Handling API Modernization)
+- Status: Memory management items marked as completed in OUTSTANDING_TASKS.md
+- Error Handling: Integrated with modern error handling API (13 functions)
 
 ## Date
 2026-01-13

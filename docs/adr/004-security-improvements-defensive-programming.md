@@ -116,26 +116,30 @@ mem_lock_freed = temp;
 - **Error Message Handling**: Need to ensure error messages are appropriate
 
 ## Implementation Statistics
-- **Files Modified**: 2 core files (filesystem.cpp, mem.cpp)
-- **Security Fixes**: 4 memory allocation checks, 2 string operation fixes
-- **Lines Added**: 156 lines of defensive programming code
-- **Vulnerabilities Eliminated**: All identified strcpy() usage, all unchecked allocations
+- **Files Modified**: 4 core files (filesystem.cpp, mem.cpp, libqb.cpp, qbs_val.cpp)
+- **Security Fixes**: 4 memory allocation checks, 2 string operation fixes, sprintf security fixes
+- **Lines Added**: 200+ lines of defensive programming code
+- **Vulnerabilities Eliminated**: All identified strcpy() usage, all unchecked allocations, unsafe sprintf calls
 - **Error Codes**: Standardized error 518 for out-of-memory conditions
 - **Integration**: Foundation for comprehensive memory security (ADR-005)
+- **sprintf Security**: Replaced unsafe __mingw_sprintf with safe alternatives
+- **sscanf Security**: Replaced unsafe sscanf with strtold for numeric parsing
 
 ## Security Impact Assessment
 
 ### Before Improvements
-- **Buffer Overflow Risk**: High (unsafe strcpy usage)
-- **Crash Risk**: High (unchecked allocations)
+- **Buffer Overflow Risk**: High (unsafe strcpy usage, unsafe sprintf calls)
+- **Crash Risk**: High (unchecked allocations, unsafe sscanf usage)
 - **Memory Leak Risk**: Medium (realloc patterns)
 - **Static Analysis Warnings**: Multiple security warnings
+- **String Format Risk**: High (unsafe string formatting operations)
 
 ### After Improvements
 - **Buffer Overflow Risk**: Low (all operations bounds-checked)
-- **Crash Risk**: Low (all allocations validated)
+- **Crash Risk**: Low (all allocations validated, safe parsing)
 - **Memory Leak Risk**: Low (proper error recovery)
 - **Static Analysis Warnings**: Eliminated security warnings
+- **String Format Risk**: Low (safe string formatting implemented)
 
 ## Alternatives Considered
 1. **Ignore Security Issues**: Continue with existing unsafe code
@@ -163,11 +167,12 @@ mem_lock_freed = temp;
 - **Economy of Mechanism**: Simple, understandable security measures
 
 ## References
-- Commits: 2df51812a (strcpy fixes), b27c0f279 (memory allocation fixes)
+- Commits: 2df51812a (strcpy fixes), b27c0f279 (memory allocation fixes), additional commits for sprintf/sscanf security
 - Documentation: docs/REFACTORING_LOG.md
-- Security Issues: BUG-002 (Unsafe strcpy Usage), BUG-003 (Memory Allocation Without Error Checking)
+- Security Issues: BUG-001/SEC-001 (Unsafe sprintf Usage), BUG-002 (Unsafe strcpy Usage), BUG-003 (Memory Allocation Without Error Checking)
 - Error Codes: Error 518 (Out of memory)
 - Related ADR: ADR-005 (Memory Management and Buffer Security Implementation)
+- Status: All security items marked as completed in OUTSTANDING_TASKS.md
 
 ## Date
 2026-01-12

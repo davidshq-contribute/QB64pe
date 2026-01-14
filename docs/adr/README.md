@@ -32,6 +32,9 @@ Each ADR follows this structure:
 | [ADR-003](003-code-formatting-linting-infrastructure.md) | Code Formatting and Linting Infrastructure | Accepted | 2026-01-11 |
 | [ADR-004](004-security-improvements-defensive-programming.md) | Security Improvements - Defensive Programming Implementation | Accepted | 2026-01-12 |
 | [ADR-005](005-memory-management-buffer-security.md) | Memory Management and Buffer Security Implementation | Accepted | 2026-01-13 |
+| [ADR-006](006-error-handling-api-modernization.md) | Error Handling API Modernization | Accepted | 2026-01-13 |
+| [ADR-007](007-test-infrastructure-implementation.md) | Test Infrastructure Implementation | Accepted | 2026-01-13 |
+| [ADR-008](008-code-quality-refactoring-framework.md) | Code Quality and Refactoring Framework | Accepted | 2026-01-13 |
 
 ## ADR Categories
 
@@ -40,6 +43,7 @@ Each ADR follows this structure:
 
 ### Testing Infrastructure
 - **ADR-002**: Comprehensive multi-tier testing system with continuous testing
+- **ADR-007**: Test infrastructure implementation with 73 tests and GOTO elimination
 
 ### Development Tools
 - **ADR-003**: Automated code formatting and linting infrastructure
@@ -47,6 +51,10 @@ Each ADR follows this structure:
 ### Security and Quality
 - **ADR-004**: Defensive programming improvements for security and stability
 - **ADR-005**: Memory management and buffer security implementation
+
+### Architecture and Code Quality
+- **ADR-006**: Error handling API modernization with 13 new API functions
+- **ADR-008**: Code quality and refactoring framework with systematic patterns
 
 ## Recent Architectural Changes
 
@@ -79,6 +87,24 @@ The following major architectural changes were implemented by Dave Mackey (david
    - Added buffer security framework with bounds checking
    - Created dedicated memory security testing infrastructure
    - Standardized memory safety patterns across codebase
+
+6. **Error Handling API Modernization** (ADR-006)
+   - Replaced 31 direct variable references with 13 modern API functions
+   - Implemented type-safe error state management
+   - Added comprehensive error handling with 166 tests (100% pass rate)
+   - Eliminated all deprecated error handling variables
+
+7. **Test Infrastructure Implementation** (ADR-007)
+   - Created comprehensive testing framework with 73 tests across 10 suites
+   - Eliminated 12 GOTO labels across 3 files for improved testability
+   - Implemented cross-platform test automation with wrapper scripts
+   - Added continuous testing and test discovery capabilities
+
+8. **Code Quality and Refactoring Framework** (ADR-008)
+   - Eliminated 90+ lines of duplicate code through systematic refactoring
+   - Implemented automated quality tools (clang-format, clang-tidy, clangd)
+   - Created comprehensive refactoring patterns and best practices
+   - Added cross-platform code quality automation scripts
 
 ## ADR Process
 

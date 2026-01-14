@@ -1,0 +1,8 @@
+- Review all the code changes you've made.
+- Did you introduce any bugs or errors?
+- Implement any bad practices?
+- Lose any functionality?
+- Have a pragmatic engineer review the changes, are they good? Are they valuable?
+- Update docs as necessary
+- Update tests as necessary
+- Whenever you run into a challenge that takes you are while to solve, make sure you create a doc in docs/problems_encountered you can refer to in the future if you run into the same problem.
