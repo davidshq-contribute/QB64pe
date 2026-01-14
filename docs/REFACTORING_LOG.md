@@ -2008,7 +2008,97 @@ QB64 test infrastructure requires strict separation:
 
 ---
 
-## Conclusion
+## Refactoring #3: Error Handling API Modernization (MAINT-001)
+
+**Date**: 2026-01-13
+**Category**: API Modernization - Technical Debt Reduction
+**Priority**: P1 - High Priority
+**Files Modified**:
+- `internal/c/libqb/src/error_handle.cpp`
+- `internal/c/libqb/include/error_handle.h`
+- `source/qb64pe.bas`
+- `internal/source/mainerr.txt`
+- `internal/source/main.txt`
+
+### Problem Statement
+
+Seven global error handling variables were marked for removal in `error_handle.h`:
+- `new_error`, `error_err`, `error_occurred`, `error_goto_line`
+- `error_handler_history`, `error_handling`, `error_retry`
+
+A replacement API with 13 functions existed, but 31 direct variable references across 6 files still used deprecated patterns.
+
+### Solution Implementation
+
+**API Functions Created**:
+- `is_error_handling()`, `set_error_retry()`, `set_error_handling()`
+- `set_error_err()`, `set_error_goto_line()`, `get_error_handler_history()`
+- `set_error_handler_history()`, `is_error_pending()`, `set_error_pending()`
+- `get_error_occurred()`, `set_error_occurred()`
+
+**Compiler Pattern Updates**:
+- Updated RESUME statement code generation (lines 9279, 9289, 9325)
+- Updated error handler history management (lines 9342-9343, 9352-9353)
+- Updated error goto line handling (lines 9393-9397)
+- Fixed array redimension error check (line 14064)
+- Fixed incomplete error_occurred block in ErrTxtBuf initialization (line 3053)
+
+**Bootstrapped Source Updates**:
+- Updated `internal/source/mainerr.txt` with new API calls
+- Verified `internal/source/main.txt` contains updated API patterns
+
+### Current Status
+
+**Issue**: The current `qb64pe.exe` compiler was built from old sources and continuously regenerates `internal/temp/*.txt` files with deprecated patterns during each compilation. Direct edits to temp files are overwritten when compiler runs.
+
+**Root Cause**:
+- Running compiler (`qb64pe.exe`) contains old code generation logic
+- Each compilation regenerates temp files from old bootstrapped sources
+- Direct patches to temp files are immediately overwritten
+
+**Blocker**: Syntax error in `source/ide/ide_global.bas` preventing bootstrap process completion.
+
+**Completion**: 90% - All preparatory work done, blocked by syntax error preventing new compiler build.
+
+---
+
+## Refactoring #4: Documentation Consolidation (2026-01-13)
+
+**Date**: 2026-01-13
+**Category**: Documentation - Content Deduplication
+**Priority**: Medium - Maintenance Improvement
+
+### Problem Statement
+
+Documentation structure contained significant duplication across 47 markdown files:
+- Three duplicate TEST_RESULTS.md files with nearly identical content
+- Overlapping code analysis content across CODE_ANALYSIS.md, IMPROVEMENTS.md, and OUTSTANDING_TASKS.md
+- Redundant error handling progress documentation
+
+### Solution Implementation
+
+**Files Consolidated**:
+1. **Test Results**: Merged content into `docs/testing/TEST_RESULTS.md` (most comprehensive)
+   - Deleted `tests/unit/TEST_RESULTS.md` (duplicate)
+   - Root `TEST_RESULTS.md` retained (different content - out-of-source builds)
+
+2. **Code Analysis**: Enhanced `docs/general/CODE_ANALYSIS.md` as single comprehensive source
+   - Added implementation status summary from OUTSTANDING_TASKS.md
+   - Deleted `docs/general/IMPROVEMENTS.md` (subset of CODE_ANALYSIS.md)
+   - Deleted `OUTSTANDING_TASKS.md` (status tracking integrated into CODE_ANALYSIS.md)
+
+3. **Cross-References Updated**: Updated all documentation references to point to consolidated files
+
+### Impact
+
+- **File Count Reduction**: From 47 to ~44 files (6% reduction)
+- **Duplication Eliminated**: ~1,000 lines of duplicate content removed
+- **Maintenance Burden**: Single source of truth for each topic
+- **Navigation**: Clearer, more focused documentation structure
+
+**Status**: ✅ **Completed** - Major duplication eliminated while preserving all important information.
+
+---
 
 The refactoring effort successfully eliminated all GOTO labels that prevented test compilation. The QB64 compiler test infrastructure is now fully operational with all 10 test suites enabled and compiling to 100%.
 

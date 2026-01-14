@@ -2,6 +2,40 @@
 
 This document describes how QB64-PE compiles programs and how the build system works.
 
+---
+
+## Path Handling Challenges
+
+### Windows Path Separator Issues
+
+During implementation of out-of-source builds, several path handling challenges were encountered due to mixed use of forward slashes (Unix-style) and backslashes (Windows-style).
+
+#### Windows ICON_OBJ Path Mixing
+
+**Location**: `Makefile` line 96
+
+**Problem**: On Windows, `ICON_OBJ` was defined as:
+```makefile
+ICON_OBJ := $(BUILD_OBJ_DIR)\icon.o
+```
+
+But `BUILD_OBJ_DIR` is defined with forward slashes (`$(BUILD_DIR)/obj`), creating a mixed path like `build-win/obj\icon.o` which is invalid.
+
+**Solution**: Use the `BUILD_OBJ` helper function which normalizes paths:
+```makefile
+ICON_OBJ := $(call BUILD_OBJ,$(PATH_INTERNAL_TEMP)/icon.rc)
+```
+
+#### Pattern Rule Path Matching on Windows
+
+**Location**: Pattern rules throughout build.mk files
+
+**Problem**: Pattern rules like `$(BUILD_OBJ_DIR)/%.o: %.cpp` use forward slashes, but on Windows, source paths may use backslashes (e.g., `internal\c\libqb\src\file.cpp`). Make's pattern matching may not work correctly with mixed separators.
+
+**Solution**: Ensure consistent use of forward slashes in all build system paths and use proper path normalization functions.
+
+---
+
 ## Related Documentation
 
 - [Auto-Including](auto-including.md) - How support files are automatically included

@@ -33,7 +33,6 @@ Each ADR follows this structure:
 | [ADR-004](004-security-improvements-defensive-programming.md) | Security Improvements - Defensive Programming Implementation | Accepted | 2026-01-12 |
 | [ADR-005](005-memory-management-buffer-security.md) | Memory Management and Buffer Security Implementation | Accepted | 2026-01-13 |
 | [ADR-006](006-error-handling-api-modernization.md) | Error Handling API Modernization | Accepted | 2026-01-13 |
-| [ADR-007](007-test-infrastructure-implementation.md) | Test Infrastructure Implementation | Accepted | 2026-01-13 |
 | [ADR-008](008-code-quality-refactoring-framework.md) | Code Quality and Refactoring Framework | Accepted | 2026-01-13 |
 
 ## ADR Categories
@@ -43,7 +42,6 @@ Each ADR follows this structure:
 
 ### Testing Infrastructure
 - **ADR-002**: Comprehensive multi-tier testing system with continuous testing
-- **ADR-007**: Test infrastructure implementation with 73 tests and GOTO elimination
 
 ### Development Tools
 - **ADR-003**: Automated code formatting and linting infrastructure
