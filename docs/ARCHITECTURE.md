@@ -676,7 +676,7 @@ QB64pe/
 
 #### `internal/c/libqb/` - Runtime Library
 
-See the [Runtime Library section](#2-runtime-library-internalclibqb) in Core Components for detailed information.
+Core runtime library providing execution environment for QB64 programs. See the [Runtime Library section](#2-runtime-library-internalclibqb) in Core Components for detailed information.
 
 #### `internal/c/parts/` - Third-Party Dependencies
 
@@ -714,22 +714,6 @@ See the [Third-Party Dependencies section](#5-third-party-dependencies-internalc
 - Automatically included by the compiler
 - Provides standard QB64 functionality
 - Can be overridden by user code
-
-#### `internal/source/` vs `internal/temp/`
-
-**`internal/source/`** (Bootstrap Files):
-- Pre-generated C++ from previous QB64-PE build
-- ~1,200 `.txt` files
-- **Tracked in git** (required for bootstrapping)
-- Used to build `qb64pe_bootstrap` executable
-- Updated automatically by CI when QB64-PE is rebuilt
-
-**`internal/temp/`** (Temporary Files):
-- Generated C++ output for each user program compilation
-- Same structure as `internal/source/` but per-compilation
-- **Not in git** (temporary, cleared between compilations)
-- Contains generated code for the program being compiled
-- Used by `qbx.cpp` via `#include` directives
 
 ## Key Technologies
 
@@ -831,15 +815,7 @@ QB64 uses a custom string type `qbs` (QB64 String) that provides:
 
 ## Testing Architecture
 
-For comprehensive testing documentation, see [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md).
-
-**Quick Overview:**
-QB64-PE uses a comprehensive multi-layered testing approach with:
-- **Include Provider System**: Abstract include file system enabling testability
-- **Component Test Harness**: State isolation for component testing
-- **Multiple Test Categories**: Compile, unit, integration, runtime, format, qbasic, dist tests
-- **Test Discovery**: Automatic test discovery and filtering
-- **Continuous Testing**: Watch mode, incremental testing, parallel execution
+QB64-PE uses a comprehensive multi-layered testing approach with component isolation and include provider abstraction.
 
 **Current Testing Status:**
 - **Unit Tests**: Complete for all major components (100%)
@@ -851,18 +827,7 @@ QB64-PE uses a comprehensive multi-layered testing approach with:
 - **GOTO Label Elimination**: 12/12 labels refactored (100%)
 - **Cross-Platform Support**: Wrapper scripts and WSL automation implemented
 
-**Key Documentation:**
-- **[docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md)** - Complete testing strategy and implementation (authoritative source)
-- **[docs/testing/COMPONENT_TESTING_STRATEGY.md](docs/testing/COMPONENT_TESTING_STRATEGY.md)** - Component testing strategy details
-- **[docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md)** - Test discovery system
-- **[docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md)** - Continuous testing features
-- **[docs/testing/TEST_RESULTS.md](docs/testing/TEST_RESULTS.md)** - Complete test status and results
-
-### Test Categories
-
-For detailed test category information, see [docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md#test-categories).
-
-**Quick Overview:**
+**Test Categories:**
 1. **Unit Tests** (`tests/unit/`) - Component isolation tests
 2. **Compiler Tests** (`tests/compile_tests/`) - Language feature tests
 3. **Integration Tests** (`tests/integration/`) - End-to-end compiler tests
@@ -871,18 +836,18 @@ For detailed test category information, see [docs/testing/TESTING_IMPLEMENTATION
 6. **QBasic Tests** (`tests/qbasic_testcases/`) - Compatibility tests
 7. **Distribution Tests** (`tests/dist/`) - Distribution verification
 
-### Test Infrastructure Features
-
-For detailed test infrastructure information, see:
-- **[docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md#test-infrastructure-details)** - Complete test infrastructure details
-- **[docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md)** - Test discovery system
-- **[docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md)** - Continuous testing features
-
-**Quick Overview:**
+**Test Infrastructure Features:**
 - **Test Discovery**: Automatic discovery, categorization, and filtering
 - **Continuous Testing**: Watch mode, incremental testing, parallel execution
 - **Test Reporting**: HTML/text reports with comprehensive error handling
 - **Test Utilities**: Common utilities for test execution and reporting
+
+**Key Documentation:**
+- **[docs/testing/TESTING_IMPLEMENTATION.md](docs/testing/TESTING_IMPLEMENTATION.md)** - Complete testing strategy and implementation (authoritative source)
+- **[docs/testing/COMPONENT_TESTING_STRATEGY.md](docs/testing/COMPONENT_TESTING_STRATEGY.md)** - Component testing strategy details
+- **[docs/testing/TEST_DISCOVERY.md](docs/testing/TEST_DISCOVERY.md)** - Test discovery system
+- **[docs/testing/CONTINUOUS_TESTING.md](docs/testing/CONTINUOUS_TESTING.md)** - Continuous testing features
+- **[docs/testing/TEST_RESULTS.md](docs/testing/TEST_RESULTS.md)** - Complete test status and results
 
 ## Bootstrap Process
 
@@ -925,11 +890,11 @@ QB64-PE uses a bootstrapping approach to compile itself:
   - `global.txt`, `regsf.txt`, `chain.txt`, `clear.txt` - Support code
   - Event handlers: `ontimer.txt`, `onkey.txt`, `onstrig.txt`, etc.
 
-**Why `.txt` Files?**: See the [Why `.txt` Extension?](#2-why-txt-extension) section in Compilation Pipeline.
+**Why `.txt` Files?**: The `.txt` extension clearly indicates generated files and maintains compatibility with the C++ preprocessor and build system.
 
-**Source Control**: See the [`internal/source/` vs `internal/temp/`](#internal-source-vs-internal-temp) section below.
+**Source Control**: Bootstrap files are tracked in git for bootstrapping, while temporary files are excluded.
 
-**How They're Used**: See the [Program Compilation](#3-program-compilation) section in Compilation Pipeline.
+**How They're Used**: The `qbx.cpp` template includes these files via `#include` directives during compilation.
 
 ### CI/CD Bootstrap Process
 
@@ -1290,15 +1255,15 @@ QB64-PE supports a library management system via `$USELIBRARY` metacommand:
 
 ### Current Technical Debt
 
-For comprehensive code analysis and improvement recommendations, see:
-- **[docs/general/CODE_ANALYSIS.md](docs/general/CODE_ANALYSIS.md)** - Complete code analysis findings (authoritative source)
-- **[docs/general/IMPROVEMENTS.md](docs/general/IMPROVEMENTS.md)** - Low-hanging fruit improvements (authoritative source)
-
 **Key Areas:**
 - Error Handling API Migration
 - Code Duplication
 - Build System Abstraction
 - Testing Infrastructure expansion
+
+For comprehensive code analysis and improvement recommendations, see:
+- **[docs/general/CODE_ANALYSIS.md](docs/general/CODE_ANALYSIS.md)** - Complete code analysis findings (authoritative source)
+- **[docs/general/IMPROVEMENTS.md](docs/general/IMPROVEMENTS.md)** - Low-hanging fruit improvements (authoritative source)
 
 ### Recent Major Accomplishments
 
@@ -1330,6 +1295,106 @@ The QB64-PE architecture has undergone significant improvements with completed r
 - **Memory Safety**: Added NULL checks for all malloc/calloc calls with proper error handling
 - **Integer Overflow**: Added overflow detection in buffer size calculations
 
+## Architecture Assessment
+
+### Overall Architecture Quality
+
+The QB64-PE architecture demonstrates excellent engineering practices with a mature, well-structured design that has evolved significantly through recent improvements:
+
+#### **Strengths**
+- **Self-hosting compiler**: Written in QB64 itself, demonstrating language maturity and bootstrapping capability
+- **Multi-stage compilation**: Clean separation between BASIC → C++ → Native binary phases
+- **Cross-platform architecture**: Unified codebase with platform-specific optimizations
+- **Modular component design**: Clear boundaries between compiler, runtime, IDE, and dependencies
+- **Intelligent dependency management**: `DEP_*` flag system reduces binary size by including only needed features
+- **Advanced symbol table**: Hash-based O(1) lookup using 64MB table for optimal performance
+- **Sophisticated string system**: Reference-counted copy-on-write strings (QBS type) with automatic memory management
+- **Comprehensive testing infrastructure**: Multi-layered testing (unit, integration, runtime, compile tests)
+
+#### **Technical Debt Management**
+The codebase has undergone significant technical debt reduction:
+- **Code duplication**: Reduced by 70% through systematic refactoring
+- **GOTO elimination**: 12/12 labels refactored to structured control flow
+- **Error handling modernization**: 13 new API functions replacing deprecated patterns
+- **Memory management**: Comprehensive safety improvements with NULL checks and overflow detection
+- **Security**: All critical vulnerabilities resolved (buffer overflows, memory leaks)
+
+### Component Architecture Analysis
+
+#### **Compiler Core (`source/qb64pe.bas`)**
+- **Size**: ~24K lines (large but well-organized for a self-hosting compiler)
+- **Responsibilities**: Lexical analysis, syntax parsing, semantic analysis, code generation
+- **Architecture**: Modular utility system with clear separation of concerns
+- **Recent improvements**: Enhanced error handling, structured control flow, comprehensive testing
+
+#### **Build System**
+- **Architecture**: Out-of-source builds with proper dependency management
+- **Features**: Cross-platform makefiles, parallel build support, intelligent dependency detection
+- **Recent improvements**: Path normalization, build directory structure, helper functions
+
+#### **Testing Infrastructure**
+- **Architecture**: Multi-tier testing with component isolation and include provider abstraction
+- **Coverage**: 73 tests across 10 suites with 100% pass rate
+- **Features**: Test discovery, continuous testing, cross-platform support, WSL automation
+
+### Security Architecture
+
+#### **Current Security Posture**
+- **Critical vulnerabilities**: ✅ All resolved (buffer overflows, memory management, integer overflow)
+- **Memory safety**: Comprehensive NULL checks, bounds validation, proper error handling
+- **Input validation**: Improved validation for user-provided code and file operations
+- **Dependency security**: Regular audits and sandboxing considerations
+
+#### **Security Improvements Implemented**
+- Replaced unsafe `sprintf()` calls with `snprintf()` with explicit buffer size limits
+- Added NULL checks after all malloc/realloc calls with proper error handling
+- Fixed memory leaks in string management and buffer operations
+- Implemented integer overflow detection in buffer size calculations
+- Enhanced path traversal protection and file operation validation
+
+### Performance Architecture
+
+#### **Current Performance Characteristics**
+- **Compilation speed**: Adequate for most projects with optimization opportunities
+- **Memory usage**: Reasonable with room for improvement in large projects
+- **Generated code quality**: Good C++ output with potential for optimization
+- **Runtime performance**: Efficient string system and memory management
+
+#### **Performance Optimization Opportunities**
+- Parallel compilation for multiple source files
+- Incremental compilation to rebuild only changed components
+- Memory pool allocation for reduced fragmentation
+- Optimized symbol table lookup for large projects
+
+### Development Process Architecture
+
+#### **Modern Development Practices**
+- **Code formatting**: clang-format with consistent style (4 spaces, 160 char limit)
+- **Static analysis**: clang-tidy with comprehensive rule set
+- **Automated scripts**: PowerShell and Bash scripts for formatting/linting
+- **Documentation**: Comprehensive markdown documentation with architectural details
+- **CI/CD**: Automated builds, testing, and distribution pipeline
+
+#### **Development Tools Integration**
+- Cross-platform formatting and linting scripts
+- Comprehensive test discovery and execution
+- Automated regression testing
+- Build verification across all platforms
+
+### Future Architecture Considerations
+
+#### **Strategic Architecture Evolution**
+- **Modularization opportunities**: Consider breaking down large monolithic files
+- **Modern compiler patterns**: Evaluate AST implementation and LLVM backend possibilities
+- **Language server protocol**: Enhanced IDE integration capabilities
+- **Package management**: BASIC library ecosystem development
+
+#### **Architectural Debt Management**
+- **Component decoupling**: Reduce tight coupling between major components
+- **Circular dependency elimination**: Audit and resolve inter-module dependencies
+- **Thread safety enhancements**: Address race conditions in datetime and threading code
+- **Path security**: Comprehensive traversal validation across file operations
+
 ## Conclusion
 
 QB64-PE is a sophisticated transpiler that bridges the gap between classic BASIC and modern native code. Its architecture emphasizes:
@@ -1343,7 +1408,3 @@ QB64-PE is a sophisticated transpiler that bridges the gap between classic BASIC
 - **Code Quality**: Modern error handling API, structured control flow, and comprehensive test coverage
 
 The bootstrap process enables self-hosting, and the comprehensive test suite ensures reliability across platforms and use cases.
-
-For detailed architectural recommendations and improvement opportunities, see:
-- **[docs/general/CODE_ANALYSIS.md](docs/general/CODE_ANALYSIS.md)** - Complete code analysis findings (authoritative source)
-- **[docs/general/IMPROVEMENTS.md](docs/general/IMPROVEMENTS.md)** - Low-hanging fruit improvements (authoritative source)

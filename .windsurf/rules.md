@@ -5,3 +5,4 @@
 - Write critical path tests as you make changes to the codebase.
 - Create/update documentation as you go.
 - As you learn things about the environment, add them to a doc and refer to them as needed. For example, what tools are available, how to write commands, etc.
+- When working with script files, in general aim to support both Windows and *nix systems. Try not to replace one with the other but support both, otherwise we end up flipping back and forth between the two depending on where development is taking place.
