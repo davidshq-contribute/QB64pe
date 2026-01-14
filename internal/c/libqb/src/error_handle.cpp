@@ -179,6 +179,105 @@ static const char *human_error(int32_t errorcode) {
 }
 
 /**
+ * @brief Gets the error goto line number
+ * @return Current error goto line number
+ * @note Replaces direct access to error_goto_line variable
+ */
+uint32_t get_error_goto_line() {
+    return error_goto_line;
+}
+
+/**
+ * @brief Sets the error goto line number
+ * @param line Line number to goto on error
+ * @note Replaces direct access to error_goto_line variable
+ */
+void set_error_goto_line(uint32_t line) {
+    error_goto_line = line;
+}
+
+/**
+ * @brief Gets the error handling state
+ * @return true if error handling is in progress, false otherwise
+ * @note Replaces direct access to error_handling variable
+ */
+bool is_error_handling() {
+    return error_handling != 0;
+}
+
+/**
+ * @brief Sets the error handling state
+ * @param handling true if error handling is in progress, false otherwise
+ * @note Replaces direct access to error_handling variable
+ */
+void set_error_handling(bool handling) {
+    error_handling = handling ? 1 : 0;
+}
+
+/**
+ * @brief Gets the error occurred flag
+ * @return true if an error has occurred, false otherwise
+ * @note Replaces direct access to error_occurred variable
+ */
+bool get_error_occurred() {
+    return error_occurred != 0;
+}
+
+/**
+ * @brief Sets the error occurred flag
+ * @param occurred true if an error has occurred, false otherwise
+ * @note Replaces direct access to error_occurred variable
+ */
+void set_error_occurred(bool occurred) {
+    error_occurred = occurred ? 1 : 0;
+}
+
+/**
+ * @brief Gets the error retry flag
+ * @return true if error retry is requested, false otherwise
+ * @note Replaces direct access to error_retry variable
+ */
+bool get_error_retry() {
+    return error_retry != 0;
+}
+
+/**
+ * @brief Sets the error retry flag
+ * @param retry true if error retry is requested, false otherwise
+ * @note Replaces direct access to error_retry variable
+ */
+void set_error_retry(bool retry) {
+    error_retry = retry ? 1 : 0;
+}
+
+/**
+ * @brief Gets the error handler history
+ * @return Pointer to error handler history string
+ * @note Replaces direct access to error_handler_history variable
+ */
+qbs *get_error_handler_history() {
+    return error_handler_history;
+}
+
+/**
+ * @brief Sets the error handler history
+ * @param history Pointer to error handler history string
+ * @note Replaces direct access to error_handler_history variable
+ */
+void set_error_handler_history(qbs *history) {
+    error_handler_history = history;
+}
+
+/**
+ * @brief Sets the current error code
+ * @param err Error code to set
+ * @note Replaces direct access to error_err variable
+ */
+void set_error_err(uint32_t err) {
+    error_err = err;
+}
+
+/**
  * @brief Clears the current error state
  * @note Resets the new_error flag. Use with caution.
  */
@@ -274,7 +373,7 @@ void fix_error() {
     int prevent_handling = 0, len, v;
     if ((new_error >= 300) && (new_error <= 315))
         prevent_handling = 1;
-    if (!error_goto_line || error_handling || prevent_handling) {
+    if (!get_error_goto_line() || is_error_handling() || prevent_handling) {
         // strip path from binary name
         static int32_t i;
         static qbs *binary_name = NULL;
@@ -327,7 +426,7 @@ void fix_error() {
     error_err = new_error;
     new_error = 0;
     error_erl = last_line;
-    error_occurred = 1;
+    set_error_occurred(true);
 
     // FIXME: EWWWWW, there's no way this is correct
     QBMAIN(NULL);
@@ -393,34 +492,25 @@ void error(int32_t error_number) {
     }
 
     // other critical errors
-    if (error_number == 11) {
-        gui_alert("Division by zero", "Critical Error", "ok");
-        exit(0);
-    }
-    if (error_number == 256) {
-        gui_alert("Out of stack space", "Critical Error", "ok");
-        exit(0);
-    }
-    if (error_number == 259) {
-        gui_alert("Cannot find dynamic library file", "Critical Error", "ok");
-        exit(0);
-    }
-    if (error_number == 260) {
-        gui_alert("Sub/Function does not exist in dynamic library", "Critical Error", "ok");
-        exit(0);
-    }
-    if (error_number == 261) {
-        gui_alert("Sub/Function does not exist in dynamic library", "Critical Error", "ok");
-        exit(0);
-    }
-
-    if (error_number == 270) {
-        gui_alert("_GL command called outside of SUB _GL's scope", "Critical Error", "ok");
-        exit(0);
-    }
-    if (error_number == 271) {
-        gui_alert("END/SYSTEM called within SUB _GL's scope", "Critical Error", "ok");
-        exit(0);
+    static const struct {
+        int error_code;
+        const char* title;
+        const char* message;
+    } critical_errors[] = {
+        {11, "Division by zero", "Critical Error"},
+        {256, "Out of stack space", "Critical Error"},
+        {259, "Cannot find dynamic library file", "Critical Error"},
+        {260, "Sub/Function does not exist in dynamic library", "Critical Error"},
+        {261, "Sub/Function does not exist in dynamic library", "Critical Error"},
+        {270, "_GL command called outside of SUB _GL's scope", "Critical Error"},
+        {271, "END/SYSTEM called within SUB _GL's scope", "Critical Error"}
+    };
+    
+    for (size_t i = 0; i < sizeof(critical_errors) / sizeof(critical_errors[0]); i++) {
+        if (error_number == critical_errors[i].error_code) {
+            gui_alert(critical_errors[i].title, critical_errors[i].message, "ok");
+            exit(0);
+        }
     }
 
     if (!new_error) {

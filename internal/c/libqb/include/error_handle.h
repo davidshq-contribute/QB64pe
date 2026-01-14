@@ -77,10 +77,87 @@ static inline bool is_error_pending() {
 }
 
 /**
- * @brief Clears the current error state
+ * @brief Clears current error state
  * @note Resets all error flags and state. Use with caution.
  */
 void clear_error();
+
+/**
+ * @brief Gets the error goto line number
+ * @return Current error goto line number
+ * @note Replaces direct access to error_goto_line variable
+ */
+uint32_t get_error_goto_line();
+
+/**
+ * @brief Sets the error goto line number
+ * @param line Line number to goto on error
+ * @note Replaces direct access to error_goto_line variable
+ */
+void set_error_goto_line(uint32_t line);
+
+/**
+ * @brief Gets the error handling state
+ * @return true if error handling is in progress, false otherwise
+ * @note Replaces direct access to error_handling variable
+ */
+bool is_error_handling();
+
+/**
+ * @brief Sets the error handling state
+ * @param handling true if error handling is in progress, false otherwise
+ * @note Replaces direct access to error_handling variable
+ */
+void set_error_handling(bool handling);
+
+/**
+ * @brief Gets the error occurred flag
+ * @return true if an error has occurred, false otherwise
+ * @note Replaces direct access to error_occurred variable
+ */
+bool get_error_occurred();
+
+/**
+ * @brief Sets the error occurred flag
+ * @param occurred true if an error has occurred, false otherwise
+ * @note Replaces direct access to error_occurred variable
+ */
+void set_error_occurred(bool occurred);
+
+/**
+ * @brief Gets the error retry flag
+ * @return true if error retry is requested, false otherwise
+ * @note Replaces direct access to error_retry variable
+ */
+bool get_error_retry();
+
+/**
+ * @brief Sets the error retry flag
+ * @param retry true if error retry is requested, false otherwise
+ * @note Replaces direct access to error_retry variable
+ */
+void set_error_retry(bool retry);
+
+/**
+ * @brief Gets the error handler history
+ * @return Pointer to error handler history string
+ * @note Replaces direct access to error_handler_history variable
+ */
+qbs *get_error_handler_history();
+
+/**
+ * @brief Sets the error handler history
+ * @param history Pointer to error handler history string
+ * @note Replaces direct access to error_handler_history variable
+ */
+void set_error_handler_history(qbs *history);
+
+/**
+ * @brief Sets the current error code
+ * @param err Error code to set
+ * @note Replaces direct access to error_err variable
+ */
+void set_error_err(uint32_t err);
 
 /**
  * @brief Gets the error line number (extended)

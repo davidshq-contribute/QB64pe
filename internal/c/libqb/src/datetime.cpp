@@ -167,7 +167,7 @@ static uint64_t millis_since_midnight() {
  *       Returns 0 if an error is pending.
  */
 double func_timer(double accuracy, int32_t passed) {
-    if (new_error)
+    if (is_error_pending())
         return 0;
 
     double result = (double)millis_since_midnight() / 1000;
@@ -219,7 +219,7 @@ void Sleep(uint32_t milliseconds) {
 void sub__delay(double seconds) {
     double ms, base, elapsed, prev_now, now; // cannot be static
     base = GetTicks();
-    if (new_error)
+    if (is_error_pending())
         return;
     if (seconds < 0) {
         error(5);
@@ -255,7 +255,7 @@ recalculate:
 }
 
 void sub__limit(double fps) {
-    if (new_error)
+    if (is_error_pending())
         return;
     static double prev = 0;
     double ms, now, elapsed; // cannot be static

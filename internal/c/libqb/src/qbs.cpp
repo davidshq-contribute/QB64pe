@@ -88,6 +88,10 @@ static qbs *qbs_new_descriptor() {
     }
     if (qbs_malloc_next == 65536) {
         qbs_malloc = (qbs *)calloc(sizeof(qbs) * 65536, 1); //~1MEG
+        if (!qbs_malloc) {
+            error(518); // Out of memory
+            return NULL;
+        }
         qbs_malloc_next = 0;
     }
     /*MLP
@@ -174,8 +178,10 @@ void qbs_free(qbs *str) {
         }
         if (qbs_list_nexti) {
             qbs_sp = ((qbs *)qbs_list[qbs_list_nexti - 1])->chr - qbs_data + ((qbs *)qbs_list[qbs_list_nexti - 1])->len + 32;
-            if (qbs_sp > qbs_data_size)
-                qbs_sp = qbs_data_size; // adding 32 could overflow buffer!
+            // Check for integer overflow before assigning
+            if (qbs_sp > qbs_data_size || qbs_sp < ((qbs *)qbs_list[qbs_list_nexti - 1])->chr - qbs_data) {
+                qbs_sp = qbs_data_size; // Clamp to buffer size to prevent overflow
+            }
         } else {
             qbs_sp = 0;
         }
