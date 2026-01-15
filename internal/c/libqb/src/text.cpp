@@ -9,6 +9,8 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
+#include "libqb-common.h"
+
 #include "text.h"
 #include "error_handle.h"
 #include "gfs.h"

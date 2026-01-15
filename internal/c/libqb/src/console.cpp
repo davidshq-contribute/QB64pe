@@ -4,6 +4,8 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
+#include "libqb-common.h"
+
 #include "console.h"
 #include "error_handle.h"
 #include "qbs.h"

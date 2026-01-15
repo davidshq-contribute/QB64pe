@@ -3,6 +3,8 @@
 //  Lock key functions extracted from libqb.cpp
 //----------------------------------------------------------------------------------------------------------------------
 
+#include "libqb-common.h"
+
 #include "keyboard.h"
 
 #ifdef QB64_WINDOWS

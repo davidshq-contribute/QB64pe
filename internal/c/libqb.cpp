@@ -9545,71 +9545,12 @@ qbs_input_wait_for_key:
 
 } // qbs_input
 
-int32 unsupported_port_accessed = 0;
-
-int32 H3C7_palette_register_read_index = 0;
-int32 H3C8_palette_register_index = 0;
-int32 H3C9_next = 0;
-int32 H3C9_read_next = 0;
-
 // H3C0_blink_enable, sub__blink, func__blink moved to utility.cpp
 extern int32 H3C0_blink_enable;
 
+// sub_out, func_inp, sub_wait moved to port_io.cpp
+
 // func__handle, func__title, set_foreground_window, func__hasfocus moved to window.cpp
-
-void sub_out(int32 port, int32 data) {
-    if (is_error_pending())
-        return;
-    unsupported_port_accessed = 0;
-    port = port & 65535;
-    data = data & 255;
-
-    if (port == 0x3C0) {
-        H3C0_blink_enable = data & (1 << 3);
-        goto done;
-    }
-
-    if (port == 0x3C7) { //&H3C7, set palette register read index
-        H3C7_palette_register_read_index = data;
-        H3C9_read_next = 0;
-        goto done;
-    }
-    if (port == 968) { //&H3C8, set palette register write index
-        H3C8_palette_register_index = data;
-        H3C9_next = 0;
-        goto done;
-    }
-    if (port == 969) { //&H3C9, set palette color
-        data = data & 63;
-        if (write_page->pal) {    // avoid NULL pointer
-            if (H3C9_next == 0) { // red
-                write_page->pal[H3C8_palette_register_index] &= 0xFF00FFFF;
-                write_page->pal[H3C8_palette_register_index] += (qbr((double)data * 4.063492f - 0.4999999f) << 16);
-            }
-            if (H3C9_next == 1) { // green
-                write_page->pal[H3C8_palette_register_index] &= 0xFFFF00FF;
-                write_page->pal[H3C8_palette_register_index] += (qbr((double)data * 4.063492f - 0.4999999f) << 8);
-            }
-            if (H3C9_next == 2) { // blue
-                write_page->pal[H3C8_palette_register_index] &= 0xFFFFFF00;
-                write_page->pal[H3C8_palette_register_index] += qbr((double)data * 4.063492f - 0.4999999f);
-            }
-        }
-        H3C9_next = H3C9_next + 1;
-        if (H3C9_next == 3) {
-            H3C9_next = 0;
-            H3C8_palette_register_index = H3C8_palette_register_index + 1;
-            H3C8_palette_register_index &= 0xFF;
-        }
-        goto done;
-    }
-
-    unsupported_port_accessed = 1;
-done:
-    return;
-error:
-    error(5);
-}
 
 // sub_randomize, func_rnd, sub__fps moved to utility.cpp
 
@@ -10945,118 +10886,11 @@ ptrszint func_ubound(ptrszint *array, int32 index, int32 num_indexes) {
     return array[4 * index] + array[4 * index + 1] - 1;
 }
 
+// Keyboard scancode buffer for port I/O emulation
 uint8 port60h_event[256];
 int32 port60h_events = 0;
 
-int32 func_inp(int32 port) {
-    static int32 value;
-    unsupported_port_accessed = 0;
-    if ((port > 65535) || (port < -65536)) {
-        error(6);
-        return 0; // Overflow
-    }
-    port &= 0xFFFF;
-
-    if (port == 0x3C9) {       // read palette
-        if (write_page->pal) { // avoid NULL pointer
-            // convert 0-255 value to 0-63 value
-            if (H3C9_read_next == 0) { // red
-                value = qbr_double_to_long((((double)((write_page->pal[H3C7_palette_register_read_index] >> 16) & 255)) / 3.984376 - 0.4999999f));
-            }
-            if (H3C9_read_next == 1) { // green
-                value = qbr_double_to_long((((double)((write_page->pal[H3C7_palette_register_read_index] >> 8) & 255)) / 3.984376 - 0.4999999f));
-            }
-            if (H3C9_read_next == 2) { // blue
-                value = qbr_double_to_long((((double)(write_page->pal[H3C7_palette_register_read_index] & 255)) / 3.984376 - 0.4999999f));
-            }
-            H3C9_read_next = H3C9_read_next + 1;
-            if (H3C9_read_next == 3) {
-                H3C9_read_next = 0;
-                H3C7_palette_register_read_index = H3C7_palette_register_read_index + 1;
-                H3C7_palette_register_read_index &= 0xFF;
-            }
-            return value;
-        } //->pal
-        return 0; // non-palette modes
-    }
-
-    /*
-        3dAh (R):  Input Status #1 Register
-        bit   0  Either Vertical or Horizontal Retrace active if set
-        1  Light Pen has triggered if set
-        2  Light Pen switch is open if set
-        3  Vertical Retrace in progress if set
-        4-5  Shows two of the 6 color outputs, depending on 3C0h index 12h.
-        Attr: Bit 4-5:   Out bit 4  Out bit 5
-        0          Blue       Red
-        1        I Blue       Green
-        2        I Red      I Green
-    */
-    if (port == 0x3DA) {
-        value = 0;
-        if (vertical_retrace_happened || vertical_retrace_in_progress) {
-            vertical_retrace_happened = 0;
-            value |= 8;
-        }
-        return value;
-    }
-
-    if (port == 0x60) {
-        // return last scancode event
-        if (port60h_events) {
-            value = port60h_event[0];
-            if (port60h_events > 1)
-                memmove(port60h_event, port60h_event + 1, 255);
-            port60h_events--;
-            return value;
-        } else {
-            return port60h_event[0];
-        }
-    }
-
-    unsupported_port_accessed = 1;
-    return 0; // unknown port!
-}
-
-void sub_wait(int32 port, int32 andexpression, int32 xorexpression, int32 passed) {
-    if (is_error_pending())
-        return;
-    // 1. read value from port
-    // 2. value^=xorexpression (if passed!)
-    // 3. value^=andexpression
-    // IMPORTANT: Wait returns immediately if given port is unsupported by QB64 so program
-    //           can continue
-    static int32 value;
-
-    // error & range checking
-    if ((port > 65535) || (port < -65536)) {
-        error(6);
-        return; // Overflow
-    }
-    port &= 0xFFFF;
-    if ((andexpression < -32768) || (andexpression > 65535)) {
-        error(6);
-        return; // Overflow
-    }
-    andexpression &= 0xFF;
-    if (passed) {
-        if ((xorexpression < -32768) || (xorexpression > 65535)) {
-            error(6);
-            return; // Overflow
-        }
-    }
-    xorexpression &= 0xFF;
-
-wait:
-    value = func_inp(port);
-    if (passed)
-        value ^= xorexpression;
-    value &= andexpression;
-    if (value || unsupported_port_accessed || stop_program)
-        return;
-    Sleep(1);
-    goto wait;
-}
+// func_inp, sub_wait moved to port_io.cpp (sub_out comment is above)
 
 // func_tab, func_spc moved to text.cpp
 
@@ -14524,124 +14358,7 @@ static uint16 ASCII_TO_MACVK[] = {0,
                                   0};
 #endif
 
-int32 MACVK_ANSI_A = 0x00;
-int32 MACVK_ANSI_S = 0x01;
-int32 MACVK_ANSI_D = 0x02;
-int32 MACVK_ANSI_F = 0x03;
-int32 MACVK_ANSI_H = 0x04;
-int32 MACVK_ANSI_G = 0x05;
-int32 MACVK_ANSI_Z = 0x06;
-int32 MACVK_ANSI_X = 0x07;
-int32 MACVK_ANSI_C = 0x08;
-int32 MACVK_ANSI_V = 0x09;
-int32 MACVK_ANSI_B = 0x0B;
-int32 MACVK_ANSI_Q = 0x0C;
-int32 MACVK_ANSI_W = 0x0D;
-int32 MACVK_ANSI_E = 0x0E;
-int32 MACVK_ANSI_R = 0x0F;
-int32 MACVK_ANSI_Y = 0x10;
-int32 MACVK_ANSI_T = 0x11;
-int32 MACVK_ANSI_1 = 0x12;
-int32 MACVK_ANSI_2 = 0x13;
-int32 MACVK_ANSI_3 = 0x14;
-int32 MACVK_ANSI_4 = 0x15;
-int32 MACVK_ANSI_6 = 0x16;
-int32 MACVK_ANSI_5 = 0x17;
-int32 MACVK_ANSI_Equal = 0x18;
-int32 MACVK_ANSI_9 = 0x19;
-int32 MACVK_ANSI_7 = 0x1A;
-int32 MACVK_ANSI_Minus = 0x1B;
-int32 MACVK_ANSI_8 = 0x1C;
-int32 MACVK_ANSI_0 = 0x1D;
-int32 MACVK_ANSI_RightBracket = 0x1E;
-int32 MACVK_ANSI_O = 0x1F;
-int32 MACVK_ANSI_U = 0x20;
-int32 MACVK_ANSI_LeftBracket = 0x21;
-int32 MACVK_ANSI_I = 0x22;
-int32 MACVK_ANSI_P = 0x23;
-int32 MACVK_ANSI_L = 0x25;
-int32 MACVK_ANSI_J = 0x26;
-int32 MACVK_ANSI_Quote = 0x27;
-int32 MACVK_ANSI_K = 0x28;
-int32 MACVK_ANSI_Semicolon = 0x29;
-int32 MACVK_ANSI_Backslash = 0x2A;
-int32 MACVK_ANSI_Comma = 0x2B;
-int32 MACVK_ANSI_Slash = 0x2C;
-int32 MACVK_ANSI_N = 0x2D;
-int32 MACVK_ANSI_M = 0x2E;
-int32 MACVK_ANSI_Period = 0x2F;
-int32 MACVK_ANSI_Grave = 0x32;
-int32 MACVK_ANSI_KeypadDecimal = 0x41;
-int32 MACVK_ANSI_KeypadMultiply = 0x43;
-int32 MACVK_ANSI_KeypadPlus = 0x45;
-int32 MACVK_ANSI_KeypadClear = 0x47;
-int32 MACVK_ANSI_KeypadDivide = 0x4B;
-int32 MACVK_ANSI_KeypadEnter = 0x4C;
-int32 MACVK_ANSI_KeypadMinus = 0x4E;
-int32 MACVK_ANSI_KeypadEquals = 0x51;
-int32 MACVK_ANSI_Keypad0 = 0x52;
-int32 MACVK_ANSI_Keypad1 = 0x53;
-int32 MACVK_ANSI_Keypad2 = 0x54;
-int32 MACVK_ANSI_Keypad3 = 0x55;
-int32 MACVK_ANSI_Keypad4 = 0x56;
-int32 MACVK_ANSI_Keypad5 = 0x57;
-int32 MACVK_ANSI_Keypad6 = 0x58;
-int32 MACVK_ANSI_Keypad7 = 0x59;
-int32 MACVK_ANSI_Keypad8 = 0x5B;
-int32 MACVK_ANSI_Keypad9 = 0x5C;
-int32 MACVK_Return = 0x24;
-int32 MACVK_Tab = 0x30;
-int32 MACVK_Space = 0x31;
-int32 MACVK_Delete = 0x33;
-int32 MACVK_Escape = 0x35;
-int32 MACVK_Command = 0x37;
-int32 MACVK_Shift = 0x38;
-int32 MACVK_CapsLock = 0x39;
-int32 MACVK_Option = 0x3A;
-int32 MACVK_Control = 0x3B;
-int32 MACVK_RightShift = 0x3C;
-int32 MACVK_RightOption = 0x3D;
-int32 MACVK_RightControl = 0x3E;
-int32 MACVK_Function = 0x3F;
-int32 MACVK_F17 = 0x40;
-int32 MACVK_VolumeUp = 0x48;
-int32 MACVK_VolumeDown = 0x49;
-int32 MACVK_Mute = 0x4A;
-int32 MACVK_F18 = 0x4F;
-int32 MACVK_F19 = 0x50;
-int32 MACVK_F20 = 0x5A;
-int32 MACVK_F5 = 0x60;
-int32 MACVK_F6 = 0x61;
-int32 MACVK_F7 = 0x62;
-int32 MACVK_F3 = 0x63;
-int32 MACVK_F8 = 0x64;
-int32 MACVK_F9 = 0x65;
-int32 MACVK_F11 = 0x67;
-int32 MACVK_F13 = 0x69;
-int32 MACVK_F16 = 0x6A;
-int32 MACVK_F14 = 0x6B;
-int32 MACVK_F10 = 0x6D;
-int32 MACVK_F12 = 0x6F;
-int32 MACVK_F15 = 0x71;
-int32 MACVK_Help = 0x72;
-int32 MACVK_Home = 0x73;
-int32 MACVK_PageUp = 0x74;
-int32 MACVK_ForwardDelete = 0x75;
-int32 MACVK_F4 = 0x76;
-int32 MACVK_End = 0x77;
-int32 MACVK_F2 = 0x78;
-int32 MACVK_PageDown = 0x79;
-int32 MACVK_F1 = 0x7A;
-int32 MACVK_LeftArrow = 0x7B;
-int32 MACVK_RightArrow = 0x7C;
-int32 MACVK_DownArrow = 0x7D;
-int32 MACVK_UpArrow = 0x7E;
-int32 MACVK_ISO_Section = 0x0A;
-int32 MACVK_JIS_Yen = 0x5D;
-int32 MACVK_JIS_Underscore = 0x5E;
-int32 MACVK_JIS_KeypadComma = 0x5F;
-int32 MACVK_JIS_Eisu = 0x66;
-int32 MACVK_JIS_Kana = 0x68;
+// MACVK_* global constants removed - they were dead code shadowed by local statics in sub__screenprint
 
 void sub__screenprint(qbs *txt) {
 
