@@ -1,5 +1,8 @@
-// Mouse support functions for macOS
-// These hacks are required to overcome the limitations of macOS GLUT
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE macOS Mouse Support Module
+//  macOS-specific mouse support functions to overcome GLUT limitations
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

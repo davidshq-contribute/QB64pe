@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE HTTP Stub Module
+//  Stub implementation of HTTP functions when libcurl is not available
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include <stdint.h>
 #include <stdlib.h>

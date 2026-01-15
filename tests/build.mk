@@ -12,6 +12,10 @@ TEST_DEF_OBJS := tests/c/test.o
 # Defines the list of test sets
 TESTS += buffer
 TESTS += http
+TESTS += graphics
+TESTS += screen
+TESTS += fileio
+TESTS += color
 
 # Describe how to build each test
 buffer.src-y := ./tests/c/buffer.cpp \
@@ -29,6 +33,22 @@ http.exe-libs-y := $(CURL_EXE_LIBS)
 
 http.libs-$(lnx) += -lpthread
 http.libs-$(win) += -lws2_32
+
+# Graphics module tests
+graphics.src-y := ./tests/c/test_graphics.cpp \
+				$(PATH_LIBQB)/src/graphics.cpp
+
+# Screen module tests
+screen.src-y := ./tests/c/test_screen.cpp \
+				$(PATH_LIBQB)/src/screen.cpp
+
+# File I/O module tests
+fileio.src-y := ./tests/c/test_fileio.cpp \
+				$(PATH_LIBQB)/src/fileio.cpp
+
+# Color module tests
+color.src-y := ./tests/c/test_color.cpp \
+				$(PATH_LIBQB)/src/color.cpp
 
 
 TEST_OBJS := $(TEST_DEF_OBJS)

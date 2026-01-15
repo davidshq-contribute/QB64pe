@@ -1,3 +1,46 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE HTTP Module Unit Tests
+//  Tests for HTTP client functionality
+//
+//  Purpose:
+//    This test suite verifies the functionality of the libqb HTTP client module,
+//    which provides HTTP/HTTPS request capabilities for QB64-PE programs.
+//
+//  Test Coverage:
+//    - HTTP and HTTPS URL handling
+//    - Case-insensitive URL parsing
+//    - URL normalization (adding http:// prefix, port handling)
+//    - HTTP connection and data retrieval
+//    - Content-Length header parsing
+//    - Connection cleanup
+//
+//  Test Data:
+//    Tests use http://www.example.com and https://www.example.com, which are
+//    reserved domains for documentation and testing purposes.
+//
+//  Requirements:
+//    - Network connectivity (tests make actual HTTP requests)
+//    - libcurl library support
+//
+//  How to Run:
+//    1. Build the test: make build-tests
+//    2. Run individually: ./tests/exes/cpp/http_test
+//    3. Run all C++ tests: ./tests/run_c_tests.sh
+//
+//  Expected Behavior:
+//    All tests should pass. Tests verify:
+//    - Successful HTTP/HTTPS connections
+//    - Correct data retrieval
+//    - Proper URL handling (case-insensitive, port specification)
+//    - Accurate content length reporting
+//
+//  Note:
+//    These tests require network access and may fail if:
+//    - No internet connection is available
+//    - example.com is unreachable
+//    - Firewall blocks HTTP/HTTPS connections
+//
+//----------------------------------------------------------------------------------------------------------------------
 
 #include <stddef.h>
 #include <stdio.h>

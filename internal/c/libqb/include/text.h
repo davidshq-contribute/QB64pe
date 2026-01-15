@@ -66,6 +66,14 @@ void qbg_sub_view_print(int32_t topline, int32_t bottomline, int32_t passed);
 // LPRINT support
 void qbs_lprint(qbs *str, int32_t finish_on_new_line);
 void lprint_makefit(qbs *text);
+int32_t func_lpos(int32_t lpt);
+
+// CLS (clear screen)
+void sub_cls(int32_t method, uint32_t use_color, int32_t passed);
+void sub_clsDest(int32_t method, uint32_t use_color, int32_t dest, int32_t passed);
+
+// Control characters flag (global)
+extern int32_t no_control_characters;
 
 // ============================================================================
 // IMPLEMENTATION NOTES

@@ -1,3 +1,9 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE MinGW PE Symbol Table Module
+//  PE symbol table parsing and symbol name demangling
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
+//
 // Copyright Edd Dawson 2013
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at

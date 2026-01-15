@@ -4,7 +4,7 @@
 
 result=0
 
-for test in buffer http
+for test in buffer http graphics screen fileio color
 do
     ./tests/exes/cpp/${test}_test || result=1
 done

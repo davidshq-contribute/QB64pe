@@ -2,15 +2,40 @@
 
 Thank you for your interest in contributing to QB64 Phoenix Edition! This document provides guidelines and information to help you contribute effectively to the project.
 
+## Contributor Onboarding Checklist
+
+Welcome! If you're new to contributing to QB64 Phoenix Edition, follow this checklist to get started:
+
+- [ ] **Read CONTRIBUTING.md** - You're doing it! This document contains all the information you need about our contribution process, coding standards, and community guidelines.
+
+- [ ] **Set up development environment** - Follow the [Development Setup](#development-setup) section below to:
+  - Clone the repository
+  - Build QB64-PE for your platform (Windows, Linux, or macOS)
+  - Verify your build works correctly
+
+- [ ] **Run tests** - Ensure the test suite passes on your system. See the [Testing](#testing) section for details on running tests. This verifies your environment is set up correctly.
+
+- [ ] **Pick a "low hanging fruit" task** - Check out [`docs/low-hanging-fruit.md`](docs/low-hanging-fruit.md) for beginner-friendly tasks that are great for first-time contributors. These tasks are specifically marked as easy and help you get familiar with the codebase.
+
+- [ ] **Submit your first PR** - Follow the [Contribution Process](#contribution-process) section to:
+  - Fork the repository
+  - Create a feature branch
+  - Make your changes following our [Coding Standards](#coding-standards)
+  - Test your changes
+  - Submit a pull request
+
+**Need help?** Check the [Getting Help](#getting-help) section at the bottom of this document for links to our forum, Discord, and other resources.
+
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Development Setup](#development-setup)
-3. [Contribution Process](#contribution-process)
-4. [Coding Standards](#coding-standards)
-5. [Testing](#testing)
-6. [Review Criteria](#review-criteria)
-7. [Community Guidelines](#community-guidelines)
+1. [Contributor Onboarding Checklist](#contributor-onboarding-checklist)
+2. [Getting Started](#getting-started)
+3. [Development Setup](#development-setup)
+4. [Contribution Process](#contribution-process)
+5. [Coding Standards](#coding-standards)
+6. [Testing](#testing)
+7. [Review Criteria](#review-criteria)
+8. [Community Guidelines](#community-guidelines)
 
 ## Getting Started
 

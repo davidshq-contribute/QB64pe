@@ -1,3 +1,33 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE Buffer Module Unit Tests
+//  Tests for buffer management functions
+//
+//  Purpose:
+//    This test suite verifies the functionality of the libqb buffer module,
+//    which provides a circular buffer implementation for efficient data
+//    streaming and buffering operations.
+//
+//  Test Coverage:
+//    - Single read/write operations
+//    - Multiple sequential read/write operations
+//    - Partial reads and writes
+//    - Buffer overflow and underflow handling
+//    - Buffer clearing and reset operations
+//    - Buffer length tracking
+//
+//  How to Run:
+//    1. Build the test: make build-tests
+//    2. Run individually: ./tests/exes/cpp/buffer_test
+//    3. Run all C++ tests: ./tests/run_c_tests.sh
+//
+//  Expected Behavior:
+//    All tests should pass. Tests verify:
+//    - Correct data storage and retrieval
+//    - Proper buffer length tracking
+//    - Handling of edge cases (empty buffer, full buffer)
+//    - Data integrity across multiple operations
+//
+//----------------------------------------------------------------------------------------------------------------------
 
 #include <stddef.h>
 #include <stdio.h>

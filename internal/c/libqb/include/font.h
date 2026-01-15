@@ -6,7 +6,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdio.h>
 
 #define INVALID_FONT_HANDLE 0
 

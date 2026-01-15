@@ -163,6 +163,23 @@ CXXFLAGS += -Wno-conversion-null
 
 ifeq ($(OS),lnx)
 	CXXLIBS += -lGL -lGLU -lX11 -lpthread -ldl -lrt -lxcb
+	
+	# Detect which C++ standard library to use based on compiler
+	# clang++ typically uses libc++ (std::__1:: namespace), g++ uses libstdc++
+	# Check the actual compiler that will be used (CXX if set, otherwise c++)
+	CXX_CMD := $(or $(CXX),$(shell which c++ 2>/dev/null || echo c++))
+	CXX_VERSION := $(shell $(CXX_CMD) --version 2>/dev/null | head -n1 || echo "")
+	
+	# If using clang++, link libc++ and libc++abi
+	# Otherwise, use libstdc++ (default for g++)
+	# Note: If you see std::__1:: undefined references, you may need to install libc++-dev
+	ifeq ($(findstring clang,$(CXX_VERSION)),clang)
+		CXXLIBS += -lc++ -lc++abi
+	else
+		# For g++ or other compilers, use libstdc++
+		CXXLIBS += -lstdc++
+	endif
+	
 	CXXFLAGS += -DFREEGLUT_STATIC
 endif
 

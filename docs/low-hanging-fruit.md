@@ -14,27 +14,6 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
 
 ---
 
-## Documentation Improvements
-
----
-
-### 6. Add Inline Comments for Complex Logic
-
-**Location**: Throughout `source/qb64pe.bas` and C++ files
-
-**Issue**: Many complex code sections have minimal or no explanatory comments.
-
-**Action**: Add clarifying comments to complex algorithms, especially around:
-- Array handling logic
-- Type conversion routines
-- Parser state machines
-- Memory management code
-
-**Difficulty**: Easy to Medium  
-**Estimated Time**: 30 minutes - 2 hours depending on complexity
-
----
-
 ## Code Style & Consistency
 
 ### 7. Standardize Comment Style
@@ -68,67 +47,6 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
 
 **Difficulty**: Easy  
 **Estimated Time**: 1-2 hours (can be done incrementally)
-
----
-
-### 9. Remove Unused Includes
-
-**Location**: C++ header files
-
-**Issue**: Header files may include unused dependencies.
-
-**Action**: Use IDE tools or static analysis to identify and remove unused `#include` statements.
-
-**Difficulty**: Very Easy  
-**Estimated Time**: 15-30 minutes per file
-
----
-
-## Testing & Quality Assurance
-
-### 10. Add Unit Tests for Extracted Modules
-
-**Location**: `tests/c/`
-
-**Issue**: Extracted modules (graphics, screen, fileio, color) may lack comprehensive unit tests.
-
-**Action**: Create test files for each module:
-- `tests/c/test_graphics.cpp`
-- `tests/c/test_screen.cpp`
-- `tests/c/test_fileio.cpp`
-- `tests/c/test_color.cpp`
-
-**Difficulty**: Easy to Medium  
-**Estimated Time**: 2-4 hours per module
-
----
-
-### 11. Add Regression Tests for Known Issues
-
-**Location**: `tests/`
-
-**Issue**: Some fixed bugs may not have regression tests to prevent reintroduction.
-
-**Action**: Review closed issues and add tests for resolved bugs.
-
-**Difficulty**: Easy  
-**Estimated Time**: 30 minutes - 1 hour per test
-
----
-
-### 12. Improve Test Documentation
-
-**Location**: `tests/README.md` and test files
-
-**Issue**: Test files may lack documentation explaining what they test and how to run them.
-
-**Action**: Add clear documentation:
-- What each test file covers
-- How to run individual tests
-- Expected behavior
-
-**Difficulty**: Very Easy  
-**Estimated Time**: 30 minutes - 1 hour
 
 ---
 
@@ -193,18 +111,6 @@ if (value > MAX_BUFFER_SIZE) { ... }
 **Difficulty**: Easy  
 **Estimated Time**: 30 minutes - 1 hour per file
 
----
-
-### 16. Consolidate Duplicate Code Patterns
-
-**Location**: Throughout codebase
-
-**Issue**: Similar code patterns may be duplicated in multiple places.
-
-**Action**: Identify common patterns and extract into helper functions.
-
-**Difficulty**: Medium  
-**Estimated Time**: 1-2 hours per refactoring
 
 ---
 
@@ -243,19 +149,6 @@ if (value > MAX_BUFFER_SIZE) { ... }
 
 ---
 
-### 19. Improve Build Script Error Messages
-
-**Location**: `setup_win.cmd`, `setup_lnx.sh`, `setup_osx.command`
-
-**Issue**: Build scripts may have unclear error messages when dependencies are missing.
-
-**Action**: Add better error checking and user-friendly error messages.
-
-**Difficulty**: Easy  
-**Estimated Time**: 1-2 hours per script
-
----
-
 ### 20. Add Code Formatting Check to CI
 
 **Location**: CI configuration files
@@ -272,56 +165,6 @@ if (value > MAX_BUFFER_SIZE) { ... }
 
 ---
 
-## Quick Documentation Tasks
-
-### 21. Update README with Common Issues
-
-**Location**: `README.md`
-
-**Issue**: Common installation or usage issues may not be documented.
-
-**Action**: Add a "Troubleshooting" section with common problems and solutions.
-
-**Difficulty**: Very Easy  
-**Estimated Time**: 30 minutes - 1 hour
-
----
-
-### 22. Create Contributor Onboarding Checklist
-
-**Location**: `docs/` or `CONTRIBUTING.md`
-
-**Issue**: New contributors may not know where to start.
-
-**Action**: Create a checklist for first-time contributors:
-- [ ] Read CONTRIBUTING.md
-- [ ] Set up development environment
-- [ ] Run tests
-- [ ] Pick a "low hanging fruit" task
-- [ ] Submit first PR
-
-**Difficulty**: Very Easy  
-**Estimated Time**: 30 minutes
-
----
-
-### 23. Document Build Dependencies
-
-**Location**: `README.md` or new `docs/build-dependencies.md`
-
-**Issue**: Build dependencies may not be clearly documented for each platform.
-
-**Action**: Create a comprehensive list of:
-- Required dependencies
-- Optional dependencies
-- Platform-specific requirements
-- How to install each dependency
-
-**Difficulty**: Easy  
-**Estimated Time**: 1-2 hours
-
----
-
 ## Code Organization
 
 ### 24. Organize Utility Functions
@@ -334,19 +177,6 @@ if (value > MAX_BUFFER_SIZE) { ... }
 
 **Difficulty**: Easy  
 **Estimated Time**: 1-2 hours
-
----
-
-### 25. Add File Header Comments
-
-**Location**: C++ source files
-
-**Issue**: Some files may lack standard header comments.
-
-**Action**: Add consistent file headers following the template in `internal/c/libqb/include/module-template.h`.
-
-**Difficulty**: Very Easy  
-**Estimated Time**: 5-10 minutes per file
 
 ---
 

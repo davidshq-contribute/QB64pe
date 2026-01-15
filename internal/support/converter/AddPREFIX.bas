@@ -761,24 +761,33 @@ SUB next_token_raw
                         unread = TRUE
                 END SELECT
             CASE STATE_NEWLINE_WIN
+                ' Windows newline continuation state: After \r, check for \n
+                ' Handles both \r\n (Windows) and standalone \r (old Mac) formats
                 SELECT CASE c
                     CASE ASCII_LF
+                        ' Complete Windows newline sequence (\r\n) - consume both characters
                         tk_state = STATE_BEGIN
                         return_token = TOK_NEWLINE
                     CASE ELSE
+                        ' Standalone \r without following \n (old Mac format)
+                        ' Return to begin state and emit newline, but put character back
                         tk_state = STATE_BEGIN
                         return_token = TOK_NEWLINE
                         unread = TRUE
                 END SELECT
         END SELECT
 
+        ' Character handling: either accumulate into token or put back for next iteration
+        ' unread flag indicates the character should be re-processed in the next state
         IF unread THEN
             next_chr_idx = next_chr_idx - 1
             unread = FALSE
         ELSE
+            ' Accumulate character into current token content
             token_content$ = token_content$ + CHR$(c)
         END IF
 
+        ' If state machine determined a complete token, finalize and return it
         IF return_token THEN
             token.t = return_token
             token.c = token_content$

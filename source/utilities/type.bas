@@ -262,36 +262,43 @@ FUNCTION typ2ctyp$ (t AS LONG, tstr AS STRING)
         IF (t AND ISSTRING) THEN typ2ctyp$ = "qbs": EXIT FUNCTION
         
         ' Extract size in bits (lower 9 bits contain size information)
+        ' Bit mask 511 = 0x1FF = 9 bits, allowing sizes up to 512 bits
         b = t AND 511
         
-        ' User-defined types map to void* in C
+        ' User-defined types map to void* in C (opaque pointer, size unknown at compile time)
         IF (t AND ISUDT) THEN typ2ctyp$ = "void": EXIT FUNCTION
         
-        ' Bit types: _BIT*n maps to int32_t or int64_t depending on size
+        ' Bit types: _BIT*n maps to int32_t or int64_t depending on total bit size
+        ' Bit types are stored in integer containers, size determines which container
         IF (t AND ISOFFSETINBITS) THEN
+            ' 32 bits or less fits in int32_t, larger requires int64_t
             IF b <= 32 THEN ctyp$ = "int32" ELSE ctyp$ = "int64"
+            ' Add unsigned prefix if needed
             IF (t AND ISUNSIGNED) THEN ctyp$ = "u" + ctyp$
             typ2ctyp$ = ctyp$: EXIT FUNCTION
         END IF
         
         ' Floating point types: size determines float/double/long double
+        ' Standard IEEE floating point sizes
         IF (t AND ISFLOAT) THEN
             IF b = 32 THEN ctyp$ = "float"
             IF b = 64 THEN ctyp$ = "double"
             IF b = 256 THEN ctyp$ = "long double"
         ELSE
             ' Integer types: size determines int8/int16/int32/int64
+            ' Standard integer sizes matching C types
             IF b = 8 THEN ctyp$ = "int8"
             IF b = 16 THEN ctyp$ = "int16"
             IF b = 32 THEN ctyp$ = "int32"
             IF b = 64 THEN ctyp$ = "int64"
-            ' Offset types are pointer-sized integers
+            ' Offset types are pointer-sized integers (platform-dependent)
             IF t AND ISOFFSET THEN ctyp$ = "ptrszint"
             ' Add 'u' prefix for unsigned types
             IF (t AND ISUNSIGNED) THEN ctyp$ = "u" + ctyp$
         END IF
         
         ' Handle offset types (pointer-sized, may override previous assignment)
+        ' Offset types must be pointer-sized regardless of other flags
         IF t AND ISOFFSET THEN
             ctyp$ = "ptrszint": IF (t AND ISUNSIGNED) THEN ctyp$ = "uptrszint"
         END IF
@@ -308,20 +315,26 @@ FUNCTION typ2ctyp$ (t AS LONG, tstr AS STRING)
     IF ts$ = "##" THEN ctyp$ = "long double"
     
     ' Handle unsigned modifier: "~" prefix indicates unsigned type
+    ' Remove the prefix and set flag for later use
     IF LEFT$(ts$, 1) = "~" THEN unsgn = 1: ts$ = RIGHT$(ts$, LEN(ts$) - 1)
     
     ' Bit type handling: "`" prefix indicates _BIT type, may have size suffix
+    ' Format: "`" or "`n" where n is the number of bits (e.g., "`8" for _BIT*8)
     IF LEFT$(ts$, 1) = "`" THEN
         n$ = RIGHT$(ts$, LEN(ts$) - 1)
-        b = 1 ' Default to 1 bit if no size specified
+        b = 1 ' Default to 1 bit if no size specified (e.g., just "`" means _BIT*1)
         IF n$ <> "" THEN
             ' Validate and parse bit size (e.g., "`8" for _BIT*8)
+            ' Bit sizes must be valid unsigned integers
             IF isuinteger(n$) = 0 THEN Give_Error "Invalid index after _BIT type": EXIT FUNCTION
             b = VAL(n$)
+            ' Maximum bit size is 64 (fits in int64_t)
             IF b > 64 THEN Give_Error "Invalid index after _BIT type": EXIT FUNCTION
         END IF
         ' Bit types map to int32_t or int64_t based on total size
+        ' This determines the C container type for the bit field
         IF b <= 32 THEN ctyp$ = "int32" ELSE ctyp$ = "int64"
+        ' Apply unsigned modifier if present
         IF unsgn THEN ctyp$ = "u" + ctyp$
         typ2ctyp$ = ctyp$: EXIT FUNCTION
     END IF

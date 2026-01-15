@@ -13,7 +13,6 @@
 
 #include "logging.h"
 #include <stdint.h>
-#include <stdio.h>
 
 // Audio logging macros
 #define audio_log_trace(...) libqb_log_with_scope_trace(logscope::Audio, __VA_ARGS__)

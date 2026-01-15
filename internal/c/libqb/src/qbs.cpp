@@ -101,13 +101,17 @@ static uint32_t qbs_data_size = 1048576;
 static uint32_t qbs_sp = 0;
 
 void qbs_free(qbs *str) {
-
+    // Free associated field if this string is part of a file field structure
     if (str->field)
         field_free(str);
 
+    // Handle temporary string list cleanup
+    // Temporary strings are tracked separately and cleaned up when they fall out of scope
     if (str->tmplisti) {
         qbs_tmp_list[str->tmplisti] = -1;
-        while (qbs_tmp_list[qbs_tmp_list_nexti - 1] == -1) {
+        // Compact the temporary list by removing trailing freed entries
+        // Guard against underflow: qbs_tmp_list_nexti must be > 0 to access qbs_tmp_list_nexti - 1
+        while (qbs_tmp_list_nexti > 0 && qbs_tmp_list[qbs_tmp_list_nexti - 1] == -1) {
             qbs_tmp_list_nexti--;
         }
     }
@@ -115,21 +119,29 @@ void qbs_free(qbs *str) {
         qbs_free_descriptor(str);
         return;
     }
+    // Handle cmem (common memory) vs regular memory allocation
     if (str->in_cmem) {
+        // Strings in cmem are managed separately (C++ interop memory)
         qbs_remove_cmem(str);
     } else {
+        // Regular string memory: mark as freed in the list
         qbs_list[str->listi] = -1;
     retry:
-        if (qbs_list[qbs_list_nexti - 1] == -1) {
+        // Compact the string list by removing trailing freed entries
+        // Guard against underflow: qbs_list_nexti must be > 0 to access qbs_list_nexti - 1
+        if (qbs_list_nexti > 0 && qbs_list[qbs_list_nexti - 1] == -1) {
             qbs_list_nexti--;
             if (qbs_list_nexti)
                 goto retry;
         }
+        // Update stack pointer to point after the last active string
         if (qbs_list_nexti) {
+            // Calculate new stack pointer: end of last string + 32 byte padding
             qbs_sp = ((qbs *)qbs_list[qbs_list_nexti - 1])->chr - qbs_data + ((qbs *)qbs_list[qbs_list_nexti - 1])->len + 32;
             if (qbs_sp > qbs_data_size)
                 qbs_sp = qbs_data_size; // adding 32 could overflow buffer!
         } else {
+            // No active strings - reset stack pointer to start of pool
             qbs_sp = 0;
         }
     }
@@ -137,22 +149,27 @@ void qbs_free(qbs *str) {
 }
 
 static void qbs_concat_list() {
+    // Compact the string list by removing freed entries (marked with -1)
+    // This defragments the list and allows efficient iteration
     uint32_t i;
     uint32_t d;
     qbs *tqbs;
     d = 0;
+    // Iterate through list, moving active entries to fill gaps
     for (i = 0; i < qbs_list_nexti; i++) {
         if (qbs_list[i] != -1) {
+            // If entry is not at its final position, move it and update its index
             if (i != d) {
                 tqbs = (qbs *)qbs_list[i];
-                tqbs->listi = d;
+                tqbs->listi = d; // Update string's list index to new position
                 qbs_list[d] = (intptr_t)tqbs;
             }
             d++;
         }
     }
     qbs_list_nexti = d;
-    // if string listings are taking up more than half of the list array double the list array's size
+    // Dynamic growth: if string listings are taking up more than half of the list array, double the size
+    // This prevents frequent reallocations and maintains O(1) amortized performance
     if (qbs_list_nexti >= (qbs_list_lasti / 2)) {
         qbs_list_lasti *= 2;
         qbs_list = (intptr_t *)realloc(qbs_list, (qbs_list_lasti + 1) * sizeof(*qbs_list));
@@ -171,28 +188,39 @@ static void qbs_tmp_concat_list() {
 }
 
 static void qbs_concat(uint32_t bytesrequired) {
-    // this does not change indexing, only ->chr pointers and the location of their data
+    // Defragment string data pool by moving strings to eliminate gaps
+    // This does not change indexing, only ->chr pointers and the location of their data
+    // Compacts fragmented memory to make room for new allocations
     static uint32_t i;
     static uint8_t *dest;
     static qbs *tqbs;
     dest = (uint8_t *)qbs_data;
     if (qbs_list_nexti) {
         qbs_sp = 0;
+        // Iterate through all active strings and pack them sequentially
         for (i = 0; i < qbs_list_nexti; i++) {
             if (qbs_list[i] != -1) {
                 tqbs = (qbs *)qbs_list[i];
+                // Only move string if there's a significant gap (>32 bytes)
+                // Small gaps are acceptable to avoid unnecessary memmove overhead
                 if ((tqbs->chr - dest) > 32) {
                     if (tqbs->len) {
+                        // Move string data to eliminate gap
                         memmove(dest, tqbs->chr, tqbs->len);
                     }
+                    // Update string's data pointer to new location
                     tqbs->chr = dest;
                 }
+                // Advance destination pointer past this string
                 dest = tqbs->chr + tqbs->len;
                 qbs_sp = dest - qbs_data;
             }
         }
     }
 
+    // Grow string data pool if needed: check if we have enough space after compaction
+    // Growth strategy: double current size + required bytes + padding
+    // This ensures we have room for the immediate allocation plus future growth
     if (((qbs_sp * 2) + (bytesrequired + 32)) >= qbs_data_size) {
         static uint8_t *oldbase;
         oldbase = qbs_data;

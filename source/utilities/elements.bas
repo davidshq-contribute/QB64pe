@@ -437,50 +437,66 @@ END FUNCTION
 '
 ' The actual value is given back as floating point, integer, and unsigned integer.
 '
+' Converts a numeric string element to its type and value representation
+' Returns: Type flags indicating the detected numeric type
+' Outputs: floating, integral, uintegral - the value in different representations
+' This function parses QB64 type suffixes and numeric formats to determine type
 FUNCTION elementGetNumericValue& (ele$, floating AS _FLOAT, integral AS _INTEGER64, uintegral AS _UNSIGNED _INTEGER64)
     DIM num$, typ&, e$, x AS LONG, returnValue AS LONG
     num$ = ele$
     typ& = 0
 
-    ' Cut off the hex/oct/bin representation if present
+    ' Cut off the hex/oct/bin representation if present (format: "value,representation")
     IF INSTR(num$, ",") THEN num$ = MID$(num$, 1, INSTR(num$, ",") - 1)
 
-    ' integer suffixes
+    ' Check for 3-character type suffixes first (longest matches take precedence)
+    ' Suffix format: ~ = unsigned, % = INTEGER, & = LONG, && = _INTEGER64
     e$ = RIGHT$(num$, 3)
+    ' Match 3-character unsigned type suffixes
     IF e$ = "~&&" THEN returnValue = UINTEGER64TYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "~%%" THEN returnValue = UBYTETYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "~%&" THEN returnValue = UOFFSETTYPE - ISPOINTER: GOTO handleInteger
+    ' Check 2-character type suffixes
     e$ = RIGHT$(num$, 2)
     IF e$ = "&&" THEN returnValue = INTEGER64TYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "%%" THEN returnValue = BYTETYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "%&" THEN returnValue = OFFSETTYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "~%" THEN returnValue = UINTEGERTYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "~&" THEN returnValue = ULONGTYPE - ISPOINTER: GOTO handleInteger
+    ' Check single-character type suffixes
     e$ = RIGHT$(num$, 1)
     IF e$ = "%" THEN returnValue = INTEGERTYPE - ISPOINTER: GOTO handleInteger
     IF e$ = "&" THEN returnValue = LONGTYPE - ISPOINTER: GOTO handleInteger
 
-    'ubit-type?
+    ' Unsigned bit type: format is "value~`size" (e.g., "5~`8" for _UNSIGNED _BIT*8)
+    ' The ` character indicates bit type, ~ indicates unsigned, number after is bit size
     IF INSTR(num$, "~`") THEN
         x = INSTR(num$, "~`")
+        ' Calculate type: UBITTYPE base - ISPOINTER flag - 1 + bit_size
+        ' Bit size determines the actual type (e.g., _BIT*8, _BIT*16, etc.)
         elementGetNumericValue& = UBITTYPE - ISPOINTER - 1 + VAL(RIGHT$(num$, LEN(num$) - x - 1))
+        ' Extract numeric value before the type suffix
         integral = VAL(LEFT$(num$, x - 1))
         uintegral = integral
         floating = integral
         EXIT FUNCTION
     END IF
 
-    'bit-type?
+    ' Signed bit type: format is "value`size" (e.g., "5`8" for _BIT*8)
+    ' Similar to unsigned but without the ~ prefix
     IF INSTR(num$, "`") THEN
         x = INSTR(num$, "`")
+        ' Calculate type: BITTYPE base - ISPOINTER flag - 1 + bit_size
         elementGetNumericValue& = BITTYPE - ISPOINTER - 1 + VAL(RIGHT$(num$, LEN(num$) - x))
+        ' Extract numeric value before the type suffix
         integral = VAL(LEFT$(num$, x - 1))
         uintegral = integral
         floating = integral
         EXIT FUNCTION
     END IF
 
-    'floats
+    ' Floating point type detection by format indicators
+    ' _FLOAT type: "##" suffix or "F" in scientific notation (e.g., "1.5F", "1.5##")
     IF INSTR(num$, "F") OR RIGHT$(num$, 2) = "##" THEN
         floating = VAL(num$)
         integral = floating
@@ -489,6 +505,7 @@ FUNCTION elementGetNumericValue& (ele$, floating AS _FLOAT, integral AS _INTEGER
         elementGetNumericValue& = FLOATTYPE - ISPOINTER
         EXIT FUNCTION
     END IF
+    ' SINGLE type: "!" suffix or "E" in scientific notation (e.g., "1.5!", "1.5E10")
     IF INSTR(num$, "E") OR RIGHT$(num$, 1) = "!" THEN
         floating = VAL(num$)
         integral = floating
@@ -497,6 +514,8 @@ FUNCTION elementGetNumericValue& (ele$, floating AS _FLOAT, integral AS _INTEGER
         elementGetNumericValue& = SINGLETYPE - ISPOINTER
         EXIT FUNCTION
     END IF
+    ' DOUBLE type: "#" suffix, "D" in scientific notation, or decimal point (e.g., "1.5", "1.5#", "1.5D10")
+    ' Default floating point type when no explicit suffix
     IF INSTR(num$, "D") OR RIGHT$(num$, 1) = "#" OR INSTR(num$, ".") THEN
         floating = VAL(num$)
         integral = floating
@@ -506,13 +525,17 @@ FUNCTION elementGetNumericValue& (ele$, floating AS _FLOAT, integral AS _INTEGER
         EXIT FUNCTION
     END IF
 
-    ' No mentioned type, assume int64
+    ' No type suffix or float indicator found - default to _INTEGER64
+    ' This handles plain integer literals without explicit type markers
     returnValue = INTEGER64TYPE - ISPOINTER
     e$ = ""
 
+    ' Remove type suffix from number string before parsing value
     handleInteger:
     num$ = LEFT$(num$, LEN(num$) - LEN(e$))
 
+    ' Parse integer value based on signed/unsigned type
+    ' For unsigned types, parse as unsigned to handle full range correctly
     IF returnValue AND ISUNSIGNED THEN
         uintegral = VAL(num$, _UNSIGNED _INTEGER64)
         integral = uintegral

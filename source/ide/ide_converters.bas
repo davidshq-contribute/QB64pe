@@ -31,13 +31,9 @@ FUNCTION BinaryFormatCheck% (pathToCheck$, pathSepToCheck$, fileToCheck$)
                 IF what$ = "Y" THEN
                     ConvertIt:
                     IF FileHasExtension(file$) THEN
-                        FOR i = LEN(file$) TO 1 STEP -1
-                            IF ASC(file$, i) = 46 THEN
-                                'keep previous extension
-                                ofile$ = LEFT$(file$, i - 1) + " (converted)" + MID$(file$, i)
-                                EXIT FOR
-                            END IF
-                        NEXT
+                        i = FindLastDot(file$)
+                        'keep previous extension
+                        ofile$ = LEFT$(file$, i - 1) + " (converted)" + MID$(file$, i)
                     ELSE
                         ofile$ = file$ + " (converted).bas"
                     END IF

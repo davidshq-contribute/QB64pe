@@ -15183,18 +15183,13 @@ FUNCTION idezpathlist$ (path$)
 END FUNCTION
 
 FUNCTION ideztakepath$ (f$) 'assume f$ contains a filename with an optional path
-    p$ = ""
-
-    FOR i = LEN(f$) TO 1 STEP -1
-        a$ = MID$(f$, i, 1)
-        IF a$ = "\" OR a$ = "/" THEN
-            p$ = LEFT$(f$, i - 1)
-            f$ = RIGHT$(f$, LEN(f$) - i)
-            EXIT FOR
-        END IF
-    NEXT
-    ideztakepath$ = p$
-    EXIT FUNCTION
+    DIM AS LONG i
+    i = FindLastPathSeparator(f$)
+    IF i > 0 THEN
+        ideztakepath$ = LEFT$(f$, i - 1)
+    ELSE
+        ideztakepath$ = ""
+    END IF
 END FUNCTION
 
 'file f$ exists, and may contain a path

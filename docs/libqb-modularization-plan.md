@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 23,359 lines (reduced from 31,111 - a 24.9% reduction)
+**Current status:** 21,183 lines (reduced from 31,111 - a 31.9% reduction)
 
 ---
 
@@ -23,6 +23,8 @@ This document tracks the modularization of `internal/c/libqb.cpp`, the core runt
 | **Keyboard** | `libqb/src/keyboard.cpp` | 102 | Lock key functions |
 | **Window** | `libqb/src/window.cpp` | 77 | `func__handle`, `func__title`, `func__hasfocus` |
 | **Legacy Memory** | `libqb/src/mem_legacy.cpp` | 61 | `func_peek`, `sub_poke`, `sub_defseg` |
+| **Text & Font** | `libqb/src/text.cpp` | 2,121 | `printchr`, `qbs_print`, `qbg_sub_locate`, `sub_cls`, `func_csrlin`, `func_pos`, `func_tab`, `func_spc`, font management (`_LOADFONT`, `_FONT`, `_FREEFONT`), print modes |
+| **Port I/O (stub)** | `libqb/src/port_io.cpp` | 33 | Header-only module: `sub_out`, `func_inp`, `sub_wait` (implementations in libqb.cpp) |
 
 **Build system:** All modules added to `libqb/build.mk`
 
@@ -60,12 +62,12 @@ int32_t libqb_get_screen_height();
 
 These modules can now be extracted using the state accessor layer:
 
-| Module | Est. Lines | Required Accessors |
-|--------|------------|-------------------|
-| **Text & Font** | ~2,000 | `libqb_get_write_page()`, `libqb_get_font_*()` |
-| **Tab/Spc** | ~200 | `libqb_get_write_page()`, `libqb_get_font_width()` |
-| **Port I/O** | ~150 | `libqb_get_write_page()` (for palette access) |
-| **Window Queries** | ~80 | Platform APIs only (no accessor needed) |
+| Module | Est. Lines | Required Accessors | Status |
+|--------|------------|-------------------|--------|
+| **Port I/O** | ~150 | `libqb_get_write_page()` (for palette access) | Stub created (port_io.h/port_io.cpp) |
+| **Window Queries** | ~80 | Platform APIs only (no accessor needed) | Pending |
+
+*Note: Text & Font module and Tab/Spc functions have been fully extracted to `text.cpp`.*
 
 ---
 
@@ -183,6 +185,10 @@ libqb.cpp includes 33 modularized headers:
 | `libqb/include/keyboard.h` | Keyboard declarations |
 | `libqb/src/mem_legacy.cpp` | Legacy memory access (peek/poke/defseg) |
 | `libqb/include/mem_legacy.h` | Legacy memory declarations |
+| `libqb/src/text.cpp` | Text output, cursor control, font management (fully implemented) |
+| `libqb/include/text.h` | Text/font function declarations (~25 functions) |
+| `libqb/src/port_io.cpp` | Port I/O module stub (header-only, implementations pending) |
+| `libqb/include/port_io.h` | Port I/O function declarations (INP, OUT, WAIT) |
 
 ### Build System
 

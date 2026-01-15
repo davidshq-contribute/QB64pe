@@ -16,18 +16,25 @@ FUNCTION Evaluate_Expression$ (e$, num AS ParseNum)
     IF CONST_EVAL_DEBUG THEN _ECHO "t$: " + t$
     IF LEFT$(t$, 5) = "ERROR" THEN Evaluate_Expression$ = t$: EXIT FUNCTION
 
-    'Deal with brackets first
+    ' Recursive expression evaluation: process innermost parentheses first
+    ' Wrap expression in parentheses to ensure complete evaluation
     exp$ = "(" + sp + t$ + sp + ")" 'Starting and finishing brackets for our parse routine.
     IF CONST_EVAL_DEBUG THEN _ECHO "exp$: " + exp$
 
     DIM Eval_E AS LONG, c AS LONG
+    ' Iteratively find and evaluate innermost parentheses until none remain
+    ' This implements a bottom-up evaluation strategy (innermost expressions first)
     DO
+        ' Find innermost matching parentheses pair
         FindInnerParens exp$, c, Eval_E
 
         IF Eval_E > 0 THEN
+            ' Validate parentheses: c should be the opening paren position
             IF c = 0 THEN Evaluate_Expression$ = "ERROR - BAD () Count": EXIT FUNCTION
+            ' Extract expression between parentheses
             eval$ = getelements$(exp$, c + 1, Eval_E - 1)
 
+            ' Recursively parse and evaluate the inner expression
             ParseExpression2 eval$
 
             eval$ = LTRIM$(RTRIM$(eval$))
@@ -35,18 +42,22 @@ FUNCTION Evaluate_Expression$ (e$, num AS ParseNum)
 
             ' Check if element preceding the parens is a known function name
             ' If so, evaluate it now using the argument list we have
+            ' This handles function calls like "SIN(expression)"
             funcOp& = IsFunctionIdentifier(getelement$(exp$, c - 1))
             IF funcOp& > 0 THEN
                 eval$ = EvaluateFunction$(funcOp&, eval$)
                 IF LEFT$(eval$, 5) = "ERROR" THEN Evaluate_Expression$ = eval$: EXIT FUNCTION
 
+                ' Adjust position since we consumed the function name
                 c = c - 1
             END IF
 
             IF CONST_EVAL_DEBUG THEN _ECHO "eval$: " + eval$
+            ' Reconstruct expression: replace parentheses and contents with evaluated result
             leftele$ = getelements$(exp$, 1, c - 1)
             rightele$ = getelements$(exp$, Eval_E + 1, numelements(exp$))
 
+            ' Combine: left part + evaluated result + right part
             exp$ = leftele$
             IF exp$ <> "" THEN exp$ = exp$ + sp
             exp$ = exp$ + eval$
@@ -69,32 +80,41 @@ FUNCTION Evaluate_Expression$ (e$, num AS ParseNum)
     Evaluate_Expression$ = exp$
 END FUNCTION
 
-' Finds an innermost set of parens, returns the element indexes of the parens
+' Finds an innermost set of parentheses, returns the element indexes of the parens
+' Strategy: Find first closing paren ")" then search backward for matching "("
+' This identifies the innermost nested expression for bottom-up evaluation
 '
 ' Gives 0 as startParen if there are no matching parens
 SUB FindInnerParens (exp$, startParen AS LONG, endParen AS LONG)
     startParen = 0
     endParen = 0
 
+    ' Phase 1: Find first closing parenthesis (innermost closing paren)
+    ' Search forward through expression elements
     strIndex = 0
     paren = 0
     DO
         ele$ = getnextelement$(exp$, paren, strIndex)
 
         IF paren = -1 THEN EXIT SUB
+        ' Found closing paren: this is the end of innermost expression
         IF ele$ = ")" THEN endParen = paren: EXIT DO
         IF paren > 1000 THEN EXIT SUB
     LOOP
 
+    ' Phase 2: Find matching opening parenthesis
+    ' Search backward from the closing paren we found
     strIndex = 0
     paren = 0
     DO
         ele$ = getprevelement$(exp$, paren, strIndex)
 
         ' Skip parens until we reach the ")" we found in the previous search
+        ' (We're searching backward, so we need to get to its position first)
         IF paren > endParen THEN _CONTINUE
 
         IF paren = -1 THEN EXIT SUB
+        ' Found opening paren: this matches the closing paren we found
         IF ele$ = "(" THEN startParen = paren: EXIT DO
         IF paren > 1000 THEN EXIT SUB
     LOOP

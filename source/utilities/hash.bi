@@ -17,9 +17,12 @@ DIM SHARED HashListSize AS LONG
 DIM SHARED HashListNext AS LONG
 DIM SHARED HashListFreeSize AS LONG
 DIM SHARED HashListFreeLast AS LONG
-'hash lookup tables
+' Hash lookup tables: Precomputed character encoding for fast hash calculation
+' hash1char: Maps single ASCII char to 5-bit value (0-31) for hash encoding
+' hash2char: Maps character pairs to combined 10-bit value (two 5-bit values)
 DIM SHARED hash1char(255) AS INTEGER
 DIM SHARED hash2char(65535) AS INTEGER
+' Encode letters A-Z (both uppercase 65-90 and lowercase 97-122) as values 1-26
 FOR x = 1 TO 26
     hash1char(64 + x) = x
     hash1char(96 + x) = x
@@ -29,12 +32,17 @@ hash1char(48) = 28 '0
 hash1char(49) = 29 '1
 hash1char(50) = 30 '2
 hash1char(51) = 31 '3
-hash1char(52) = 23 '4 'note: x, y, z and beginning alphabet letters avoided because of common usage (eg. a2, y3)
+' Digits 4-9 use lower values to avoid collisions with common variable names
+' Note: x, y, z and beginning alphabet letters avoided because of common usage (eg. a2, y3)
+hash1char(52) = 23 '4
 hash1char(53) = 22 '5
 hash1char(54) = 20 '6
 hash1char(55) = 19 '7
 hash1char(56) = 18 '8
 hash1char(57) = 17 '9
+' Precompute hash2char table: combines two hash1char values into one lookup
+' Format: hash2char[c1 + c2*256] = hash1char(c1) + hash1char(c2)*32
+' This allows O(1) lookup of 2-character combinations
 FOR c1 = 0 TO 255
     FOR c2 = 0 TO 255
         hash2char(c1 + c2 * 256) = hash1char(c1) + hash1char(c2) * 32

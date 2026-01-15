@@ -1,4 +1,49 @@
 '
+' Helper function: Checks if a character code represents a path separator
+'
+' Returns: True if the character is '/' (47) or '\' (92)
+FUNCTION IsPathSeparator%% (charCode AS LONG)
+    IsPathSeparator = (charCode = 47) OR (charCode = 92)
+END FUNCTION
+
+'
+' Helper function: Finds the position of the last path separator in a string
+'
+' Returns: Position of last '/' or '\', or 0 if not found
+FUNCTION FindLastPathSeparator& (path$ AS STRING)
+    DIM AS LONG i
+    DIM a$
+    
+    FOR i = LEN(path$) TO 1 STEP -1
+        a$ = MID$(path$, i, 1)
+        IF a$ = "/" OR a$ = "\" THEN
+            FindLastPathSeparator = i
+            EXIT FUNCTION
+        END IF
+    NEXT
+    FindLastPathSeparator = 0
+END FUNCTION
+
+'
+' Helper function: Finds the position of the last dot (for file extensions)
+' Stops searching if a path separator is encountered
+'
+' Returns: Position of last '.', or 0 if not found
+FUNCTION FindLastDot& (filename$ AS STRING)
+    DIM AS LONG i, a
+    
+    FOR i = LEN(filename$) TO 1 STEP -1
+        a = ASC(filename$, i)
+        IF IsPathSeparator(a) THEN EXIT FOR
+        IF a = 46 THEN
+            FindLastDot = i
+            EXIT FUNCTION
+        END IF
+    NEXT
+    FindLastDot = 0
+END FUNCTION
+
+'
 ' Duplicates the contents of one file into another
 '
 ' Returns: 0 on success, -1 error reading source
@@ -18,14 +63,13 @@ END FUNCTION
 '
 ' Returns: The path + trailing separator, or empty if no path
 FUNCTION getfilepath$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a$ = MID$(f$, i, 1)
-        IF a$ = "/" OR a$ = "\" THEN
-            getfilepath$ = LEFT$(f$, i)
-            EXIT FUNCTION
-        END IF
-    NEXT
-    getfilepath$ = ""
+    DIM AS LONG pos
+    pos = FindLastPathSeparator(f$)
+    IF pos > 0 THEN
+        getfilepath$ = LEFT$(f$, pos)
+    ELSE
+        getfilepath$ = ""
+    END IF
 END FUNCTION
 
 '
@@ -33,11 +77,7 @@ END FUNCTION
 '
 ' Returns: True if provided filename has an extension
 FUNCTION FileHasExtension (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN FileHasExtension = -1: EXIT FUNCTION
-    NEXT
+    FileHasExtension = (FindLastDot(f$) > 0)
 END FUNCTION
 
 '
@@ -45,12 +85,13 @@ END FUNCTION
 '
 ' Returns: Provided filename without extension on the end
 FUNCTION RemoveFileExtension$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN RemoveFileExtension$ = LEFT$(f$, i - 1): EXIT FUNCTION
-    NEXT
-    RemoveFileExtension$ = f$
+    DIM AS LONG dotPos
+    dotPos = FindLastDot(f$)
+    IF dotPos > 0 THEN
+        RemoveFileExtension$ = LEFT$(f$, dotPos - 1)
+    ELSE
+        RemoveFileExtension$ = f$
+    END IF
 END FUNCTION
 
 '
@@ -59,12 +100,13 @@ END FUNCTION
 ' Returns "" if there is no extension
 '
 FUNCTION GetFileExtension$ (f$)
-    FOR i = LEN(f$) TO 1 STEP -1
-        a = ASC(f$, i)
-        IF a = 47 OR a = 92 THEN EXIT FOR
-        IF a = 46 THEN GetFileExtension$ = MID$(f$, i + 1): EXIT FUNCTION
-    NEXT
-    GetFileExtension$ = ""
+    DIM AS LONG dotPos
+    dotPos = FindLastDot(f$)
+    IF dotPos > 0 THEN
+        GetFileExtension$ = MID$(f$, dotPos + 1)
+    ELSE
+        GetFileExtension$ = ""
+    END IF
 END FUNCTION
 
 '

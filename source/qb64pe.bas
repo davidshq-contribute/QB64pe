@@ -1079,13 +1079,10 @@ IF LEN(path.source$) THEN
 END IF
 IF SaveExeWithSource THEN path.exe$ = path.source$
 
-FOR x = LEN(f$) TO 1 STEP -1
-    a$ = MID$(f$, x, 1)
-    IF a$ = "/" OR a$ = "\" THEN
-        f$ = RIGHT$(f$, LEN(f$) - x)
-        EXIT FOR
-    END IF
-NEXT
+x = FindLastPathSeparator(f$)
+IF x > 0 THEN
+    f$ = RIGHT$(f$, LEN(f$) - x)
+END IF
 file$ = f$
 
 'if cmemlist(currentid+1)<>0 before calling regid the variable
@@ -1110,6 +1107,12 @@ bh = OpenBuffer%("O", tmpdir$ + "dyninfo.txt")
 
 IF Debug THEN CLOSE #9: OPEN tmpdir$ + "debug.txt" FOR OUTPUT AS #9
 
+' Initialize array tracking structures for compilation pass
+' arrayelementslist: Tracks element count for arrays with unknown dimensions (-1)
+'   Used to resolve array sizes during multi-pass compilation when dimensions are discovered
+' cmemlist: Flags variables that must be stored in common memory (cmem) for C++ interop
+'   Set when variables are passed to subs/functions requiring cmem storage
+' sfcmemargs: Tracks which sub/function arguments require cmem storage
 FOR i = 1 TO ids_max + 1
     arrayelementslist(i) = 0
     cmemlist(i) = 0
@@ -3399,19 +3402,17 @@ DO
                 END IF
                 EmbedFile$ = EmbedPath$ + MID$(EmbedFile$, 3)
             ELSEIF INSTR(EmbedFile$, "/") OR INSTR(EmbedFile$, "\") THEN
-                FOR i = LEN(EmbedFile$) TO 1 STEP -1
-                    IF MID$(EmbedFile$, i, 1) = "/" OR MID$(EmbedFile$, i, 1) = "\" THEN
-                        EmbedPath$ = LEFT$(EmbedFile$, i)
-                        EmbedFileOnly$ = MID$(EmbedFile$, i + 1)
-                        IF _DIREXISTS(EmbedPath$) = 0 THEN a$ = "File '" + EmbedFileOnly$ + "' not found": GOTO errmes
-                        currentdir$ = _CWD$
-                        CHDIR EmbedPath$
-                        EmbedPath$ = _CWD$
-                        CHDIR currentdir$
-                        EmbedFile$ = EmbedPath$ + pathsep$ + EmbedFileOnly$
-                        EXIT FOR
-                    END IF
-                NEXT
+                i = FindLastPathSeparator(EmbedFile$)
+                IF i > 0 THEN
+                    EmbedPath$ = LEFT$(EmbedFile$, i)
+                    EmbedFileOnly$ = MID$(EmbedFile$, i + 1)
+                    IF _DIREXISTS(EmbedPath$) = 0 THEN a$ = "File '" + EmbedFileOnly$ + "' not found": GOTO errmes
+                    currentdir$ = _CWD$
+                    CHDIR EmbedPath$
+                    EmbedPath$ = _CWD$
+                    CHDIR currentdir$
+                    EmbedFile$ = EmbedPath$ + pathsep$ + EmbedFileOnly$
+                END IF
             END IF
             IF _FILEEXISTS(EmbedFile$) = 0 THEN a$ = "File '" + EmbedFile$ + "' not found": GOTO errmes
             'verify handle validity (Aa-Zz/0-9, begin with letter)
@@ -3486,22 +3487,20 @@ DO
 
                 ExeIconFile$ = IconPath$ + MID$(ExeIconFile$, 3)
             ELSEIF INSTR(ExeIconFile$, "/") OR INSTR(ExeIconFile$, "\") THEN
-                FOR i = LEN(ExeIconFile$) TO 1 STEP -1
-                    IF MID$(ExeIconFile$, i, 1) = "/" OR MID$(ExeIconFile$, i, 1) = "\" THEN
-                        IconPath$ = LEFT$(ExeIconFile$, i)
-                        ExeIconFileOnly$ = MID$(ExeIconFile$, i + 1)
+                i = FindLastPathSeparator(ExeIconFile$)
+                IF i > 0 THEN
+                    IconPath$ = LEFT$(ExeIconFile$, i)
+                    ExeIconFileOnly$ = MID$(ExeIconFile$, i + 1)
 
-                        IF _DIREXISTS(IconPath$) = 0 THEN a$ = "File '" + ExeIconFileOnly$ + "' not found": GOTO errmes
+                    IF _DIREXISTS(IconPath$) = 0 THEN a$ = "File '" + ExeIconFileOnly$ + "' not found": GOTO errmes
 
-                        currentdir$ = _CWD$
-                        CHDIR IconPath$
-                        IconPath$ = _CWD$
-                        CHDIR currentdir$
+                    currentdir$ = _CWD$
+                    CHDIR IconPath$
+                    IconPath$ = _CWD$
+                    CHDIR currentdir$
 
-                        ExeIconFile$ = IconPath$ + pathsep$ + ExeIconFileOnly$
-                        EXIT FOR
-                    END IF
-                NEXT
+                    ExeIconFile$ = IconPath$ + pathsep$ + ExeIconFileOnly$
+                END IF
             END IF
 
             IF _FILEEXISTS(ExeIconFile$) = 0 THEN a$ = "File '" + ExeIconFile$ + "' not found": GOTO errmes
@@ -4135,14 +4134,11 @@ DO
 
                     'Separate path from name
                     libpath$ = ""
-                    FOR z = LEN(x$) TO 1 STEP -1
-                        a = ASC(x$, z)
-                        IF a = 47 OR a = 92 THEN '\ or /
-                            libpath$ = LEFT$(x$, z)
-                            x$ = RIGHT$(x$, LEN(x$) - z)
-                            EXIT FOR
-                        END IF
-                    NEXT
+                    z = FindLastPathSeparator(x$)
+                    IF z > 0 THEN
+                        libpath$ = LEFT$(x$, z)
+                        x$ = RIGHT$(x$, LEN(x$) - z)
+                    END IF
 
                     og_libpath$ = libpath$ ' save the original libpath
 
@@ -7074,6 +7070,8 @@ DO
 
     IF n >= 2 THEN
         IF firstelement$ = "ON" AND secondelement$ = "STRIG" THEN
+            ' ON STRIG parsing: Handles syntax "ON STRIG(button, controller) GOSUB label"
+            ' Extracts button number and optional controller number from parentheses
             SetDependency DEPENDENCY_DEVICEINPUT
             i = 3
             IF i > n THEN a$ = "Expected (": GOTO errmes
@@ -7081,23 +7079,30 @@ DO
             IF a2$ <> "(" THEN a$ = "Expected (": GOTO errmes
             l$ = SCase$("On" + sp + "Strig" + sp2 + "(")
             IF i > n THEN a$ = "Expected ...": GOTO errmes
-            B = 0
-            x = 0
-            e2$ = ""
-            e3$ = ""
+            ' Argument extraction: Parse button and optional controller parameters
+            ' Use balanced parenthesis counter to handle nested expressions
+            B = 0  ' Parenthesis nesting counter
+            x = 0  ' Comma counter (max 1 comma allowed)
+            e2$ = ""  ' First argument (button number)
+            e3$ = ""  ' Second argument (controller number, optional)
             FOR i = i TO n
                 e$ = getelement$(ca$, i)
                 a = ASC(e$)
-                IF a = 40 THEN B = B + 1
-                IF a = 41 THEN B = B - 1
+                ' Track nesting: '(' increments, ')' decrements
+                IF a = 40 THEN B = B + 1  ' '(' = 40
+                IF a = 41 THEN B = B - 1  ' ')' = 41
+                ' Closing paren at base level: End of argument list
                 IF B = -1 THEN GOTO onstriggotarg
-                IF a = 44 AND B = 0 THEN
+                ' Comma at base level: Separates button from controller argument
+                IF a = 44 AND B = 0 THEN  ' ',' = 44
                     x = x + 1
-                    IF x > 1 THEN a$ = "Expected )": GOTO errmes
-                    IF e2$ = "" THEN a$ = "Expected ... ,": GOTO errmes
+                    IF x > 1 THEN a$ = "Expected )": GOTO errmes  ' Only one comma allowed
+                    IF e2$ = "" THEN a$ = "Expected ... ,": GOTO errmes  ' Must have button before comma
+                    ' Move button to e3$, start collecting controller in e2$
                     e3$ = e2$
                     e2$ = ""
                 ELSE
+                    ' Accumulate argument text (handles multi-token expressions)
                     IF LEN(e2$) THEN e2$ = e2$ + sp + e$ ELSE e2$ = e$
                 END IF
             NEXT
@@ -7106,15 +7111,17 @@ DO
             IF e2$ = "" THEN a$ = "Expected ... )": GOTO errmes
             WriteBufRawData MainTxtBuf, "onstrig_setup("
 
-            'sort scanned results
+            ' Argument sorting: Determine which argument is button vs controller
+            ' If e3$ exists, format is "ON STRIG(button, controller)" - both provided
+            ' If e3$ is empty, format is "ON STRIG(button)" - controller defaults to 0
             IF LEN(e3$) THEN
-                optI$ = e3$
-                optController$ = e2$
-                optPassed$ = "1"
+                optI$ = e3$  ' Button number (first argument)
+                optController$ = e2$  ' Controller number (second argument)
+                optPassed$ = "1"  ' Controller was explicitly provided
             ELSE
-                optI$ = e2$
-                optController$ = "0"
-                optPassed$ = "0"
+                optI$ = e2$  ' Button number (only argument)
+                optController$ = "0"  ' Default controller
+                optPassed$ = "0"  ' Controller not provided, use default
             END IF
 
             'i
@@ -11041,26 +11048,37 @@ DO
                                         IF id.tsize <> targettypsize THEN a$ = "Incorrect array type passed to sub": GOTO errmes
                                     END IF
 
+                                    ' Check if this argument position requires cmem storage
+                                    ' sfcmemargs stores per-argument cmem requirements as character flags
                                     IF MID$(sfcmemargs(targetid), i, 1) = CHR$(1) THEN 'cmem required?
+                                        ' Mark variable for cmem storage and trigger recompile
+                                        ' Recompile needed because cmem allocation affects code generation
                                         IF cmemlist(idnum) = 0 THEN
                                             cmemlist(idnum) = 1
                                             recompile = 1
                                         END IF
                                     END IF
 
+                                    ' Array element count resolution logic:
+                                    ' linkid = 0 means this is a real array with known dimensions (not a placeholder)
+                                    ' We can safely use its element count to resolve unknown requirements
                                     IF id.linkid = 0 THEN
                                         'if id.linkid is 0, it means the number of array elements is definitely
                                         'known of the array being passed, this is not some "fake"/unknown array.
                                         'using the numer of array elements of a fake array would be dangerous!
 
-
+                                        ' Only resolve if the target sub/function has unknown element requirement
+                                        ' nelereq = 0 indicates the requirement hasn't been determined yet
                                         IF nelereq = 0 THEN
                                             'only continue if the number of array elements required is unknown
                                             'and it needs to be set
 
+                                            ' Use the actual array's element count to resolve the requirement
+                                            ' This propagates known array sizes through the call chain
                                             IF id.arrayelements > 0 THEN '2009
 
                                                 nelereq = id.arrayelements
+                                                ' Store resolved requirement in sub/function argument metadata
                                                 MID$(id2.nelereq, i, 1) = CHR$(nelereq)
 
                                             END IF
@@ -11129,22 +11147,29 @@ DO
 
                                                 e$ = "(void*)( ((char*)(" + n$ + ")) + (" + o$ + ") )"
 
-                                                'convert void* to target type*
+                                                ' Convert void* pointer to target type pointer
+                                                ' UDT element access requires explicit cast to target element type
                                                 IF passudtelement THEN e$ = "(" + typ2ctyp$(targettyp2 + (targettyp AND ISUNSIGNED), "") + "*)" + e$
                                                 IF Error_Happened THEN GOTO errmes
 
                                             ELSE
-                                                'not a udt
+                                                ' Not a UDT: handle regular type conversion
                                                 IF arr THEN
+                                                    ' Array argument: pass address of first element
+                                                    ' _BIT array offsets cannot be passed (not addressable)
                                                     IF (sourcetyp2 AND ISOFFSETINBITS) THEN a$ = "Cannot pass _BIT array offsets": GOTO errmes
+                                                    ' refer() generates address-of expression, 0 flag = don't dereference
                                                     e$ = "(&(" + refer(e$, sourcetyp, 0) + "))"
                                                     IF Error_Happened THEN GOTO errmes
                                                 ELSE
+                                                    ' Scalar argument: refer() handles value/reference conversion
+                                                    ' 1 flag = may dereference if needed for value passing
                                                     e$ = refer(e$, sourcetyp, 1)
                                                     IF Error_Happened THEN GOTO errmes
                                                 END IF
 
-                                                'note: signed/unsigned mismatch requires casting
+                                                ' Signed/unsigned mismatch requires explicit cast
+                                                ' C++ requires explicit casts between signed/unsigned types to prevent warnings/errors
                                                 IF (sourcetyp AND ISUNSIGNED) <> (targettyp AND ISUNSIGNED) THEN
                                                     e$ = "(" + typ2ctyp$(targettyp2 + (targettyp AND ISUNSIGNED), "") + "*)" + e$
                                                     IF Error_Happened THEN GOTO errmes
@@ -11769,7 +11794,9 @@ IF Debug THEN
     PRINT #9, "recompile="; recompile
 END IF
 
-'Set cmem flags for subs/functions requiring data passed in cmem
+' Set cmem flags for subs/functions requiring data passed in cmem
+' This pass propagates cmem requirements from sub/function arguments back to variable declarations
+' Variables marked in cmemlist must be allocated in common memory for C++ interop
 FOR i = 1 TO idn
     IF cmemlist(i) THEN 'must be in cmem
 
@@ -11778,6 +11805,8 @@ FOR i = 1 TO idn
 
         IF Debug THEN PRINT #9, "recompiling cmem sf! checking:"; RTRIM$(id.n)
 
+        ' If this variable is a sub/function argument, propagate cmem requirement
+        ' sfid points to the sub/function, sfarg is the argument index
         IF id.sfid THEN 'it is an argument of a sub/function
 
             IF Debug THEN PRINT #9, "recompiling cmem sf! It's a sub/func arg!"
@@ -12107,51 +12136,55 @@ FOR x = 1 TO commonarraylistn
     n2$ = RTRIM$(id.callname)
     tsize = id.tsize
 
-    'select command
+    ' COMMON array serialization: Determine array element type for CHAIN file format
+    ' Command 3 = fixed-length elements (all elements same size, e.g., INTEGER arrays)
+    ' Command 4 = variable-length elements (each element has different size, e.g., STRING arrays)
     command = 3 'fixed length elements
     IF t AND ISSTRING THEN
         IF (t AND ISFIXEDLENGTH) = 0 THEN
-            command = 4 'var-len elements
+            command = 4 'var-len elements (variable-length strings)
         END IF
     END IF
 
 
-    'if...
-    'i) array elements are still undefined (ie. arrayelements=-1) pass the input content along
-    '   if any existed or an array-placeholder
-    'ii) if the array's elements were defined, any input content would have been loaded so the
-    '    array (in whatever state it currently is) should be passed. If it is currently erased
-    '    then it should be passed as a placeholder
+    ' COMMON array handling strategy:
+    ' i) If array elements are undefined (arrayelements=-1): Load from CHAIN file if present
+    '    This handles arrays that were declared but not dimensioned before CHAIN
+    ' ii) If array elements are defined: Array state is already loaded, pass current state
+    '    If array is erased, it will be passed as a placeholder
 
     IF arrayelements = -1 THEN
 
-        'load array (copies the array, if any, into a buffer for later)
-
-
-
+        ' Array loading from CHAIN file: Serialize array data into a buffer for later restoration
+        ' This allows COMMON arrays to be preserved across CHAIN operations
         MainTxtBuf = OpenBuffer%("O", tmpdir$ + "inpchain" + _TOSTR$(i) + ".txt")
-        WriteBufLine MainTxtBuf, "if (int32val==2){" 'array place-holder
-        'create buffer to store array as-is in global.txt
+        WriteBufLine MainTxtBuf, "if (int32val==2){" 'array place-holder marker
+        ' Dynamic buffer allocation: Create a growable buffer to store serialized array data
+        ' Buffer grows as array data is read, using realloc to expand as needed
         x$ = _TOSTR$(uniquenumber)
-        x1$ = "chainarraybuf" + x$
-        x2$ = "chainarraybufsiz" + x$
+        x1$ = "chainarraybuf" + x$  ' Buffer pointer
+        x2$ = "chainarraybufsiz" + x$  ' Current buffer size
         WriteBufLine GlobTxtBuf, "static uint8 *" + x1$ + "=(uint8*)malloc(1);"
         WriteBufLine GlobTxtBuf, "static int64 " + x2$ + "=0;"
-        'read next command
+        ' Read array type marker from CHAIN file (2=placeholder, 3=fixed-len, 4=var-len)
         WriteBufLine MainTxtBuf, "sub_get(FF,NULL,byte_element((uint64)&int32val,4," + NewByteElement$ + "),0);"
 
+        ' Validate array type matches expected format
         IF command = 3 THEN WriteBufLine MainTxtBuf, "if (int32val==3){" 'fixed-length-element array
         IF command = 4 THEN WriteBufLine MainTxtBuf, "if (int32val==4){" 'var-length-element array
+        ' Append type marker to buffer: Grow buffer by 4 bytes, store int32 marker
         WriteBufLine MainTxtBuf, x2$ + "+=4; " + x1$ + "=(uint8*)realloc(" + x1$ + "," + x2$ + "); *(int32*)(" + x1$ + "+" + x2$ + "-4)=int32val;"
 
         IF command = 3 THEN
-            'read size in bits of one element, convert it to bytes
+            ' Fixed-length arrays: Read element size (in bits), convert to bytes for allocation
+            ' Element size determines how many bytes each array element occupies
             WriteBufLine MainTxtBuf, "sub_get(FF,NULL,byte_element((uint64)&int64val,8," + NewByteElement$ + "),0);"
             WriteBufLine MainTxtBuf, x2$ + "+=8; " + x1$ + "=(uint8*)realloc(" + x1$ + "," + x2$ + "); *(int64*)(" + x1$ + "+" + x2$ + "-8)=int64val;"
+            ' Convert bits to bytes: Right-shift by 3 (divide by 8)
             WriteBufLine MainTxtBuf, "bytes=int64val>>3;"
         END IF 'com=3
 
-        IF command = 4 THEN WriteBufLine MainTxtBuf, "bytes=1;" 'bytes used to calculate number of elements
+        IF command = 4 THEN WriteBufLine MainTxtBuf, "bytes=1;" ' Variable-length arrays: bytes=1 used as counter for number of elements
 
         'read number of dimensions
         WriteBufLine MainTxtBuf, "sub_get(FF,NULL,byte_element((uint64)&int32val,4," + NewByteElement$ + "),0);"
@@ -13712,14 +13745,23 @@ FUNCTION allocarray (n2$, elements$, elementsize, udt)
     IF Debug THEN PRINT #9, "numelements count:"; nume
 
     descstatic = 0
+    ' Array dimension validation and resolution
+    ' arraydesc indicates this is an array declaration/definition
     IF arraydesc THEN
         IF id.arrayelements <> nume THEN
 
+            ' Handle arrays with unknown dimensions (-1 indicates unknown at declaration time)
+            ' During compilation, we discover dimensions and must ensure consistency
             IF id.arrayelements = -1 THEN 'unknown
+                ' Check if we've seen this array before with a different element count
+                ' arrayelementslist tracks discovered sizes to prevent dimension conflicts
                 IF arrayelementslist(currentid) <> 0 AND nume <> arrayelementslist(currentid) THEN Give_Error "Cannot change the number of elements an array has!": EXIT FUNCTION
+                ' Special case: single-element arrays can be resolved immediately
                 IF nume = 1 THEN id.arrayelements = 1: ids(currentid).arrayelements = 1 'lucky guess!
+                ' Record discovered element count for consistency checking in later passes
                 arrayelementslist(currentid) = nume
             ELSE
+                ' Array already has known dimensions - cannot change them
                 Give_Error "Cannot change the number of elements an array has!": EXIT FUNCTION
             END IF
 
@@ -15036,10 +15078,13 @@ FUNCTION dim2 (varname$, typ2$, method, elements$)
             'clearid
 
             IF f = 1 THEN
-
+                ' Array dimension resolution: Handle placeholder "?" for COMMON arrays
+                ' If "?" is provided, check if dimension count was previously specified
+                ' Example: "?3" means 3-dimensional array with dimensions resolved later
                 IF LEN(elements$) = 1 AND ASC(elements$) = 63 THEN '"?"
                     E = arrayelementslist(idn + 1): IF E THEN elements$ = elements$ + _TOSTR$(E) 'eg. "?3" for a 3 dimensional array
                 END IF
+                ' Allocate array: Generate C++ code for array allocation and return element count
                 nume = allocarray(n$, elements$, 1, 0)
                 IF Error_Happened THEN EXIT FUNCTION
                 l$ = l$ + sp + tlayout$
@@ -15047,18 +15092,24 @@ FUNCTION dim2 (varname$, typ2$, method, elements$)
                 clearid
 
             ELSE
+                ' Declaration-only mode: Store array metadata without generating allocation code
                 clearid
                 IF elements$ = "?" THEN
+                    ' Placeholder array: Dimensions will be resolved later (COMMON arrays)
                     nume = -1
-                    id.linkid = glinkid
+                    id.linkid = glinkid  ' Link to parent declaration for later resolution
                     id.linkarg = glinkarg
                 ELSE
+                    ' Fixed dimensions: Parse element count from dimension string
                     nume = VAL(elements$)
                 END IF
             END IF
 
+            ' Array type assignment: Set base type and modifiers
             id.arraytype = BYTETYPE: IF unsgn THEN id.arraytype = id.arraytype + ISUNSIGNED
+            ' Memory location: Mark if array should be in conventional memory (cmem)
             IF cmemlist(idn + 1) THEN id.arraytype = id.arraytype + ISINCONVENTIONALMEMORY
+            ' Static array encoding: Values > 65536 indicate static arrays (subtract offset to get element count)
             IF nume > 65536 THEN nume = nume - 65536: id.staticarray = 1
 
             id.arrayelements = nume
