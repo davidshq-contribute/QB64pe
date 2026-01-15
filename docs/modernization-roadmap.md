@@ -2,18 +2,21 @@
 
 ## Current State
 
-The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **17,492 lines (43.8% reduction)**. Fifteen major modules have been extracted successfully, enabled by the state accessor layer (`libqb_state.h`).
+The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **19,119 lines (38.5% reduction)**. Forty-seven modules have been extracted to `libqb/src/`, with 15 major functional modules and many supporting infrastructure modules. The state accessor layer (`libqb_state.h`) enables controlled access to shared global state.
 
 ### Completed Extractions
-- Graphics (7,589 lines), Text/Font (2,121 lines), File I/O (1,680 lines)
-- Networking (894 lines), Platform (870 lines), Color (621 lines)
+- Graphics (7,830 lines), Text/Font (2,127 lines), File I/O (1,916 lines)
+- Shell (1,540 lines), GFS (1,191 lines), Filesystem (1,044 lines)
+- Networking (894 lines), Platform (894 lines), Color (795 lines)
+- QBS string handling (725 lines), HTTP (530 lines), Memory (411 lines)
 - Mouse, Port I/O, Screen, Keyboard, Utility, Console, Window, Legacy Memory
-- State Accessor layer (168 lines) - enables further modularization
+- State Accessor layer (215 lines) - enables further modularization
+- Total: 26,572 lines in 47 modules
 
 ### Remaining Challenges
 - **Global state coupling**: Image system (`img[]`, `pages[]`), font arrays, environment 2D variables still accessed via externs in some modules
 - **Complex interdependencies**: Display/render loop, input state machine, graphics mode management are tightly coupled
-- **Diminishing returns**: Remaining ~17.5K lines are increasingly interdependent; practical ceiling is ~42-45% reduction (already achieved 43.8%)
+- **Diminishing returns**: Remaining ~19K lines are increasingly interdependent; practical ceiling is ~40% reduction
 
 ---
 
