@@ -967,9 +967,11 @@ Gets the control character disabled state (used by text module).
 ## Window Module {#window-module}
 
 **Header**: `internal/c/libqb/include/window.h`
-**Source**: `internal/c/libqb/src/window.cpp` (77 lines)
+**Source**: `internal/c/libqb/src/window.cpp` (347 lines)
 
-The Window module provides window handle and focus functions.
+The Window module provides window handle, focus, desktop dimensions, window positioning, and file drop functions.
+
+### Window Handle and Focus
 
 #### `int64_t func__handle()`
 Gets native window handle (_HANDLE).
@@ -982,6 +984,60 @@ Gets window title (_TITLE$ query).
 #### `int32_t func__hasfocus()`
 Checks if window has focus (_HASFOCUS).
 - **Returns**: -1 if focused, 0 otherwise
+
+### Desktop Dimensions
+
+#### `int32_t func_screenwidth()`
+Gets the width of the screen/desktop (SCREENWIDTH).
+- **Returns**: Screen width in pixels, or 0 if not available
+
+#### `int32_t func_screenheight()`
+Gets the height of the screen/desktop (SCREENHEIGHT).
+- **Returns**: Screen height in pixels, or 0 if not available
+
+### Window State
+
+#### `void sub_screenicon()`
+Iconifies (minimizes) the window (SCREENICON statement).
+
+#### `int32_t func_windowexists()`
+Checks if the QB64 window exists (_WINDOWEXISTS).
+- **Returns**: -1 if window exists, 0 otherwise
+
+#### `int32_t func_screenicon()`
+Checks if the window is iconified (SCREENICON function).
+- **Returns**: -1 if iconified, 0 otherwise
+
+### Window Positioning
+
+#### `void sub__screenmove(int32_t x, int32_t y, int32_t passed)`
+Moves the window to a specified position (_SCREENMOVE).
+- **x**: X coordinate
+- **y**: Y coordinate
+- **passed**: Bit flags (1=_MIDDLE, 2=coordinates provided)
+
+### File Drop Functions
+
+#### `void sub__filedrop(int32_t on_off)`
+Enables or disables file drop acceptance (_FILEDROP).
+- **on_off**: 0 or 1 to enable, 2 to disable
+
+#### `int32_t func__filedrop()`
+Gets the current file drop acceptance state (_FILEDROP query).
+- **Returns**: -1 if enabled, 0 if disabled
+
+#### `void sub__finishdrop()`
+Finishes processing dropped files and clears the drop list (_FINISHDROP).
+
+#### `int32_t func__totaldroppedfiles()`
+Gets the total number of dropped files (_TOTALDROPPEDFILES).
+- **Returns**: Number of dropped files
+
+#### `qbs *func__droppedfile(int32_t fileIndex, int32_t passed)`
+Gets a dropped file by index (_DROPPEDFILE$).
+- **fileIndex**: 1-based file index
+- **passed**: 1 if fileIndex was provided, 0 for sequential access
+- **Returns**: File path string, or empty string on error
 
 ### Internal Helper Functions
 
@@ -1076,7 +1132,7 @@ Writes byte to memory (POKE).
 ## State Accessor Module {#state-accessor-module}
 
 **Header**: `internal/c/libqb/include/libqb_state.h`
-**Source**: `internal/c/libqb/src/libqb_state.cpp` (168 lines)
+**Source**: `internal/c/libqb/src/libqb_state.cpp` (401 lines)
 
 The State Accessor module provides controlled access to global state, enabling modularization.
 
@@ -1126,6 +1182,56 @@ Gets screen width in pixels.
 
 #### `int32_t libqb_get_screen_height()`
 Gets screen height in pixels.
+
+### Display Control Accessors
+
+#### `int32_t libqb_get_screen_hide()` / `void libqb_set_screen_hide(int32_t value)`
+Gets/sets screen visibility state.
+
+#### `int32_t libqb_get_autodisplay()` / `void libqb_set_autodisplay(int32_t value)`
+Gets/sets auto-display mode (-1=toggle, 0=off, 1=on).
+
+#### `void libqb_display()`
+Forces display update.
+
+### Fullscreen State Accessors
+
+#### `int32_t libqb_get_full_screen()` / `void libqb_set_full_screen(int32_t value)`
+Gets/sets fullscreen mode (0=off, 1=stretch, 2=squarepixels).
+
+#### `int32_t libqb_get_full_screen_set()` / `void libqb_set_full_screen_set(int32_t value)`
+Gets/sets pending fullscreen mode change (-1=no change).
+
+#### `int32_t libqb_get_fullscreen_smooth()` / `void libqb_set_fullscreen_smooth(int32_t value)`
+Gets/sets fullscreen smooth scaling.
+
+#### `int32_t libqb_get_force_display_update()` / `void libqb_set_force_display_update(int32_t value)`
+Gets/sets force display update flag.
+
+### Resize State Accessors
+
+#### `int32_t libqb_get_resize_snapback()` / `void libqb_set_resize_snapback(int32_t value)`
+Gets/sets resize snapback mode (1=enabled, 0=disabled).
+
+#### `int32_t libqb_get_resize_auto()` / `void libqb_set_resize_auto(int32_t value)`
+Gets/sets resize auto mode.
+
+#### `int32_t libqb_get_resize_event()` / `void libqb_set_resize_event(int32_t value)`
+Gets/sets resize event flag.
+
+#### `int32_t libqb_get_resize_event_x()` / `int32_t libqb_get_resize_event_y()`
+Gets resize event dimensions.
+
+### File Drop State Accessors
+
+#### `int32_t libqb_get_accept_filedrop()` / `void libqb_set_accept_filedrop(int32_t value)`
+Gets/sets file drop acceptance state (-1=enabled, 0=disabled).
+
+#### `int32_t libqb_get_total_dropped_files()` / `void libqb_set_total_dropped_files(int32_t value)`
+Gets/sets total dropped files count.
+
+#### `void* libqb_get_hdrop()` / `void libqb_set_hdrop(void* value)`
+Gets/sets HDROP handle (Windows file drop handle).
 
 ---
 
