@@ -59,28 +59,100 @@ int32_t libqb_get_screen_height();
 
 ---
 
-## Potential Future Extractions
+## Remaining Code Analysis
 
-| Module | Est. Lines | Complexity | Notes |
-|--------|------------|------------|-------|
-| **Printer** | ~100 | High | `sub__printimage` needs deep img_struct access |
+The ~20,000 remaining lines break down into these functional areas:
 
-*Note: Text & Font module, Tab/Spc functions, Port I/O, Keyboard Input, and Platform Code are now fully extracted.*
+| Area | Lines | Location | Self-Contained? |
+|------|-------|----------|-----------------|
+| Global state & data structures | ~1,700 | 61-1750 | N/A (declarations) |
+| Display/render loop | ~1,371 | 16396-18797 | No (core orchestrator) |
+| Key input infrastructure | ~1,200 | 14289-19899 | No (state machine) |
+| Graphics mode management | ~1,050 | 5845-6866 | No (deep integration) |
+| INPUT statement | ~830 | 8513-9342 | No (cross-cutting) |
+| Networking/TCP | ~650 | 12700-13600 | **Yes** |
+| PRINT USING | ~600 | 11450-12600 | Moderate |
+| Control flow/runtime | ~600 | scattered | No |
+| Hardware texture mgmt | ~400 | 3600-4100 | **Yes** |
+| Window/GUI operations | ~300 | scattered | **Yes** |
+| Mouse GLUT callbacks | ~215 | 16946-17192 | Moderate |
 
 ---
 
-## Deferred Modules
+## ROI-Prioritized Extraction Roadmap
 
-These modules have complex dependencies beyond what the accessor layer provides:
+### Tier 1: High ROI (Self-contained, minimal dependencies)
 
-| Module | Est. Lines | Blocking Dependencies |
-|--------|------------|----------------------|
-| **Input** | ~3,000 | Mouse message queue, key event system, display page structures |
-| **Window/UI** | ~1,200 | Platform APIs (Windows, X11, macOS), GLUT thread, console handles |
-| **Control Flow** | ~1,500 | Display, fonts, QBS string system (cross-cutting) |
-| **x86 Emulator** | ~1,100 | CMEM memory management (deeply interleaved) |
+| Module | Lines | Effort | Impact | Notes |
+|--------|-------|--------|--------|-------|
+| **Networking** | ~650 | Low | High | TCP/socket functions are isolated. Only needs GFS and error_handle externs. |
+| **Hardware Textures** | ~400 | Low | Medium | `newimg()`, `freeimg()`, `new_hardware_img()`, texture upload functions. |
+| **Window Operations** | ~300 | Low | Medium | Expand existing window.cpp with `sub__screenmove()`, `sub__icon()`, file drop handlers. |
 
-**Path forward:** Extend the accessor layer as needed, or extract with platform-specific wrappers.
+**Recommendation:** Extract networking first - highest line count with lowest complexity.
+
+### Tier 2: Medium ROI (Needs accessor layer expansion)
+
+| Module | Lines | Effort | Impact | Blockers |
+|--------|-------|--------|--------|----------|
+| **Mouse GLUT Callbacks** | ~215 | Medium | Low | Needs mouse state accessors, display offset calculation |
+| **PRINT USING** | ~600 | Medium | Medium | Coupled to text rendering, cursor state |
+| **Printer** | ~100 | Medium | Low | Deep img_struct access |
+
+### Tier 3: Low ROI (Architectural changes required)
+
+| Module | Lines | Effort | Impact | Why Difficult |
+|--------|-------|--------|--------|---------------|
+| **Key Input** | ~1,200 | High | Medium | Complex state machine with keyhit buffer, keyheld arrays, modifier tracking |
+| **Graphics Mode** | ~1,050 | High | Medium | `qbg_screen()` alone is 607 lines touching fonts, palettes, pages |
+| **INPUT Statement** | ~830 | Very High | Low | Cross-cuts graphics, text, input, cursor - 4+ major systems |
+
+### Tier 4: Core System (Not Extractable)
+
+| Area | Lines | Why |
+|------|-------|-----|
+| **Display/Render Loop** | ~1,371 | Central orchestrator - `display()` and `GLUT_DISPLAY_REQUEST()` coordinate everything |
+| **Global State** | ~1,700 | Foundation data structures - can only add accessors, not move |
+| **Control Flow** | ~600 | GOSUB/RETURN, CHAIN, exit handlers - deeply integrated |
+
+---
+
+## Recommended Next Steps
+
+### Immediate (High ROI)
+
+1. **Extract Networking Module** (~650 lines)
+   - Functions: `tcp_init`, `tcp_done`, `tcp_host_open`, `tcp_client_open`, `connection_new`, stream operations
+   - Dependencies: GFS module, error_handle (both already have headers)
+   - Estimated effort: 2-3 hours
+
+2. **Expand Window Module** (~300 lines)
+   - Add: `sub__screenmove`, `sub__icon`, `sub__filedrop`, `func__filedrop`
+   - Current window.cpp is only 77 lines - room to grow
+   - Platform wrappers already exist in the file
+
+3. **Extract Hardware Texture Functions** (~400 lines)
+   - Functions: `newimg`, `freeimg`, `imgrevert`, `new_hardware_img`, texture management
+   - Could merge into existing graphics.cpp or create new hardware.cpp
+   - Low coupling to other systems
+
+### Deferred (Low ROI or blocking)
+
+- **Key Input Infrastructure** - Would require event system redesign
+- **Graphics Mode Setup** - `qbg_screen()` is too entangled with fonts/palettes/pages
+- **INPUT Statement** - Cross-cuts too many systems; leave in libqb.cpp
+- **Display Loop** - Core orchestrator must remain
+
+### Strategic Considerations
+
+**Diminishing Returns:** We've extracted 35.8% of the code. The remaining ~20K lines are increasingly interdependent. Further extraction yields smaller modules with higher effort.
+
+**Practical Ceiling:** Realistically, we can reach ~40-45% reduction (extract networking + window + hardware = ~1,350 more lines). Beyond that requires architectural changes to the accessor layer.
+
+**Alternative Focus:** Instead of more extractions, consider:
+- Improving existing module interfaces (reduce extern declarations)
+- Adding more accessors to libqb_state.h for cleaner module boundaries
+- Documentation and code cleanup within libqb.cpp itself
 
 ---
 
