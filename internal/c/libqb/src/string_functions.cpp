@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE String Functions Module
+//  String manipulation functions (LSET, RSET, etc.)
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE Error Handling Module
+//  Error handling, reporting, and recovery functions
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

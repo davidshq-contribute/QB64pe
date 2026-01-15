@@ -1,5 +1,7 @@
 //----------------------------------------------------------------------------------------------------------------------
-// QB64-PE graphics support
+//  QB64-PE Graphics Module
+//  Graphics drawing and rendering functions
+//  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "graphics.h"
@@ -66,6 +68,15 @@ extern uint8_t *qbg_active_page_offset;
 static int32_t depthbuffer_mode0 = DEPTHBUFFER_MODE__ON;
 static int32_t depthbuffer_mode1 = DEPTHBUFFER_MODE__ON;
 
+/**
+ * Converts HSB (Hue, Saturation, Brightness) color to RGB.
+ * 
+ * Converts a color from the HSB color space to RGB color space.
+ * Hue is in degrees (0-360), saturation and brightness are normalized (0.0-1.0).
+ * 
+ * @param hsb Pointer to source HSB color structure
+ * @param rgb Pointer to destination RGB color structure
+ */
 void hsb2rgb(hsb_color *hsb, rgb_color *rgb) {
     double hu, hi, hf, pv, qv, tv;
 
@@ -89,6 +100,16 @@ void hsb2rgb(hsb_color *hsb, rgb_color *rgb) {
     }
 }
 
+/**
+ * Converts RGB color to HSB (Hue, Saturation, Brightness).
+ * 
+ * Converts a color from the RGB color space to HSB color space.
+ * RGB values are normalized (0.0-1.0). Hue is returned in degrees (0-360),
+ * saturation and brightness are normalized (0.0-1.0).
+ * 
+ * @param rgb Pointer to source RGB color structure
+ * @param hsb Pointer to destination HSB color structure
+ */
 void rgb2hsb(rgb_color *rgb, hsb_color *hsb) {
     double mini, maxi, diff, hu;
     // --- find min/max and difference ---
@@ -115,6 +136,17 @@ void rgb2hsb(rgb_color *rgb, hsb_color *hsb) {
     }
 }
 
+/**
+ * Creates a 32-bit ARGB color value from HSB components.
+ * 
+ * Converts hue (0-360 degrees), saturation (0-100%), and brightness (0-100%)
+ * to a 32-bit ARGB color value with full alpha (0xFF000000).
+ * 
+ * @param hue Hue in degrees (0-360, clamped)
+ * @param sat Saturation percentage (0-100, clamped)
+ * @param bri Brightness percentage (0-100, clamped)
+ * @return 32-bit ARGB color value with alpha set to 0xFF
+ */
 uint32_t func__hsb32(double hue, double sat, double bri) {
     hsb_color hsb; rgb_color rgb;
     // --- prepare values for conversion ---
@@ -128,6 +160,18 @@ uint32_t func__hsb32(double hue, double sat, double bri) {
     return ((lround(rgb.r * 255.0) << 16) + (lround(rgb.g * 255.0) << 8) + lround(rgb.b * 255.0)) | 0xFF000000;
 }
 
+/**
+ * Creates a 32-bit ARGB color value from HSBA components.
+ * 
+ * Converts hue (0-360 degrees), saturation (0-100%), brightness (0-100%),
+ * and alpha (0-100%) to a 32-bit ARGB color value.
+ * 
+ * @param hue Hue in degrees (0-360, clamped)
+ * @param sat Saturation percentage (0-100, clamped)
+ * @param bri Brightness percentage (0-100, clamped)
+ * @param alf Alpha percentage (0-100, clamped)
+ * @return 32-bit ARGB color value
+ */
 uint32_t func__hsba32(double hue, double sat, double bri, double alf) {
     hsb_color hsb; rgb_color rgb; double alpha;
     // --- prepare values for conversion ---
@@ -142,6 +186,12 @@ uint32_t func__hsba32(double hue, double sat, double bri, double alf) {
     return (lround(alpha * 255.0) << 24) + (lround(rgb.r * 255.0) << 16) + (lround(rgb.g * 255.0) << 8) + lround(rgb.b * 255.0);
 }
 
+/**
+ * Extracts the hue component from a 32-bit ARGB color.
+ * 
+ * @param argb 32-bit ARGB color value
+ * @return Hue in degrees (0-360)
+ */
 double func__hue32(uint32_t argb) {
     rgb_color rgb; hsb_color hsb;
     // --- prepare values for conversion ---
@@ -154,6 +204,12 @@ double func__hue32(uint32_t argb) {
     return hsb.h;
 }
 
+/**
+ * Extracts the saturation component from a 32-bit ARGB color.
+ * 
+ * @param argb 32-bit ARGB color value
+ * @return Saturation percentage (0-100)
+ */
 double func__sat32(uint32_t argb) {
     rgb_color rgb; hsb_color hsb;
     // --- prepare values for conversion ---
@@ -166,6 +222,12 @@ double func__sat32(uint32_t argb) {
     return hsb.s * 100.0;
 }
 
+/**
+ * Extracts the brightness component from a 32-bit ARGB color.
+ * 
+ * @param argb 32-bit ARGB color value
+ * @return Brightness percentage (0-100)
+ */
 double func__bri32(uint32_t argb) {
     rgb_color rgb; hsb_color hsb;
     // --- prepare values for conversion ---
@@ -178,6 +240,17 @@ double func__bri32(uint32_t argb) {
     return hsb.b * 100.0;
 }
 
+/**
+ * Controls depth buffer settings for 3D rendering.
+ * 
+ * Sets depth buffer mode (ON, OFF, LOCK, or _CLEAR) for the specified
+ * destination surface. Used for 3D graphics rendering to control
+ * depth testing and clearing operations.
+ * 
+ * @param options Depth buffer option: 1=ON, 2=OFF, 3=LOCK, 4=_CLEAR
+ * @param dst Destination image handle (0 or 1 for primary surfaces, negative for hardware images)
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed) {
     //                    {ON|OFF|LOCK|_CLEAR}
 
@@ -246,6 +319,34 @@ void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed) {
     dst_himg->depthbuffer_mode = new_mode;
 }
 
+/**
+ * Maps a textured triangle from a source image to a destination.
+ * 
+ * Draws a triangle with texture mapping from a source image to a destination.
+ * Supports 2D and 3D mapping, culling options, seamless tiling, and smooth scaling.
+ * Can work with both software and hardware-accelerated images.
+ * 
+ * @param cull_options Culling mode: 1=_CLOCKWISE, 2=_ANTICLOCKWISE
+ * @param sx1 Source X coordinate of first vertex
+ * @param sy1 Source Y coordinate of first vertex
+ * @param sx2 Source X coordinate of second vertex
+ * @param sy2 Source Y coordinate of second vertex
+ * @param sx3 Source X coordinate of third vertex
+ * @param sy3 Source Y coordinate of third vertex
+ * @param si Source image handle (0 for read page)
+ * @param fdx1 Destination X coordinate of first vertex
+ * @param fdy1 Destination Y coordinate of first vertex
+ * @param fdz1 Destination Z coordinate of first vertex (for 3D)
+ * @param fdx2 Destination X coordinate of second vertex
+ * @param fdy2 Destination Y coordinate of second vertex
+ * @param fdz2 Destination Z coordinate of second vertex (for 3D)
+ * @param fdx3 Destination X coordinate of third vertex
+ * @param fdy3 Destination Y coordinate of third vertex
+ * @param fdz3 Destination Z coordinate of third vertex (for 3D)
+ * @param di Destination image handle (0 for write page)
+ * @param smooth_options Smooth scaling: 1=_SMOOTH, 2=_SMOOTHSHRUNK, 3=_SMOOTHSTRETCHED
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub__maptriangle(int32_t cull_options, float sx1, float sy1, float sx2, float sy2, float sx3, float sy3, int32_t si, float fdx1, float fdy1, float fdz1,
                       float fdx2, float fdy2, float fdz2, float fdx3, float fdy3, float fdz3, int32_t di, int32_t smooth_options, int32_t passed) {
     //[{_CLOCKWISE|_ANTICLOCKWISE}][{_SEAMLESS}](?,?)-(?,?)-(?,?)[,?]{TO}(?,?[,?])-(?,?[,?])-(?,?[,?])[,[?][,{_SMOOTH|_SMOOTHSHRUNK|_SMOOTHSTRETCHED}]]"
@@ -2916,6 +3017,24 @@ void sub__maptriangle(int32_t cull_options, float sx1, float sy1, float sx2, flo
 // Extracted from libqb.cpp
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Draws a line, rectangle outline, or filled rectangle.
+ * 
+ * Draws a line between two points, a rectangle outline, or a filled rectangle
+ * depending on the bf parameter. Supports STEP coordinates, custom colors,
+ * and line styles (dashed patterns).
+ * 
+ * @param x1 X coordinate of first point (or start point if using STEP)
+ * @param y1 Y coordinate of first point (or start point if using STEP)
+ * @param x2 X coordinate of second point (or offset if using STEP)
+ * @param y2 Y coordinate of second point (or offset if using STEP)
+ * @param col Color value (uses current color if not specified)
+ * @param bf Drawing mode: 0=line, 1=rectangle outline, 2=filled rectangle
+ * @param style Line style pattern (16-bit mask for dashed lines)
+ * @param passed Bit flags: bit 0=first point provided, bit 1=second point provided,
+ *               bit 2=STEP for first point, bit 3=STEP for second point,
+ *               bit 4=color provided, bit 5=style provided
+ */
 void sub_line(float x1, float y1, float x2, float y2, uint32 col, int32 bf, uint32 style, int32 passed) {
     if (is_error_pending())
         return;
@@ -2991,6 +3110,19 @@ void sub_line(float x1, float y1, float x2, float y2, uint32 col, int32 bf, uint
 // even if blending is disabled (a fixed color is likely to have a fixed alpha value anyway),
 // and this allows for filling alpha regions
 
+/**
+ * Fills an area with a color using flood fill algorithm (32-bit with blending).
+ * 
+ * Fills a bounded area starting at the specified point with the fill color.
+ * The fill stops at the border color. Supports alpha blending for 32-bit images.
+ * Uses a two-buffer algorithm for efficient flood filling.
+ * 
+ * @param x X coordinate of starting point (or offset if using STEP)
+ * @param y Y coordinate of starting point (or offset if using STEP)
+ * @param fillcol Fill color (uses current color if not specified)
+ * @param bordercol Border color (uses fill color if not specified)
+ * @param passed Bit flags: bit 0=STEP coordinates, bit 1=fill color provided, bit 2=border color provided
+ */
 // 32-bit WITH BENDING
 void sub_paint32(float x, float y, uint32 fillcol, uint32 bordercol, int32 passed) {
 
@@ -4198,6 +4330,16 @@ allplotted:
 
 } // sub_circle
 
+/**
+ * Gets the color value at a specific pixel position (no clipping).
+ * 
+ * Returns the color value at the specified coordinates without any clipping
+ * or coordinate transformation. Used internally by func_point().
+ * 
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @return Color value at the specified position, or NULL on error
+ */
 uint32 point(int32 x, int32 y) { // does not clip!
     if (read_page->bytes_per_pixel == 1) {
         return read_page->offset[y * read_page->width + x] & read_page->mask;
@@ -4207,6 +4349,18 @@ uint32 point(int32 x, int32 y) { // does not clip!
     return NULL;
 }
 
+/**
+ * Gets the color value at a point or cursor position information.
+ * 
+ * If coordinates are provided, returns the color value at that point.
+ * If no coordinates are provided (x=0-3), returns cursor position information:
+ * 0=scaled X, 1=scaled Y, 2=unscaled X, 3=unscaled Y.
+ * 
+ * @param x X coordinate or cursor info index (0-3)
+ * @param y Y coordinate (ignored if x is 0-3)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Color value, cursor position, or -1 if point is outside viewport
+ */
 double func_point(float x, float y, int32 passed) {
     static int32 x2, y2, i;
 
@@ -4273,6 +4427,18 @@ double func_point(float x, float y, int32 passed) {
     return -1;
 }
 
+/**
+ * Sets a pixel to a specific color.
+ * 
+ * Draws a single pixel at the specified coordinates with the given color.
+ * Supports STEP coordinates and uses the current color if not specified.
+ * Updates the graphics cursor position.
+ * 
+ * @param x X coordinate (or offset if using STEP)
+ * @param y Y coordinate (or offset if using STEP)
+ * @param col Color value (uses current color if not specified)
+ * @param passed Bit flags: bit 0=STEP coordinates, bit 1=color provided
+ */
 void sub_pset(float x, float y, uint32 col, int32 passed) {
     if (is_error_pending())
         return;
@@ -4326,6 +4492,17 @@ void sub_pset(float x, float y, uint32 col, int32 passed) {
     return;
 }
 
+/**
+ * Sets a pixel to the background color.
+ * 
+ * Draws a single pixel at the specified coordinates using the background color
+ * (or specified color if provided). This is equivalent to PSET with background color.
+ * 
+ * @param x X coordinate (or offset if using STEP)
+ * @param y Y coordinate (or offset if using STEP)
+ * @param col Color value (uses background color if not specified)
+ * @param passed Bit flags: bit 0=STEP coordinates, bit 1=color provided
+ */
 void sub_preset(float x, float y, uint32 col, int32 passed) {
     if (is_error_pending())
         return;
@@ -4349,6 +4526,19 @@ extern int32 console_image;
 #define NEW_HARDWARE_IMG__BUFFER_CONTENT 1
 #define NEW_HARDWARE_IMG__DUPLICATE_PROVIDED_BUFFER 2
 
+/**
+ * Creates a new image with specified dimensions and color depth.
+ * 
+ * Allocates a new image buffer with the given width, height, and bits per pixel.
+ * If bpp is not specified, uses the current write page's color mode.
+ * The new image adopts the current page's palette, font, colors, and settings.
+ * 
+ * @param x Width of the image in pixels (must be > 0)
+ * @param y Height of the image in pixels (must be > 0)
+ * @param bpp Bits per pixel: 0-2, 7-13, 256, or 32 (uses current mode if not specified)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Negative image handle on success, -1 on error, 0 if error pending
+ */
 int32 func__newimage(int32 x, int32 y, int32 bpp, int32 passed) {
     static int32 i;
     if (is_error_pending())
@@ -4397,6 +4587,18 @@ int32 func__newimage(int32 x, int32 y, int32 bpp, int32 passed) {
     return -i;
 }
 
+/**
+ * Creates a copy of an existing image.
+ * 
+ * Duplicates an image, creating a new image with the same dimensions,
+ * color depth, and pixel data. Optionally converts between software and
+ * hardware image formats.
+ * 
+ * @param i Source image handle to copy
+ * @param mode Optional target color mode (for conversion)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Negative image handle of the copy, or hardware image handle on conversion
+ */
 int32 func__copyimage(int32 i, int32 mode, int32 passed) {
     static int32 i2, bytes;
     static img_struct *s, *d;
@@ -4470,6 +4672,15 @@ int32 func__copyimage(int32 i, int32 mode, int32 passed) {
     return -i2;
 }
 
+/**
+ * Frees an image from memory.
+ * 
+ * Releases the memory allocated for an image. Cannot free screen pages.
+ * For hardware images, queues a command to free the image on the graphics thread.
+ * 
+ * @param i Image handle to free (negative for regular images, positive for screen pages)
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub__freeimage(int32 i, int32 passed) {
     if (is_error_pending())
         return;
@@ -7000,6 +7211,21 @@ put_8_32_clear_mirror:
 
 } // sub__putimage
 
+/**
+ * Gets pixel data from a rectangular region and stores it in a memory element.
+ * 
+ * Copies pixel data from the read page within the specified rectangular region
+ * into a memory element structure. Supports STEP coordinates and mask colors
+ * for areas outside the image bounds.
+ * 
+ * @param x1f X coordinate of first corner (or offset if using STEP)
+ * @param y1f Y coordinate of first corner (or offset if using STEP)
+ * @param x2f X coordinate of second corner (or offset if using STEP)
+ * @param y2f Y coordinate of second corner (or offset if using STEP)
+ * @param element Pointer to byte_element_struct to store the pixel data
+ * @param mask Color value to use for pixels outside image bounds
+ * @param passed Bit flags: bit 0=STEP for first point, bit 1=STEP for second point, bit 2=mask provided
+ */
 void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element, uint32 mask, int32 passed) {
     //"[{STEP}](?,?)-[{STEP}](?,?),?[,?]"
     //   &1            &2            &4
@@ -7260,6 +7486,20 @@ void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element,
 
 } // sub_graphics_get
 
+/**
+ * Puts pixel data from a memory element onto the write page.
+ * 
+ * Draws pixel data stored in a memory element structure onto the write page
+ * at the specified position. Supports various drawing options (PSET, PRESET,
+ * AND, OR, XOR) and mask colors for transparency.
+ * 
+ * @param x1f X coordinate of top-left corner (or offset if using STEP)
+ * @param y1f Y coordinate of top-left corner (or offset if using STEP)
+ * @param element Pointer to byte_element_struct containing pixel data
+ * @param option Drawing option: 0=PSET, 1=PRESET, 2=AND, 3=OR, 4=XOR
+ * @param mask Color value to use as transparent/mask color
+ * @param passed Bit flags: bit 0=STEP coordinates, bit 1=option provided, bit 2=mask provided
+ */
 void sub_graphics_put(float x1f, float y1f, void *element, int32 option, uint32 mask, int32 passed) {
     //"[{STEP}](?,?),?[,[{_CLIP}][{PSET|PRESET|AND|OR|XOR}][,?]]"
     // step->passed&1

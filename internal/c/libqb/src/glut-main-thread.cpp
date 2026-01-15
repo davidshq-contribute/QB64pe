@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE GLUT Main Thread Module
+//  GLUT main thread initialization and management
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

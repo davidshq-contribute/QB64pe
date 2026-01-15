@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE QBS String Conversion Module
+//  Numeric to string conversion functions (STR$)
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

@@ -46,10 +46,39 @@
 // This is returned to the caller if something goes wrong while loading the image
 #define INVALID_IMAGE_HANDLE -1
 
+// ============================================================================
+// FORWARD DECLARATIONS
+// ============================================================================
+
 struct qbs;
 
+// ============================================================================
+// PUBLIC API DECLARATIONS
+// ============================================================================
+
+/// Loads an image from a file.
+/// Supports multiple formats including PNG, JPEG, BMP, GIF, PCX, SVG, QOI, and more.
+/// @param qbsFileName File path (QB64 string)
+/// @param bpp Target bits per pixel (optional, 0 for auto-detect)
+/// @param qbsRequirements Additional requirements string (optional)
+/// @param passed Parameter passing flags
+/// @returns Image handle, or INVALID_IMAGE_HANDLE on error
 int32_t func__loadimage(qbs *qbsFileName, int32_t bpp, qbs *qbsRequirements, int32_t passed);
+
+/// Saves an image to a file.
+/// Supports multiple formats including PNG, JPEG, BMP, and QOI.
+/// @param qbsFileName Output file path (QB64 string)
+/// @param imageHandle Image handle to save
+/// @param qbsRequirements Save options string (optional, format-specific)
+/// @param passed Parameter passing flags
 void sub__saveimage(qbs *qbsFileName, int32_t imageHandle, qbs *qbsRequirements, int32_t passed);
+
+// ============================================================================
+// COLOR UTILITY FUNCTIONS
+// ============================================================================
+
+// These inline functions provide efficient color manipulation for BGRA format
+// (Blue-Green-Red-Alpha, which is the internal format used by QB64-PE)
 
 static inline constexpr uint8_t image_get_bgra_red(uint32_t c) {
     return uint8_t((c >> 16) & 0xFFu);
@@ -146,3 +175,20 @@ static inline constexpr int32_t func__green32(uint32_t col) {
 static inline constexpr int32_t func__blue32(uint32_t col) {
     return col & 0xFF;
 }
+
+// ============================================================================
+// IMPLEMENTATION NOTES
+// ============================================================================
+
+// This module provides image loading and saving functionality with support for:
+// - Multiple image formats (PNG, JPEG, BMP, GIF, PCX, SVG, QOI, etc.)
+// - Format conversion and bit depth adjustment
+// - Efficient BGRA color format utilities
+// - Image scaling algorithms (pixelscalers, mmpx)
+//
+// Powered by:
+// - stb_image & stb_image_write for common formats
+// - dr_pcx for PCX format support
+// - nanosvg for SVG vector graphics
+// - qoi for QOI format support
+// - pixelscalers and mmpx for image scaling

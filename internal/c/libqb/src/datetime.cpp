@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE Date/Time Module
+//  Date and time functions and high-resolution timing
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 

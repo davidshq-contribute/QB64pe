@@ -1,9 +1,4 @@
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE File I/O Module
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
@@ -79,6 +74,19 @@ uint64 n_uint64_value = 0;
 // Generic I/O helpers
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Writes data to a file at a specific offset.
+ * 
+ * Writes the specified number of bytes from the buffer to the file.
+ * The offset is a byte offset from the start of the file (-1 means current position).
+ * This function has been largely superseded by gfs_write but is kept for compatibility.
+ * 
+ * @param i File number
+ * @param offset Byte offset from start of file (-1 for current position)
+ * @param cp Pointer to data buffer to write
+ * @param bytes Number of bytes to write
+ * @return Always returns 0 (errors are handled internally)
+ */
 int32 generic_put(int32 i, int32 offset, uint8 *cp, int32 bytes) {
     // note: generic_put & generic_get have been made largely redundant by gfs_read & gfs_write
     //      offset is a byte-offset from base 0 (-1=current pos)
@@ -123,6 +131,20 @@ int32 generic_put(int32 i, int32 offset, uint8 *cp, int32 bytes) {
     return 0;
 }
 
+/**
+ * Reads data from a file at a specific offset.
+ * 
+ * Reads the specified number of bytes from the file into the buffer.
+ * The offset is a byte offset from the start of the file (-1 means current position).
+ * The number of bytes actually read is stored in generic_get_bytes_read.
+ * This function has been largely superseded by gfs_read but is kept for compatibility.
+ * 
+ * @param i File number
+ * @param offset Byte offset from start of file (-1 for current position)
+ * @param cp Pointer to data buffer to read into
+ * @param bytes Number of bytes to read
+ * @return Always returns 0 (errors are handled internally)
+ */
 int32 generic_get(int32 i, int32 offset, uint8 *cp, int32 bytes) {
     // note: generic_put & generic_get have been made largely redundant by gfs_read & gfs_write
     //      offset is a byte-offset from base 0 (-1=current pos)
@@ -175,6 +197,15 @@ int32 generic_get(int32 i, int32 offset, uint8 *cp, int32 bytes) {
 // File character input helpers
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Reads a single character from a file.
+ * 
+ * Returns the ASCII value (0-255) of the next character in the file.
+ * Handles EOF character (CHR$(26)) specially by setting the EOF flag.
+ * 
+ * @param i File number
+ * @return ASCII value (0-255) of the character, -1 if EOF reached, -2 on error
+ */
 int32 file_input_chr(int32 i) {
     // returns the ASCII value of the character (0-255)
     // returns -1 if eof reached (error to be externally handled)
@@ -212,6 +243,16 @@ int32 file_input_chr(int32 i) {
     return c;
 }
 
+/**
+ * Skips the matching newline character in a CR/LF pair.
+ * 
+ * If a CR (13) or LF (10) character was just read, this function checks
+ * if the next character is the matching pair and skips it if so.
+ * Also handles EOF character (CHR$(26)) detection.
+ * 
+ * @param i File number
+ * @param c The character that was just read (should be 10 or 13)
+ */
 void file_input_skip1310(int32 i, int32 c) {
     // assumes a character of value 13 or 10 has just been read (passed)
     // peeks next character and skips it too if it is a corresponding 13 or 10 pair
@@ -234,6 +275,15 @@ void file_input_skip1310(int32 i, int32 c) {
     }
 }
 
+/**
+ * Advances the file position to the next data item.
+ * 
+ * Skips whitespace and separators to position the file at the start of
+ * the next data item. Handles spaces, commas, and newline characters.
+ * 
+ * @param i File number
+ * @param lastc The last character that was read
+ */
 void file_input_nextitem(int32 i, int32 lastc) {
     if (i < 0)
         return;
@@ -273,6 +323,14 @@ nextchr:
 // Number parsing functions
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Determines if rounding should increment the integer part.
+ * 
+ * Checks the first digit after the decimal point to determine
+ * if the integer part should be rounded up (if digit >= 5).
+ * 
+ * @return 1 if rounding should increment, 0 otherwise
+ */
 int32 n_roundincrement() {
     static int32 i, i2, i3;
     if (n_digits == 0)
@@ -285,6 +343,16 @@ int32 n_roundincrement() {
     return 0;
 }
 
+/**
+ * Converts parsed number digits to a floating-point value.
+ * 
+ * Processes the digits stored in the global number parsing variables
+ * (n_digits, n_exp, n_neg, n_hex) and converts them to a floating-point
+ * value stored in n_float_value. Supports decimal, hexadecimal, octal,
+ * and binary number formats.
+ * 
+ * @return 1 on success, 0 on overflow or error
+ */
 int32 n_float() {
     // return value: Bit 0=successful
     // data
@@ -397,6 +465,16 @@ int32 n_float() {
     return 1;
 }
 
+/**
+ * Converts parsed number digits to a 64-bit signed integer value.
+ * 
+ * Processes the digits stored in the global number parsing variables
+ * (n_digits, n_exp, n_neg, n_hex) and converts them to a 64-bit signed
+ * integer value stored in n_int64_value. Supports decimal, hexadecimal,
+ * octal, and binary number formats with range checking.
+ * 
+ * @return 1 on success, 0 on overflow or error
+ */
 int32 n_int64() {
     // return value: Bit 0=successful
     // data
@@ -511,6 +589,16 @@ int32 n_int64() {
     return 1;
 }
 
+/**
+ * Converts parsed number digits to a 64-bit unsigned integer value.
+ * 
+ * Processes the digits stored in the global number parsing variables
+ * (n_digits, n_exp, n_neg, n_hex) and converts them to a 64-bit unsigned
+ * integer value stored in n_uint64_value. Supports decimal, hexadecimal,
+ * octal, and binary number formats with range checking.
+ * 
+ * @return 1 on success, 0 on overflow or error
+ */
 int32 n_uint64() {
     // return value: Bit 0=successful
     // data
@@ -614,6 +702,19 @@ int32 n_uint64() {
     return 1;
 }
 
+/**
+ * Parses a number from a data buffer.
+ * 
+ * Reads a number from the data buffer starting at data_offset and updates
+ * the offset to point after the number. Supports decimal, hexadecimal (&H),
+ * octal (&O), and binary (&B) formats. The parsed number is stored in global
+ * variables for conversion by n_float(), n_int64(), or n_uint64().
+ * 
+ * @param data Pointer to the data buffer
+ * @param data_offset Pointer to current offset in buffer (updated on return)
+ * @param data_size Total size of the data buffer
+ * @return 0 on success, 1 on overflow, 2 if out of data, 3 on syntax error
+ */
 int32 n_inputnumberfromdata(uint8 *data, ptrszint *data_offset, ptrszint data_size) {
     // return values:
     // 0=success!
@@ -861,6 +962,17 @@ gotnumber:;
     return 0; // success
 }
 
+/**
+ * Parses a number from a file.
+ * 
+ * Reads a number from the file starting at the current file position.
+ * Supports decimal, hexadecimal (&H), octal (&O), and binary (&B) formats.
+ * The parsed number is stored in global variables for conversion by
+ * n_float(), n_int64(), or n_uint64().
+ * 
+ * @param fileno File number to read from
+ * @return 0 on success, 1 on overflow, 2 on EOF, 3 on error
+ */
 int32 n_inputnumberfromfile(int32 fileno) {
     // return values:
     // 0=success
@@ -1096,6 +1208,21 @@ errorlabel:
 // File open/close operations
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Opens a file with specified access mode and sharing options.
+ * 
+ * Opens a file for RANDOM, BINARY, INPUT, OUTPUT, or APPEND access.
+ * Supports access restrictions (READ, WRITE) and sharing locks.
+ * For RANDOM files, record_length specifies the record size.
+ * 
+ * @param name Filename as a qbs string
+ * @param type File access type: 1=RANDOM, 2=BINARY, 3=INPUT, 4=OUTPUT, 5=APPEND
+ * @param access Access restrictions: 1=READ WRITE, 2=READ, 3=WRITE
+ * @param sharing Sharing mode: 1=SHARED, 2=LOCK READ WRITE, 3=LOCK READ, 4=LOCK WRITE
+ * @param i File number to assign
+ * @param record_length Record length for RANDOM files (ignored for other modes)
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub_open(qbs *name, int32 type, int32 access, int32 sharing, int32 i, int64 record_length, int32 passed) {
     if (is_error_pending())
         return;
@@ -1254,6 +1381,19 @@ void sub_open(qbs *name, int32 type, int32 access, int32 sharing, int32 i, int64
     } // type==3
 }
 
+/**
+ * Opens a file using GW-BASIC style syntax.
+ * 
+ * Parses a GW-BASIC style type string (R, B, I, O, A) and opens the file
+ * using the standard sub_open function. This provides compatibility with
+ * older BASIC file opening syntax.
+ * 
+ * @param typestr Type string: "R"=RANDOM, "B"=BINARY, "I"=INPUT, "O"=OUTPUT, "A"=APPEND
+ * @param i File number to assign
+ * @param name Filename as a qbs string
+ * @param record_length Record length for RANDOM files
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub_open_gwbasic(qbs *typestr, int32 i, qbs *name, int64 record_length, int32 passed) {
     if (is_error_pending())
         return;
@@ -1285,6 +1425,16 @@ void sub_open_gwbasic(qbs *typestr, int32 i, qbs *name, int64 record_length, int
     }
 }
 
+/**
+ * Closes a file or all files.
+ * 
+ * If a file number is provided, closes that specific file.
+ * If no file number is provided, closes all open files and special handles.
+ * Handles both regular files and special handles (TCP, HTTP, etc.).
+ * 
+ * @param i2 File number to close (if passed parameter is set), or ignored if closing all
+ * @param passed Bit flags: if set, closes specific file; if not set, closes all files
+ */
 void sub_close(int32 i2, int32 passed) {
     if (is_error_pending())
         return;
@@ -1345,6 +1495,14 @@ void sub_close(int32 i2, int32 passed) {
     gfs_close_all_files();
 } // close
 
+/**
+ * Gets the next available file number.
+ * 
+ * Returns the lowest file number that is not currently in use.
+ * Useful for opening files without specifying a file number.
+ * 
+ * @return Next available file number
+ */
 int32 func_freefile() {
     return gfs_fileno_freefile();
 }
@@ -1353,6 +1511,15 @@ int32 func_freefile() {
 // File status functions
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Gets the length of a file in bytes.
+ * 
+ * Returns the size of the file in bytes. For special handles (TCP, HTTP),
+ * returns the content length or available data size.
+ * 
+ * @param i File number or special handle
+ * @return File length in bytes, or 0 on error
+ */
 int64 func_lof(int32 i) {
     static int64 size;
 
@@ -1413,6 +1580,15 @@ int64 func_lof(int32 i) {
     return size;
 }
 
+/**
+ * Checks if end of file has been reached.
+ * 
+ * Returns -1 if EOF has been reached, 0 if more data is available.
+ * For special handles (TCP, HTTP), checks connection status and data availability.
+ * 
+ * @param i File number or special handle
+ * @return -1 if EOF reached, 0 if more data available, or 0 on error
+ */
 int32 func_eof(int32 i) {
     static int32 pos, lof, x;
 
@@ -1483,6 +1659,16 @@ int32 func_eof(int32 i) {
     return 0;
 }
 
+/**
+ * Sets the file position for reading or writing.
+ * 
+ * Moves the file pointer to the specified position. For RANDOM files,
+ * the position is interpreted as a record number (1-based). For other
+ * file types, the position is a byte offset (1-based).
+ * 
+ * @param i File number
+ * @param pos Position: record number for RANDOM files, byte offset for others (1-based)
+ */
 void sub_seek(int32 i, int64 pos) {
     if (is_error_pending())
         return;
@@ -1527,6 +1713,16 @@ void sub_seek(int32 i, int64 pos) {
     }
 }
 
+/**
+ * Gets the current file position.
+ * 
+ * Returns the current position in the file. For RANDOM files, returns
+ * the current record number (1-based). For other file types, returns
+ * the byte offset (1-based).
+ * 
+ * @param i File number
+ * @return Current position: record number for RANDOM, byte offset for others (1-based), or 0 on error
+ */
 int64 func_seek(int32 i) {
     if (gfs_fileno_valid(i) != 1) {
         error(52);
@@ -1543,6 +1739,18 @@ int64 func_seek(int32 i) {
     return gfs_getpos(i) + 1;
 }
 
+/**
+ * Gets the current file location (similar to LOC function).
+ * 
+ * Returns location information based on file type:
+ * - RANDOM: current record number (0-based)
+ * - BINARY: current byte position
+ * - INPUT/OUTPUT/APPEND: current position in 128-byte records
+ * - COM ports: bytes in input buffer
+ * 
+ * @param i File number
+ * @return Location value based on file type, or 0 on error
+ */
 int64 func_loc(int32 i) {
     if (gfs_fileno_valid(i) != 1) {
         error(52);
@@ -1581,6 +1789,17 @@ int64 func_loc(int32 i) {
 // BLOAD/BSAVE operations
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Saves a memory region to a binary file.
+ * 
+ * Saves a block of memory to a file in QB64 BSAVE format.
+ * The file includes a header with signature, segment, offset, and size information.
+ * Maximum size is 65536 bytes. The data is read from the current DEF SEG memory region.
+ * 
+ * @param filename Name of the file to save to
+ * @param offset Memory offset within the current segment (0-65535)
+ * @param size Number of bytes to save (0-65536)
+ */
 void sub_bsave(qbs *filename, int32 offset, int32 size) {
     if (is_error_pending())
         return;
@@ -1627,6 +1846,17 @@ void sub_bsave(qbs *filename, int32 offset, int32 size) {
     fh.close();
 }
 
+/**
+ * Loads a binary file into memory.
+ * 
+ * Loads a BSAVE format file into memory. If an offset is provided,
+ * loads to that position in the current DEF SEG. Otherwise, loads
+ * to the position specified in the file header.
+ * 
+ * @param filename Name of the file to load
+ * @param offset Optional memory offset within the current segment (if passed parameter is set)
+ * @param passed Bit flags: if set, uses provided offset; if not set, uses file header offset
+ */
 void sub_bload(qbs *filename, int32 offset, int32 passed) {
     if (is_error_pending())
         return;

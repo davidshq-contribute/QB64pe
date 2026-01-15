@@ -1,9 +1,4 @@
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE Screen Management Module
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
@@ -53,10 +48,22 @@ extern int32 environment_2d__screen_scaled_height;
 // Display control
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Enables automatic display updates.
+ * 
+ * When enabled, the display will automatically refresh after drawing operations
+ * without requiring explicit calls to _DISPLAY.
+ */
 void sub__autodisplay() {
     autodisplay = 1;
 }
 
+/**
+ * Manually updates the display and disables automatic display updates.
+ * 
+ * Forces an immediate screen refresh. If autodisplay is enabled, it will be
+ * disabled after this call completes. Does nothing if the screen is hidden.
+ */
 void sub__display() {
     if (screen_hide)
         return;
@@ -75,6 +82,16 @@ void sub__display() {
 // Fullscreen control
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Sets the fullscreen mode and scaling method.
+ * 
+ * Controls how the application window is displayed in fullscreen mode.
+ * Options include: _OFF (windowed), _STRETCH (stretch to fit), _SQUAREPIXELS (maintain aspect),
+ * or OFF (windowed). Optionally enables smooth scaling.
+ * 
+ * @param method Fullscreen mode: 0=default, 1=_OFF, 2=_STRETCH, 3=_SQUAREPIXELS, 4=OFF
+ * @param passed Bit flags: bit 0 = _SMOOTH option provided
+ */
 void sub__fullscreen(int32 method, int32 passed) {
     // ref: "[{_OFF|_STRETCH|_SQUAREPIXELS|OFF}][, _SMOOTH]"
     //          1      2           3        4         1
@@ -96,6 +113,15 @@ void sub__fullscreen(int32 method, int32 passed) {
     force_display_update = 1;
 }
 
+/**
+ * Sets which fullscreen modes and scaling options are allowed.
+ * 
+ * Restricts which fullscreen modes and scaling methods can be used.
+ * Options include: _STRETCH, _SQUAREPIXELS, _OFF, _ALL, or OFF for both mode and smooth.
+ * 
+ * @param method Allowed fullscreen mode: 1=_STRETCH, 2=_SQUAREPIXELS, 3=_OFF, 4=_ALL, 5=OFF
+ * @param smooth Allowed smooth scaling: 1=_SMOOTH, 2=_OFF, 3=_ALL, 4=OFF
+ */
 void sub__allowfullscreen(int32 method, int32 smooth) {
     // ref: "[{_STRETCH|_SQUAREPIXELS|_OFF|_ALL|OFF}][, _SMOOTH|_OFF|_ALL|OFF]"
     //            1          2         3    4   5         1      2    3   4
@@ -113,6 +139,14 @@ void sub__allowfullscreen(int32 method, int32 smooth) {
         fullscreen_allowedsmooth = 0;
 }
 
+/**
+ * Gets the current fullscreen mode.
+ * 
+ * Returns the active fullscreen mode: 0=windowed, 1=stretch, 2=square pixels.
+ * If a mode change is pending, returns the pending mode instead.
+ * 
+ * @return Current fullscreen mode (0=windowed, 1=stretch, 2=square pixels)
+ */
 int32 func__fullscreen() {
     static int32 x;
     x = full_screen_set;
@@ -121,6 +155,11 @@ int32 func__fullscreen() {
     return full_screen;
 }
 
+/**
+ * Gets whether smooth scaling is enabled in fullscreen mode.
+ * 
+ * @return -1 if smooth scaling is enabled, 0 if disabled
+ */
 int32 func__fullscreensmooth() {
     return -fullscreen_smooth;
 }
@@ -129,6 +168,15 @@ int32 func__fullscreensmooth() {
 // Resize handling
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Enables or disables window resizing and sets resize behavior.
+ * 
+ * Controls whether the window can be resized and how content is scaled when resized.
+ * Options include enabling/disabling resize snapback and setting auto-scaling mode.
+ * 
+ * @param on_off Resize control: 1=enable, 2=disable (snapback), 0=no change
+ * @param stretch_smooth Auto-scaling mode: 1=stretch, 2=smooth, 0=disable
+ */
 void sub__resize(int32 on_off, int32 stretch_smooth) {
     if (on_off == 1)
         resize_snapback = 0;
@@ -143,6 +191,14 @@ void sub__resize(int32 on_off, int32 stretch_smooth) {
     }
 }
 
+/**
+ * Checks if a window resize event has occurred.
+ * 
+ * Returns -1 if a resize event occurred (and clears the event flag),
+ * 0 if no resize event or if resizing is disabled.
+ * 
+ * @return -1 if resize event occurred, 0 otherwise
+ */
 int32 func__resize() {
     if (resize_snapback)
         return 0; // resize must be enabled
@@ -153,10 +209,20 @@ int32 func__resize() {
     return 0;
 }
 
+/**
+ * Gets the width from the most recent resize event.
+ * 
+ * @return Width in pixels of the resized window
+ */
 int32 func__resizewidth() {
     return resize_event_x;
 }
 
+/**
+ * Gets the height from the most recent resize event.
+ * 
+ * @return Height in pixels of the resized window
+ */
 int32 func__resizeheight() {
     return resize_event_y;
 }
@@ -165,10 +231,24 @@ int32 func__resizeheight() {
 // Scaled dimensions
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Gets the scaled width of the screen.
+ * 
+ * Returns the width of the screen after applying any scaling transformations.
+ * 
+ * @return Scaled screen width in pixels
+ */
 int32 func__scaledwidth() {
     return environment_2d__screen_scaled_width;
 }
 
+/**
+ * Gets the scaled height of the screen.
+ * 
+ * Returns the height of the screen after applying any scaling transformations.
+ * 
+ * @return Scaled screen height in pixels
+ */
 int32 func__scaledheight() {
     return environment_2d__screen_scaled_height;
 }
@@ -177,6 +257,14 @@ int32 func__scaledheight() {
 // Screen position
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Gets the X coordinate of the screen window on the desktop.
+ * 
+ * Returns the horizontal position of the application window relative to the desktop.
+ * On Windows, accounts for window border width. Returns 0 on unsupported platforms.
+ * 
+ * @return X coordinate of the window in pixels, or 0 if not supported
+ */
 int32 func__screenx() {
 #if defined(QB64_GUI) && defined(QB64_WINDOWS) && defined(QB64_GLUT)
     NEEDS_GLUT(0);
@@ -188,6 +276,14 @@ int32 func__screenx() {
     return 0; // if not windows then return 0
 }
 
+/**
+ * Gets the Y coordinate of the screen window on the desktop.
+ * 
+ * Returns the vertical position of the application window relative to the desktop.
+ * On Windows, accounts for window border and header height. Returns 0 on unsupported platforms.
+ * 
+ * @return Y coordinate of the window in pixels, or 0 if not supported
+ */
 int32 func__screeny() {
 #if defined(QB64_GUI) && defined(QB64_WINDOWS) && defined(QB64_GLUT)
     NEEDS_GLUT(0);

@@ -1,3 +1,9 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE QBS Value Conversion Module
+//  String to numeric value conversion functions
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
+
 #include "libqb-common.h"
 
 #include "error_handle.h"

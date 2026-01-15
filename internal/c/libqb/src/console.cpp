@@ -1,6 +1,7 @@
 //----------------------------------------------------------------------------------------------------------------------
-// QB64-PE Console Support
-// Extracted from libqb.cpp for modularization
+//  QB64-PE Console Module
+//  Console window and input/output support
+//  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "console.h"

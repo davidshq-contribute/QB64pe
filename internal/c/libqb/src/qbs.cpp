@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE QBS String Module
+//  QB String (qbs) descriptor management and operations
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 
@@ -23,8 +28,13 @@ static uint32_t qbs_malloc_freed_size = 65536;
 static uint32_t qbs_malloc_freed_num = 0; // number of freed qbs descriptors
 
 static qbs *qbs_new_descriptor() {
+    // Memory pool for qbs (QB64 string) descriptors: Reuse freed descriptors before allocating new ones
+    // This reduces memory fragmentation and improves allocation performance
+    
     // MLP //qbshlp1++;
     if (qbs_malloc_freed_num) {
+        // Reuse a previously freed descriptor from the freed list (LIFO - Last In First Out)
+        // Zero out the descriptor to ensure clean state
         /*MLP
             static qbs *s;
             s=(qbs*)memset((void *)qbs_malloc_freed[--qbs_malloc_freed_num],0,sizeof(qbs));
@@ -33,10 +43,15 @@ static qbs *qbs_new_descriptor() {
         */
         return (qbs *)memset((void *)qbs_malloc_freed[--qbs_malloc_freed_num], 0, sizeof(qbs));
     }
+    
+    // No freed descriptors available - allocate from the main pool
+    // Pool size is 65536 descriptors (~1MB total). When exhausted, allocate a new pool block
     if (qbs_malloc_next == 65536) {
         qbs_malloc = (qbs *)calloc(sizeof(qbs) * 65536, 1); //~1MEG
-        qbs_malloc_next = 0;
+        qbs_malloc_next = 0; // Reset index to start of new pool
     }
+    
+    // Allocate next available descriptor from current pool
     /*MLP
         dbglist[dbglisti]=(uint32)&qbs_malloc[qbs_malloc_next];
         static qbs* s;
@@ -49,13 +64,19 @@ static qbs *qbs_new_descriptor() {
 }
 
 static void qbs_free_descriptor(qbs *str) {
+    // Return a qbs descriptor to the freed list for reuse (memory pool optimization)
     // MLP //qbshlp1--;
+    
+    // Grow the freed list if it's full (doubling strategy for amortized O(1) growth)
+    // This allows the pool to handle varying workloads without frequent reallocations
     if (qbs_malloc_freed_num == qbs_malloc_freed_size) {
         qbs_malloc_freed_size *= 2;
         qbs_malloc_freed = (intptr_t *)realloc(qbs_malloc_freed, qbs_malloc_freed_size * sizeof(*qbs_malloc_freed));
         if (!qbs_malloc_freed)
-            error(508);
+            error(508); // Critical: cannot grow freed list
     }
+    
+    // Add descriptor to freed list for future reuse (LIFO stack)
     qbs_malloc_freed[qbs_malloc_freed_num] = (intptr_t)str;
     qbs_malloc_freed_num++;
     return;

@@ -1,3 +1,8 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE Memory Management Module
+//  Memory lock and allocation management functions
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 
@@ -50,62 +55,91 @@ void new_mem_lock() {
         return;
     }
 
+    // Memory pool management: Reuse freed locks before allocating new ones
+    // This reduces fragmentation and improves performance by recycling memory blocks
     if (mem_lock_freed_n) {
+        // Reuse a previously freed lock from the freed list (LIFO - Last In First Out)
         mem_lock_tmp = (mem_lock *)mem_lock_freed[--mem_lock_freed_n];
     } else {
+        // No freed locks available - allocate from the main pool
+        // Check if we've exhausted the current pool allocation
         if (mem_lock_next == mem_lock_max) {
+            // Pool exhausted: allocate a new pool block (note: old block is not freed,
+            // existing locks remain valid, but we start a fresh allocation block)
             mem_lock *new_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
             if (!new_base) {
                 error(518); // critical error: out of memory
                 return;
             }
             mem_lock_base = new_base;
-            mem_lock_next = 0;
+            mem_lock_next = 0; // Reset index to start of new pool
         }
+        // Allocate next available lock from current pool
         mem_lock_tmp = &mem_lock_base[mem_lock_next++];
     }
+    // Assign unique ID to track this lock (prevents use-after-free errors)
     mem_lock_tmp->id = ++mem_lock_id;
 }
 
 void free_mem_lock(mem_lock *lock) {
+    // Invalidate lock ID to prevent use-after-free (checking code will detect invalid ID)
     lock->id = 0; // invalidate lock
+    
+    // Free associated memory if this was a malloc-allocated block
+    // Type 1 = malloc'd memory that needs explicit free()
     if (lock->type == 1)
         free(lock->offset); // malloc type
-    // add to freed list
+    
+    // Add to freed list for reuse (memory pool optimization)
+    // Grow the freed list if it's full (doubling strategy for amortized O(1) growth)
     if (mem_lock_freed_n == mem_lock_freed_max) {
         int32_t new_max = mem_lock_freed_max * 2;
         intptr_t *temp = (intptr_t *)realloc(mem_lock_freed, sizeof(intptr_t) * new_max);
         if (!temp) {
             // realloc failed - mem_lock_freed still valid, just can't grow
             // This lock will be lost, but we won't corrupt memory
+            // Note: This is a non-fatal error - the lock is simply not recycled
             return;
         }
         mem_lock_freed = temp;
         mem_lock_freed_max = new_max;
     }
+    // Add lock to freed list for future reuse (LIFO stack)
     mem_lock_freed[mem_lock_freed_n++] = (intptr_t)lock;
 }
 
 void sub__memfree(void *mem) {
-    // 1:malloc: memory will be freed if it still exists
-    // 2:images: will not be freed, no action will be taken
-    // exists?
+    // Memory block types:
+    // Type 0: Unsecured memory (no malloc, just tracked)
+    // Type 1: malloc-allocated memory (needs explicit free)
+    // Type 2: Image memory (freed when image is freed, not here)
+    
+    // Validation: Check if memory block structure is valid
     if (((mem_block *)(mem))->lock_offset == 0) {
-        error(309);
+        error(309); // Memory block doesn't exist
         return;
     }
+    
+    // Security check: Verify lock ID matches (prevents double-free and use-after-free)
+    // If IDs don't match, the memory was already freed or the block is invalid
     if (((mem_lock *)(((mem_block *)(mem))->lock_offset))->id != ((mem_block *)(mem))->lock_id) {
-        error(307);
+        error(307); // Memory has been freed
         return;
-    } // memory has been freed
+    }
+    
+    // Free the lock (which will free associated memory if type == 1)
+    // Type 0: Just tracking memory, no malloc to free
     if (((mem_lock *)(((mem_block *)(mem))->lock_offset))->type == 0) { // no security
         free_mem_lock((mem_lock *)((mem_block *)(mem))->lock_offset);
     }
+    // Type 1: malloc'd memory - free_mem_lock will call free() on lock->offset
     if (((mem_lock *)(((mem_block *)(mem))->lock_offset))->type == 1) { // malloc
         free_mem_lock((mem_lock *)((mem_block *)(mem))->lock_offset);
     }
     // note: type 2(image) is freed when the image is freed
-    // invalidate caller's mem structure (avoids misconception that _MEMFREE failed)
+    
+    // Invalidate caller's mem structure (avoids misconception that _MEMFREE failed)
+    // Using a sentinel value that won't match any valid lock ID
     ((mem_block *)(mem))->lock_id = 1073741821;
 }
 

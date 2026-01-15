@@ -1,9 +1,4 @@
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE Color & Palette Module
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
@@ -32,6 +27,17 @@ extern int32 read_page_index;
 // Color matching - finds closest palette entry for given RGB values
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Finds the closest matching palette color index for the given RGB values on the write page.
+ * 
+ * Searches through the current write page's palette to find the color entry that most closely
+ * matches the specified RGB values using Manhattan distance (sum of absolute differences).
+ * 
+ * @param r Red component (0-255)
+ * @param g Green component (0-255)
+ * @param b Blue component (0-255)
+ * @return Palette index of the closest matching color
+ */
 uint32 matchcol(int32 r, int32 g, int32 b) {
     static int32 v, v2, n, n2, best, c;
     static int32 *p;
@@ -55,6 +61,18 @@ uint32 matchcol(int32 r, int32 g, int32 b) {
     return best;
 }
 
+/**
+ * Finds the closest matching palette color index for the given RGB values on a specific image.
+ * 
+ * Searches through the specified image's palette to find the color entry that most closely
+ * matches the specified RGB values using Manhattan distance (sum of absolute differences).
+ * 
+ * @param r Red component (0-255)
+ * @param g Green component (0-255)
+ * @param b Blue component (0-255)
+ * @param i Image index to search palette of
+ * @return Palette index of the closest matching color
+ */
 uint32 matchcol(int32 r, int32 g, int32 b, int32 i) {
     static int32 v, v2, n, n2, best, c;
     static int32 *p;
@@ -82,6 +100,19 @@ uint32 matchcol(int32 r, int32 g, int32 b, int32 i) {
 // RGB/RGBA color creation
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Creates an RGB color value from red, green, and blue components.
+ * 
+ * Clamps RGB values to the 0-255 range. For 32-bit images, returns a 32-bit ARGB color value.
+ * For palette-based images, returns the closest matching palette index.
+ * 
+ * @param r Red component (clamped to 0-255)
+ * @param g Green component (clamped to 0-255)
+ * @param b Blue component (clamped to 0-255)
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return 32-bit ARGB color value or palette index, depending on image format
+ */
 uint32 func__rgb(int32 r, int32 g, int32 b, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -126,6 +157,21 @@ uint32 func__rgb(int32 r, int32 g, int32 b, int32 i, int32 passed) {
     } // passed
 } // rgb
 
+/**
+ * Creates an RGBA color value from red, green, blue, and alpha components.
+ * 
+ * Clamps RGBA values to the 0-255 range. For 32-bit images, returns a 32-bit ARGB color value.
+ * For palette-based images, returns the closest matching palette index or transparent color
+ * if alpha is 0 and transparency is enabled.
+ * 
+ * @param r Red component (clamped to 0-255)
+ * @param g Green component (clamped to 0-255)
+ * @param b Blue component (clamped to 0-255)
+ * @param a Alpha component (clamped to 0-255)
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return 32-bit ARGB color value or palette index, depending on image format
+ */
 uint32 func__rgba(int32 r, int32 g, int32 b, int32 a, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -182,6 +228,17 @@ uint32 func__rgba(int32 r, int32 g, int32 b, int32 a, int32 i, int32 passed) {
 // Color channel extraction
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Extracts the alpha channel value from a color.
+ * 
+ * For 32-bit images, returns the alpha component (bits 24-31) of the color.
+ * For palette-based images, returns 255 for opaque colors or 0 for transparent colors.
+ * 
+ * @param col Color value to extract alpha from
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Alpha value (0-255) or 0 on error
+ */
 int32 func__alpha(uint32 col, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -226,6 +283,17 @@ int32 func__alpha(uint32 col, int32 i, int32 passed) {
     } // passed
 }
 
+/**
+ * Extracts the red channel value from a color.
+ * 
+ * For 32-bit images, returns the red component (bits 16-23) of the color.
+ * For palette-based images, returns the red component from the palette entry.
+ * 
+ * @param col Color value to extract red from
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Red value (0-255) or 0 on error
+ */
 int32 func__red(uint32 col, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -266,6 +334,17 @@ int32 func__red(uint32 col, int32 i, int32 passed) {
     } // passed
 }
 
+/**
+ * Extracts the green channel value from a color.
+ * 
+ * For 32-bit images, returns the green component (bits 8-15) of the color.
+ * For palette-based images, returns the green component from the palette entry.
+ * 
+ * @param col Color value to extract green from
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Green value (0-255) or 0 on error
+ */
 int32 func__green(uint32 col, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -306,6 +385,17 @@ int32 func__green(uint32 col, int32 i, int32 passed) {
     } // passed
 }
 
+/**
+ * Extracts the blue channel value from a color.
+ * 
+ * For 32-bit images, returns the blue component (bits 0-7) of the color.
+ * For palette-based images, returns the blue component from the palette entry.
+ * 
+ * @param col Color value to extract blue from
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Blue value (0-255) or 0 on error
+ */
 int32 func__blue(uint32 col, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -350,6 +440,17 @@ int32 func__blue(uint32 col, int32 i, int32 passed) {
 // Clear/transparent color
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Sets or clears the transparent color for an image.
+ * 
+ * For palette-based images, sets which palette index should be treated as transparent.
+ * For 32-bit images, sets all pixels matching the specified color to fully transparent.
+ * Use _NONE option to disable transparency.
+ * 
+ * @param c Color value to set as transparent (ignored if _NONE is specified)
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags: bit 0 = _NONE, bit 1 = color provided, bit 2 = image handle provided
+ */
 void sub__clearcolor(uint32 c, int32 i, int32 passed) {
     //--         _NONE->1       2       4
     // id.specialformat = "[{_NONE}][?][,?]"
@@ -425,6 +526,16 @@ void sub__clearcolor(uint32 c, int32 i, int32 passed) {
     return;
 }
 
+/**
+ * Gets the current transparent color index for an image.
+ * 
+ * Returns the palette index used for transparency in palette-based images,
+ * or -1 if transparency is disabled, or 0 for 32-bit images.
+ * 
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Transparent color index, -1 if disabled, or 0 on error/invalid mode
+ */
 int32 func__clearcolor(int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -457,6 +568,16 @@ int32 func__clearcolor(int32 i, int32 passed) {
 // Default colors
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Gets the default foreground color for an image.
+ * 
+ * Returns the color value that is used as the default drawing color
+ * for the specified image or write page.
+ * 
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Default color value or 0 on error
+ */
 uint32 func__defaultcolor(int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -481,6 +602,16 @@ uint32 func__defaultcolor(int32 i, int32 passed) {
     return img[i].color;
 }
 
+/**
+ * Gets the background color for an image.
+ * 
+ * Returns the color value that is used as the background color
+ * for the specified image or write page.
+ * 
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return Background color value or 0 on error
+ */
 uint32 func__backgroundcolor(int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -509,6 +640,17 @@ uint32 func__backgroundcolor(int32 i, int32 passed) {
 // Palette operations
 //----------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Gets the color value for a specific palette entry.
+ * 
+ * Returns the 32-bit ARGB color value stored at the specified palette index.
+ * Only works with palette-based images.
+ * 
+ * @param n Palette index (0-255)
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ * @return 32-bit ARGB color value or 0 on error
+ */
 uint32 func__palettecolor(int32 n, int32 i, int32 passed) {
     if (is_error_pending())
         return 0;
@@ -541,6 +683,17 @@ uint32 func__palettecolor(int32 n, int32 i, int32 passed) {
     return img[i].pal[n] | 0xFF000000;
 }
 
+/**
+ * Sets the color value for a specific palette entry.
+ * 
+ * Updates the palette entry at the specified index with the new color value.
+ * Only works with palette-based images.
+ * 
+ * @param n Palette index (0-255)
+ * @param c 32-bit ARGB color value to set
+ * @param i Optional image/page handle (if passed parameter is set)
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub__palettecolor(int32 n, uint32 c, int32 i, int32 passed) {
     if (is_error_pending())
         return;
@@ -573,6 +726,16 @@ void sub__palettecolor(int32 n, uint32 c, int32 i, int32 passed) {
     img[i].pal[n] = c;
 }
 
+/**
+ * Copies the palette from one image to another.
+ * 
+ * Copies all 256 palette entries (1024 bytes) from the source image
+ * to the destination image. Both images must be palette-based.
+ * 
+ * @param i Source image/page handle (read page if not provided)
+ * @param i2 Destination image/page handle (write page if not provided)
+ * @param passed Bit flags indicating which parameters were provided
+ */
 void sub__copypalette(int32 i, int32 i2, int32 passed) {
     if (is_error_pending())
         return;

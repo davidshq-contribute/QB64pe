@@ -1,5 +1,9 @@
-
-// Implementation of these functions was pulled from miniaudio.h (MIT)
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE File Path Module
+//  File path manipulation and parsing functions
+//  Implementation based on miniaudio.h (MIT)
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 
