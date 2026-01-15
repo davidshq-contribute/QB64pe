@@ -524,7 +524,7 @@ int32 connection_new(int32 method, qbs *info_in, int32 value) {
         qbs_set(str, qbs_new_txt(":"));
         i = 1;
 
-        for (int k = 0; k < sizeof(info_part) / sizeof(*info_part) - 1; k++) {
+        for (size_t k = 0; k < sizeof(info_part) / sizeof(*info_part) - 1; k++) {
             x = func_instr(i, info, str, 1);
             if (!x)
                 break;
