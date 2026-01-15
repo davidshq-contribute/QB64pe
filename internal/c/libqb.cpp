@@ -53,6 +53,8 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "console.h"
+#include "utility.h"
+#include "window.h"
 
 // These are here because they are used in func__loadfont()
 #include <algorithm>
@@ -148,8 +150,7 @@ int32 environment_2d__letterbox = 0;     // 1=vertical black stripes required, 2
 int32 window_focused = 0; // Not used on Windows
 uint8 *window_title = NULL;
 
-double max_fps = 60; // 60 is the default
-int32 auto_fps = 0;  // set to 1 to make QB64 auto-adjust fps based on load
+// max_fps and auto_fps moved to utility.cpp
 
 int32 os_resize_event = 0;
 
@@ -8573,18 +8574,7 @@ void qbs_lprint(qbs *str, int32 finish_on_new_line) {
 }
 
 int32 no_control_characters = 0;
-int32 no_control_characters2 = 0;
-
-void sub__controlchr(int32 onoff) {
-    if (onoff == 2)
-        no_control_characters2 = 1;
-    else
-        no_control_characters2 = 0;
-}
-
-int32 func__controlchr() {
-    return -no_control_characters2;
-}
+// no_control_characters2, sub__controlchr, func__controlchr moved to utility.cpp
 
 void qbs_print(qbs *str, int32 finish_on_new_line) {
     if (is_error_pending())
@@ -8658,7 +8648,7 @@ void qbs_print(qbs *str, int32 finish_on_new_line) {
 
         // ###special characters
 
-        if (no_control_characters || no_control_characters2)
+        if (no_control_characters || get_control_characters_disabled())
             goto skip_control_characters;
 
         if (character == 28) {
@@ -10796,62 +10786,10 @@ int32 H3C8_palette_register_index = 0;
 int32 H3C9_next = 0;
 int32 H3C9_read_next = 0;
 
-int32 H3C0_blink_enable = 1;
+// H3C0_blink_enable, sub__blink, func__blink moved to utility.cpp
+extern int32 H3C0_blink_enable;
 
-void sub__blink(int32 onoff) {
-    if (onoff == 1)
-        H3C0_blink_enable = 1;
-    else
-        H3C0_blink_enable = 0;
-}
-
-int32 func__blink() {
-    return -H3C0_blink_enable;
-}
-
-int64 func__handle() {
-#ifdef QB64_WINDOWS
-#    ifdef DEPENDENCY_CONSOLE_ONLY
-    if (!window_handle) {
-        char pszConsoleTitle[1024];
-        GetConsoleTitle(pszConsoleTitle, 1024);
-        window_handle = FindWindow(NULL, pszConsoleTitle);
-    }
-    return (ptrszint)window_handle;
-#    endif
-
-    OPTIONAL_GLUT(0);
-    return (ptrszint)window_handle;
-#else
-    return 0;
-#endif
-}
-
-qbs *func__title() {
-    if (!window_title) {
-        return qbs_new_txt("");
-    } else {
-        return qbs_new_txt((char *)window_title);
-    }
-}
-
-void set_foreground_window(ptrszint i) {
-#ifdef QB64_WINDOWS
-    BOOL result = SetForegroundWindow((HWND)i);
-#endif
-    return;
-}
-
-int32 func__hasfocus() {
-#ifdef QB64_GUI
-#    ifdef QB64_WINDOWS
-    return -((HWND)func__handle() == GetForegroundWindow());
-#    elif defined(QB64_LINUX)
-    return window_focused;
-#    endif
-#endif
-    return -1;
-}
+// func__handle, func__title, set_foreground_window, func__hasfocus moved to window.cpp
 
 void sub_out(int32 port, int32 data) {
     if (is_error_pending())
@@ -10907,85 +10845,7 @@ error:
     error(5);
 }
 
-uint32 rnd_seed = 327680;
-uint32 rnd_seed_first = 327680; // Note: must contain the same value as rnd_seed
-
-void sub_randomize(double seed, int32 passed) {
-    if (is_error_pending())
-        return;
-
-    if (passed == 3) { // USING
-        // Dim As Uinteger m = cptr(Uinteger Ptr, @n)[1]
-        static uint32 m;
-        m = ((uint32 *)&seed)[1];
-        // m Xor= (m Shr 16)
-        m ^= (m >> 16);
-        // rnd_seed = (m And &hffff) Shl 8 Or (rnd_seed And &hff)
-        rnd_seed = ((m & 0xffff) << 8) | (rnd_seed_first & 0xff); // Note: rnd_seed changed to rnd_seed_first
-        return;
-    }
-
-    if (passed == 1) {
-        // Dim As Uinteger m = cptr(Uinteger Ptr, @n)[1]
-        static uint32 m;
-        m = ((uint32 *)&seed)[1];
-        // m Xor= (m Shr 16)
-        m ^= (m >> 16);
-        // rnd_seed = (m And &hffff) Shl 8 Or (rnd_seed And &hff)
-        rnd_seed = ((m & 0xffff) << 8) | (rnd_seed & 0xff);
-        return;
-    }
-
-    qbs_print(qbs_new_txt("Random-number seed (-32768 to 32767)? "), 0);
-    static int16 integerseed;
-    qbs_input_variabletypes[1] = 16; // id.t=16 'a signed 16 bit integer
-    qbs_input_variableoffsets[1] = &integerseed;
-    qbs_input(1, 1);
-    // rnd_seed = (m And &hffff) Shl 8 Or (rnd_seed And &hff) 'nb. same as above
-    rnd_seed = ((integerseed & 0xffff) << 8) | (rnd_seed & 0xff);
-    return;
-}
-
-float func_rnd(float n, int32 passed) {
-    if (is_error_pending())
-        return 0;
-
-    static uint32 m;
-    if (!passed)
-        n = 1.0f;
-    if (n != 0.0) {
-        if (n < 0.0) {
-            m = *((uint32 *)&n);
-            rnd_seed = (m & 0xFFFFFF) + ((m & 0xFF000000) >> 24);
-        }
-        rnd_seed = (rnd_seed * 16598013 + 12820163) & 0xFFFFFF;
-    }
-    return (double)rnd_seed / 0x1000000;
-}
-
-void sub__fps(double fps, int32 passed) {
-    // passed=1 means _AUTO
-    // passed=2 means use fps
-    if (is_error_pending())
-        return;
-    if (passed != 1 && passed != 2) {
-        error(5);
-        return;
-    }
-    if (passed == 1) {
-        auto_fps = 1; //_AUTO
-    }
-    if (passed == 2) {
-        if (fps < 1) {
-            error(5);
-            return;
-        }
-        if (fps > 200)
-            fps = 200;
-        max_fps = fps;
-        auto_fps = 0;
-    }
-}
+// sub_randomize, func_rnd, sub__fps moved to utility.cpp
 
 // generic_put, generic_get_bytes_read, and generic_get moved to fileio.cpp
 
@@ -14869,8 +14729,7 @@ void sub_run_init() {
     // note: cursor state does not appear to be reset by the RUN command
     // im->cursor_show=0; im->cursor_firstvalue=4; im->cursor_lastvalue=4;
     // Reset RND & RANDOMIZE state
-    rnd_seed = 327680;
-    rnd_seed_first = 327680; // Note: must contain the same value as rnd_seed
+    reset_rnd_state();
     // clear keyboard buffers
     sub__keyclear(NULL, 0);
 }
@@ -18624,7 +18483,7 @@ void GLUT_IDLEFUNC() {
     int64_t elapsed = curTime - lastTick;
 
     // Calculate out the error between how long the frame was 'supposed' to take vs. how long it actually took.
-    deltaTick += ((double)1000 / max_fps) - (double)elapsed;
+    deltaTick += ((double)1000 / get_max_fps()) - (double)elapsed;
 
     lastTick = curTime;
 
@@ -18641,8 +18500,8 @@ void GLUT_IDLEFUNC() {
         lastTick = sleepTime;
     } else {
         // If we fall behind by a full frame or more, then skip to the next one
-        while (deltaTick < -((double)1000 / max_fps))
-            deltaTick += ((double)1000 / max_fps);
+        while (deltaTick < -((double)1000 / get_max_fps()))
+            deltaTick += ((double)1000 / get_max_fps());
     }
 
     glutPostRedisplay();
