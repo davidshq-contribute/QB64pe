@@ -11,23 +11,25 @@
 #ifndef INCLUDE_LIBQB_FILEIO_H
 #define INCLUDE_LIBQB_FILEIO_H
 
+// ============================================================================
+// DEPENDENCIES
+// ============================================================================
+
 #include "../../os.h"
 
+// Forward declarations
 struct qbs;
 struct byte_element_struct;
+
+// ============================================================================
+// PUBLIC API DECLARATIONS
+// ============================================================================
 
 // File open/close operations
 void sub_open(qbs *name, int32 type, int32 access, int32 sharing, int32 i, int64 record_length, int32 passed);
 void sub_open_gwbasic(qbs *typestr, int32 i, qbs *name, int64 record_length, int32 passed);
 void sub_close(int32 i2, int32 passed);
 int32 func_freefile();
-
-// NOTE: The following functions remain in libqb.cpp for now and will be migrated later:
-// - sub_file_print
-// - sub_file_input_string
-// - sub_file_line_input_string
-// - func_input
-// - sub_get, sub_get2, sub_put, sub_put2
 
 // BLOAD/BSAVE operations
 void sub_bload(qbs *filename, int32 offset, int32 passed);
@@ -39,6 +41,10 @@ int32 func_eof(int32 i);
 void sub_seek(int32 i, int64 pos);
 int64 func_seek(int32 i);
 int64 func_loc(int32 i);
+
+// ============================================================================
+// INTERNAL HELPERS (exposed for other modules)
+// ============================================================================
 
 // Generic I/O helpers (internal use but needed by other modules)
 int32 generic_put(int32 i, int32 offset, uint8 *cp, int32 bytes);
@@ -67,5 +73,23 @@ int32 n_inputnumberfromfile(int32 fileno);
 int32 file_input_chr(int32 i);
 void file_input_skip1310(int32 i, int32 c);
 void file_input_nextitem(int32 i, int32 lastc);
+
+// ============================================================================
+// IMPLEMENTATION NOTES
+// ============================================================================
+
+// TODO: The following functions remain in libqb.cpp and will be migrated later:
+// - sub_file_print
+// - sub_file_input_string
+// - sub_file_line_input_string
+// - func_input
+// - sub_get, sub_get2, sub_put, sub_put2
+
+// This module provides file I/O functionality including:
+// - File open/close operations with various access modes
+// - Binary file operations (BLOAD/BSAVE)
+// - File status and positioning functions
+// - Number parsing utilities for data input
+// - Low-level I/O helper functions
 
 #endif // INCLUDE_LIBQB_FILEIO_H

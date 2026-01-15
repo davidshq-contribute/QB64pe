@@ -4,55 +4,43 @@
 //  | (_) | _ \/ _ \__ | || ||  _/|  __/
 //   \__\_\___/\___/|_||_||_||_|   \___|
 //
-//  QB64-PE Screen Management Module
+//  QB64-PE [Module Name] Module
+//  [Brief description of module purpose]
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#ifndef INCLUDE_LIBQB_SCREEN_H
-#define INCLUDE_LIBQB_SCREEN_H
+#ifndef INCLUDE_LIBQB_[MODULE_NAME]_H
+#define INCLUDE_LIBQB_[MODULE_NAME]_H
 
 // ============================================================================
 // DEPENDENCIES
 // ============================================================================
 
-#include <stdint.h>
+#include <stdint.h>  // Standard integer types
+// Add other system headers here
+
+// Forward declarations
+struct qbs;
+struct byte_element_struct;
 
 // ============================================================================
 // PUBLIC API DECLARATIONS
 // ============================================================================
 
-// Display control
-void sub__display();
-void sub__autodisplay();
+// [Group 1: Primary functionality]
+// Function declarations with brief comments describing purpose
 
-// Fullscreen control
-void sub__fullscreen(int32_t method, int32_t passed);
-int32_t func__fullscreen();
-int32_t func__fullscreensmooth();
-void sub__allowfullscreen(int32_t method, int32_t smooth);
+// [Group 2: Secondary functionality]
+// Related function declarations
 
-// Resize handling
-void sub__resize(int32_t on_off, int32_t stretch_smooth);
-int32_t func__resize();
-int32_t func__resizewidth();
-int32_t func__resizeheight();
-
-// Scaled dimensions
-int32_t func__scaledwidth();
-int32_t func__scaledheight();
-
-// Screen position
-int32_t func__screenx();
-int32_t func__screeny();
+// [Group 3: Internal helpers exposed for other modules]
+// Functions needed by other modules but not part of public API
 
 // ============================================================================
 // IMPLEMENTATION NOTES
 // ============================================================================
 
-// This module provides screen management functionality including:
-// - Display control and automatic display updates
-// - Fullscreen mode management with smooth scaling options
-// - Window resize handling and dimension queries
-// - Screen position and scaled dimension utilities
+// Any important notes about implementation, dependencies, or future plans
+// Include TODO items for functions still in libqb.cpp
 
-#endif // INCLUDE_LIBQB_SCREEN_H
+#endif // INCLUDE_LIBQB_[MODULE_NAME]_H
