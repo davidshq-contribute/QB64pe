@@ -637,31 +637,47 @@ SUB next_token
 END SUB
 
 SUB next_token_raw
+    ' Lexer state machine: Tokenizes input stream character by character
+    ' Uses a finite state machine to track current parsing context (word, string, comment, etc.)
+    
     DIM c, return_token, token_content$, spaces$, unread
     DO
+        ' Read next character from input stream
         c = ASC(input_content$, next_chr_idx)
         next_chr_idx = next_chr_idx + 1
         column_count = column_count + 1
+        
+        ' State machine: Each state handles different parsing contexts
         SELECT CASE tk_state
             CASE STATE_BEGIN
+                ' Initial state: Determine token type from first character
                 SELECT CASE c
+                    ' Alphanumeric characters start a word/identifier token
+                    ' Includes type suffixes: & (LONG), . (SINGLE), ? (DOUBLE), etc.
             case asc("A") to asc("Z"), asc("a") to asc("z"), asc("_"), asc("0") to asc("9"), _
                  asc("&"), asc("."), asc("?")
                         tk_state = STATE_WORD
+                    ' $ starts a metacommand (e.g., $IF, $INCLUDE)
                     CASE ASC("$")
                         tk_state = STATE_METACMD
+                    ' : is a standalone token (label separator)
                     CASE ASC(":")
                         return_token = TOK_COLON
+                    ' Operators and punctuation are standalone tokens
             case asc("^"), asc("*"), asc("-"), asc("+"), asc("="), asc("\"), asc("#"), _
                  asc(";"), asc("<"), asc(">"), asc("/"), asc("("), asc(")"), asc(",")
                         return_token = TOK_PUNCTUATION
+                    ' " starts a string literal
                     CASE ASCII_QUOTE
                         tk_state = STATE_STRING
+                    ' ' starts a comment (rest of line)
                     CASE ASC("'")
                         tk_state = STATE_COMMENT
+                    ' Whitespace: accumulate but don't create token yet
                     CASE ASC(" "), ASCII_TAB, ASCII_VTAB
                         spaces$ = spaces$ + CHR$(c)
                         _CONTINUE
+                    ' Line endings: transition to newline state
                     CASE ASCII_CR, ASCII_LF, ASCII_EOF
                         tk_state = STATE_NEWLINE
                         unread = TRUE
@@ -671,6 +687,8 @@ SUB next_token_raw
                         tk_state = STATE_WORD
                 END SELECT
             CASE STATE_METACMD
+                ' Metacommand state: Read until end of line
+                ' Metacommands are preprocessor directives like $IF, $INCLUDE
                 SELECT CASE c
                     CASE ASCII_CR, ASCII_LF, ASCII_EOF
                         tk_state = STATE_NEWLINE
@@ -678,16 +696,20 @@ SUB next_token_raw
                         unread = TRUE
                 END SELECT
             CASE STATE_WORD
+                ' Word/identifier state: Continue reading while valid identifier characters
+                ' Valid chars include type suffixes: ` (BIT), ~ (UNSIGNED), ! (SINGLE), etc.
                 SELECT CASE c
             case asc("A") to asc("Z"), asc("a") to asc("z"), asc("_"), asc("0") to asc("9"), _
                  asc("`"), asc("~"), asc("!"), asc("#"), asc("$"), asc("%"), asc("&"), asc("."), asc("?")
-                        'Continue
+                        'Continue accumulating characters
                     CASE ELSE
+                        ' End of word: return to begin state and emit word token
                         tk_state = STATE_BEGIN
                         return_token = TOK_WORD
                         unread = TRUE
                 END SELECT
             CASE STATE_COMMENT
+                ' Comment state: Read until end of line (comments extend to EOL)
                 SELECT CASE c
                     CASE ASCII_CR, ASCII_LF, ASCII_EOF
                         tk_state = STATE_NEWLINE
@@ -695,16 +717,22 @@ SUB next_token_raw
                         unread = TRUE
                 END SELECT
             CASE STATE_STRING
+                ' String literal state: Read until closing quote or end of line
+                ' Note: Unclosed strings are allowed (QB64 compatibility)
                 SELECT CASE c
                     CASE ASCII_QUOTE
+                        ' Closing quote: end of string token
                         tk_state = STATE_BEGIN
                         return_token = TOK_STRING
                     CASE ASCII_CR, ASCII_LF, ASCII_EOF
+                        ' End of line without closing quote: emit string token anyway
                         tk_state = STATE_NEWLINE
                         return_token = TOK_STRING
                         unread = TRUE
                 END SELECT
             CASE STATE_DATA
+                ' DATA statement state: Read until end of line
+                ' DATA statements have special parsing rules
                 SELECT CASE c
                     CASE ASCII_CR, ASCII_LF, ASCII_EOF
                         tk_state = STATE_NEWLINE
@@ -712,13 +740,17 @@ SUB next_token_raw
                         unread = TRUE
                 END SELECT
             CASE STATE_NEWLINE
+                ' Newline state: Handle different line ending formats
                 SELECT CASE c
                     CASE ASCII_LF
+                        ' Unix-style newline (\n) or second char of Windows newline (\r\n)
                         tk_state = STATE_BEGIN
                         return_token = TOK_NEWLINE
                     CASE ASCII_CR
+                        ' Windows-style newline: might be followed by \n
                         tk_state = STATE_NEWLINE_WIN
                     CASE ASCII_EOF
+                        ' End of file: emit EOF token
                         return_token = TOK_EOF
                         unread = TRUE 'Do not insert EOF character
                     CASE ELSE

@@ -64,8 +64,10 @@ void new_mem_lock() {
         // No freed locks available - allocate from the main pool
         // Check if we've exhausted the current pool allocation
         if (mem_lock_next == mem_lock_max) {
-            // Pool exhausted: allocate a new pool block (note: old block is not freed,
-            // existing locks remain valid, but we start a fresh allocation block)
+            // Pool exhausted: allocate a new pool block
+            // Note: The old block is not freed (memory leak), but existing locks pointing
+            // to the old block remain valid since the memory is still allocated.
+            // We start a fresh allocation block for new allocations.
             mem_lock *new_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
             if (!new_base) {
                 error(518); // critical error: out of memory

@@ -249,71 +249,102 @@ FUNCTION symboltype (s$) 'returns type or 0(not a valid symbol)
 END FUNCTION
 
 FUNCTION typ2ctyp$ (t AS LONG, tstr AS STRING)
+    ' Converts QB64 type representation to C type name string
+    ' Type can be passed in three formats (the unused value is ignored):
+    ' i. as a typ value in t (bit flags)
+    ' ii. as a typ symbol (eg. "~%") in tstr
+    ' iii. as a typ name (eg. "_UNSIGNED INTEGER") in tstr
+    
     ctyp$ = ""
-    'typ can be passed as either: (the unused value is ignored)
-    'i. as a typ value in t
-    'ii. as a typ symbol (eg. "~%") in tstr
-    'iii. as a typ name (eg. _UNSIGNED INTEGER) in tstr
     IF tstr$ = "" THEN
+        ' Convert from type value (bit flags)
         IF (t AND ISARRAY) THEN EXIT FUNCTION 'cannot return array types
         IF (t AND ISSTRING) THEN typ2ctyp$ = "qbs": EXIT FUNCTION
+        
+        ' Extract size in bits (lower 9 bits contain size information)
         b = t AND 511
+        
+        ' User-defined types map to void* in C
         IF (t AND ISUDT) THEN typ2ctyp$ = "void": EXIT FUNCTION
+        
+        ' Bit types: _BIT*n maps to int32_t or int64_t depending on size
         IF (t AND ISOFFSETINBITS) THEN
             IF b <= 32 THEN ctyp$ = "int32" ELSE ctyp$ = "int64"
             IF (t AND ISUNSIGNED) THEN ctyp$ = "u" + ctyp$
             typ2ctyp$ = ctyp$: EXIT FUNCTION
         END IF
+        
+        ' Floating point types: size determines float/double/long double
         IF (t AND ISFLOAT) THEN
             IF b = 32 THEN ctyp$ = "float"
             IF b = 64 THEN ctyp$ = "double"
             IF b = 256 THEN ctyp$ = "long double"
         ELSE
+            ' Integer types: size determines int8/int16/int32/int64
             IF b = 8 THEN ctyp$ = "int8"
             IF b = 16 THEN ctyp$ = "int16"
             IF b = 32 THEN ctyp$ = "int32"
             IF b = 64 THEN ctyp$ = "int64"
+            ' Offset types are pointer-sized integers
             IF t AND ISOFFSET THEN ctyp$ = "ptrszint"
+            ' Add 'u' prefix for unsigned types
             IF (t AND ISUNSIGNED) THEN ctyp$ = "u" + ctyp$
         END IF
+        
+        ' Handle offset types (pointer-sized, may override previous assignment)
         IF t AND ISOFFSET THEN
             ctyp$ = "ptrszint": IF (t AND ISUNSIGNED) THEN ctyp$ = "uptrszint"
         END IF
         typ2ctyp$ = ctyp$: EXIT FUNCTION
     END IF
 
+    ' Convert from type symbol string (e.g., "$", "!", "#", "~%", etc.)
     ts$ = tstr$
-    'is ts$ a symbol?
+    
+    ' Direct symbol mappings for common types
     IF ts$ = "$" THEN ctyp$ = "qbs"
     IF ts$ = "!" THEN ctyp$ = "float"
     IF ts$ = "#" THEN ctyp$ = "double"
     IF ts$ = "##" THEN ctyp$ = "long double"
+    
+    ' Handle unsigned modifier: "~" prefix indicates unsigned type
     IF LEFT$(ts$, 1) = "~" THEN unsgn = 1: ts$ = RIGHT$(ts$, LEN(ts$) - 1)
+    
+    ' Bit type handling: "`" prefix indicates _BIT type, may have size suffix
     IF LEFT$(ts$, 1) = "`" THEN
         n$ = RIGHT$(ts$, LEN(ts$) - 1)
-        b = 1
+        b = 1 ' Default to 1 bit if no size specified
         IF n$ <> "" THEN
+            ' Validate and parse bit size (e.g., "`8" for _BIT*8)
             IF isuinteger(n$) = 0 THEN Give_Error "Invalid index after _BIT type": EXIT FUNCTION
             b = VAL(n$)
             IF b > 64 THEN Give_Error "Invalid index after _BIT type": EXIT FUNCTION
         END IF
+        ' Bit types map to int32_t or int64_t based on total size
         IF b <= 32 THEN ctyp$ = "int32" ELSE ctyp$ = "int64"
         IF unsgn THEN ctyp$ = "u" + ctyp$
         typ2ctyp$ = ctyp$: EXIT FUNCTION
     END IF
+    
+    ' Offset type: "%&" maps to pointer-sized integer
     IF ts$ = "%&" THEN
         typ2ctyp$ = "ptrszint": IF (t AND ISUNSIGNED) THEN typ2ctyp$ = "uptrszint"
         EXIT FUNCTION
     END IF
+    
+    ' Integer type symbols: %% = BYTE, % = INTEGER, & = LONG, && = _INTEGER64
     IF ts$ = "%%" THEN ctyp$ = "int8"
     IF ts$ = "%" THEN ctyp$ = "int16"
     IF ts$ = "&" THEN ctyp$ = "int32"
     IF ts$ = "&&" THEN ctyp$ = "int64"
     IF ctyp$ <> "" THEN
+        ' Apply unsigned modifier if present
         IF unsgn THEN ctyp$ = "u" + ctyp$
         typ2ctyp$ = ctyp$: EXIT FUNCTION
     END IF
-    'is tstr$ a named type? (eg. 'LONG')
+    
+    ' Try converting type name to symbol, then recursively convert
+    ' This handles named types like "LONG", "_UNSIGNED INTEGER", etc.
     s$ = type2symbol$(tstr$)
     IF Error_Happened THEN EXIT FUNCTION
     IF LEN(s$) THEN
@@ -734,8 +765,14 @@ FUNCTION isuinteger (i$)
 END FUNCTION
 
 FUNCTION Type_PromoteArithmeticType& (qbTypA AS LONG, qbTypB AS LONG)
+    ' Type promotion algorithm: Determines the result type when performing arithmetic operations
+    ' between two different types. Follows C-style type promotion rules adapted for QB64.
+    
+    ' Strip context flags (array, reference, etc.) to get base type information
     DIM typeA AS LONG: typeA = Type_StripContextFlags(qbTypA)
     DIM typeB AS LONG: typeB = Type_StripContextFlags(qbTypB)
+    
+    ' Extract type characteristics for promotion decision logic
     DIM isFloatA AS _BYTE: isFloatA = Type_IsFloatingPoint(typeA)
     DIM isFloatB AS _BYTE: isFloatB = Type_IsFloatingPoint(typeB)
     DIM isUnsignedA AS _BYTE: isUnsignedA = Type_IsUnsigned(typeA)
@@ -743,19 +780,25 @@ FUNCTION Type_PromoteArithmeticType& (qbTypA AS LONG, qbTypB AS LONG)
     DIM sizeA AS _UNSIGNED LONG: sizeA = Type_GetSizeInBits(typeA)
     DIM sizeB AS _UNSIGNED LONG: sizeB = Type_GetSizeInBits(typeB)
 
+    ' Rule 1: Identical types require no promotion
     IF typeA = typeB THEN ' both are of the same type
         Type_PromoteArithmeticType = typeA
+    ' Rule 2: UOFFSET takes precedence over all other types (pointer arithmetic)
     ELSEIF typeA = UOFFSETTYPE _ORELSE typeB = UOFFSETTYPE THEN ' special case UOFFSET
         Type_PromoteArithmeticType = UOFFSETTYPE
+    ' Rule 3: OFFSET takes precedence over non-UOFFSET types
     ELSEIF typeA = OFFSETTYPE _ORELSE typeB = OFFSETTYPE THEN ' special case OFFSET
         Type_PromoteArithmeticType = OFFSETTYPE
+    ' Rule 4: When both types share the same category (float or unsigned), promote to larger size
     ELSEIF (isFloatA _ANDALSO isFloatB) _ORELSE (isUnsignedA _ANDALSO isUnsignedB) THEN ' both are floating point or both are unsigned
         Type_PromoteArithmeticType = _IIF(sizeA > sizeB, typeA, typeB)
+    ' Rule 5: Same size but different categories - floating point wins over integer
     ELSEIF sizeA = sizeB THEN ' both are of the same size
         IF isFloatA _ANDALSO NOT isFloatB THEN ' one is a floating point
             Type_PromoteArithmeticType = typeA
         ELSEIF NOT isFloatA _ANDALSO isFloatB THEN ' one is a floating point
             Type_PromoteArithmeticType = typeB
+        ' Rule 5a: Same size, one unsigned - unsigned wins (preserves value range)
         ELSEIF isUnsignedA _ANDALSO NOT isUnsignedB THEN ' one is an unsigned
             Type_PromoteArithmeticType = typeA
         ELSEIF NOT isUnsignedA _ANDALSO isUnsignedB THEN ' one is an unsigned
@@ -763,34 +806,46 @@ FUNCTION Type_PromoteArithmeticType& (qbTypA AS LONG, qbTypB AS LONG)
         ELSE
             Type_PromoteArithmeticType = typeA ' both are of the same sized signed type
         END IF
+    ' Rule 6: Different sizes - promote smaller to larger, with special float handling
     ELSEIF sizeA < sizeB THEN ' one is smaller than the other
+        ' Special case: if smaller type is float, promote to next larger float type
         IF isFloatA _ANDALSO NOT isFloatB THEN ' one is a floating point
             SELECT CASE typeA
                 CASE SINGLETYPE
+                    ' SINGLE (32-bit) promotes to DOUBLE (64-bit) when mixed with larger integer
                     Type_PromoteArithmeticType = DOUBLETYPE
                 CASE DOUBLETYPE
+                    ' DOUBLE (64-bit) promotes to _FLOAT (256-bit) when mixed with larger integer
                     Type_PromoteArithmeticType = FLOATTYPE
                 CASE FLOATTYPE
+                    ' _FLOAT is already largest, stays as _FLOAT
                     Type_PromoteArithmeticType = FLOATTYPE
                 CASE ELSE
                     Type_PromoteArithmeticType = typeA
             END SELECT
         ELSE
+            ' Standard promotion: smaller integer promotes to larger integer
             Type_PromoteArithmeticType = typeB ' promote the larger one
         END IF
+    ' Rule 7: Same as Rule 6 but with reversed size relationship
     ELSEIF sizeA > sizeB THEN ' one is smaller than the other
+        ' Special case: if smaller type is float, promote to next larger float type
         IF NOT isFloatA _ANDALSO isFloatB THEN ' one is a floating point
             SELECT CASE typeB
                 CASE SINGLETYPE
+                    ' SINGLE (32-bit) promotes to DOUBLE (64-bit) when mixed with larger integer
                     Type_PromoteArithmeticType = DOUBLETYPE
                 CASE DOUBLETYPE
+                    ' DOUBLE (64-bit) promotes to _FLOAT (256-bit) when mixed with larger integer
                     Type_PromoteArithmeticType = FLOATTYPE
                 CASE FLOATTYPE
+                    ' _FLOAT is already largest, stays as _FLOAT
                     Type_PromoteArithmeticType = FLOATTYPE
                 CASE ELSE
                     Type_PromoteArithmeticType = typeB
             END SELECT
         ELSE
+            ' Standard promotion: smaller integer promotes to larger integer
             Type_PromoteArithmeticType = typeA ' promote the larger one
         END IF
     END IF

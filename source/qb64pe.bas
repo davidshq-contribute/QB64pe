@@ -1904,8 +1904,10 @@ DO
         wholeline$ = lineformat(wholeline$)
         IF Error_Happened THEN GOTO errmes
 
+        ' Preserve original case for display/output purposes
         cwholeline$ = wholeline$
-        wholeline$ = eleucase$(wholeline$) '********REMOVE THIS LINE LATER********
+        ' Convert to uppercase for case-insensitive keyword parsing (preserves quoted strings)
+        wholeline$ = eleucase$(wholeline$)
 
 
         addmetadynamic = 0: addmetastatic = 0
@@ -5098,18 +5100,25 @@ DO
                 l$ = l$ + sp + "("
                 IF n = 4 THEN GOTO nosfparams2
                 IF n < 4 THEN a$ = "Expected ( ... )": GOTO errmes
+                ' Parameter parsing: Extract individual parameters separated by commas
+                ' Use balanced parenthesis counter to handle nested expressions in parameters
+                ' Example: SUB test(a, func(b, c), d) - must correctly identify 3 parameters
                 B = 0
                 a2$ = ""
                 FOR i = 4 TO n - 1
                     e$ = getelement$(ca$, i)
+                    ' Track nesting depth: Increment for opening paren, decrement for closing
                     IF e$ = "(" THEN B = B + 1
                     IF e$ = ")" THEN B = B - 1
+                    ' Parameter separator: Comma at nesting level 0 indicates parameter boundary
+                    ' Only split on commas that aren't inside nested expressions
                     IF e$ = "," AND B = 0 THEN
                         IF i = n - 1 THEN a$ = "Expected , ... )": GOTO errmes
                         getlastparam2:
                         IF a2$ = "" THEN a$ = "Expected ... ,": GOTO errmes
                         a2$ = LEFT$(a2$, LEN(a2$) - 1)
-                        'possible format: [BYVAL]a[%][(1)][AS][type]
+                        ' Parameter format parsing: [BYVAL]a[%][(1)][AS][type]
+                        ' Handles: BYVAL modifier, variable name, type suffix, array dimensions, AS type clause
                         params = params + 1
                         glinkid = targetid
                         glinkarg = params
@@ -5993,9 +6002,12 @@ DO
             l$ = l$ + sp + tlayout$
             e$ = evaluate(e$, typ)
             IF Error_Happened THEN GOTO errmes
+            ' FOR loop variable validation: Only pointer types (non-string, non-offset-in-bits, non-array) are allowed
+            ' This ensures the loop variable can be incremented and compared properly
             IF (typ AND ISREFERENCE) THEN
                 getid VAL(e$)
                 IF Error_Happened THEN GOTO errmes
+                ' Validate variable type: must be a pointer, but not string/offset-in-bits/array
                 IF (id.t AND ISPOINTER) THEN
                     IF (id.t AND ISSTRING) = 0 THEN
                         IF (id.t AND ISOFFSETINBITS) = 0 THEN
@@ -6011,16 +6023,21 @@ DO
             controlvalue(controllevel) = currentid
             v$ = e$
 
-            'find C++ datatype to match variable
-            'markup to cater for greater range/accuracy
+            ' Type conversion for FOR loop: Upgrade to larger C++ types for better range/accuracy
+            ' This prevents overflow and precision loss during loop iterations
+            ' Strategy: Upgrade smaller types to larger ones (e.g., SINGLE->double, INTEGER->int32)
             ctype$ = ""
             ctyp = typ - ISPOINTER
             bits = typ AND 511
             IF (typ AND ISFLOAT) THEN
+                ' Floating point: Upgrade SINGLE (32-bit) to double (64-bit) for precision
                 IF bits = 32 THEN ctype$ = "double": ctyp = 64& + ISFLOAT
+                ' DOUBLE and _FLOAT both map to long double for maximum precision
                 IF bits = 64 THEN ctype$ = "long double": ctyp = 256& + ISFLOAT
                 IF bits = 256 THEN ctype$ = "long double": ctyp = 256& + ISFLOAT
             ELSE
+                ' Integer types: Upgrade to prevent overflow (e.g., BYTE->int16, INTEGER->int32)
+                ' This ensures loop can handle large step values and final values
                 IF bits = 8 THEN ctype$ = "int16": ctyp = 16&
                 IF bits = 16 THEN ctype$ = "int32": ctyp = 32&
                 IF bits = 32 THEN ctype$ = "int64": ctyp = 64&
@@ -6070,18 +6087,29 @@ DO
             END IF
 
             WriteBufLine MainTxtBuf, "fornext_step" + u$ + "=" + e$ + ";"
+            ' Detect step direction: Negative steps require different termination condition
+            ' This flag is used later to determine if loop should continue when value < final (negative step)
+            ' or when value > final (positive step)
             WriteBufLine MainTxtBuf, "if (fornext_step" + u$ + "<0) fornext_step_negative" + u$ + "=1; else fornext_step_negative" + u$ + "=0;"
 
+            ' Error handling: Check for pending errors before entering loop
             WriteBufLine MainTxtBuf, "if (is_error_pending()) goto fornext_error" + u$ + ";"
+            ' Jump to loop entry point (skips initial increment on first iteration)
             WriteBufLine MainTxtBuf, "goto fornext_entrylabel" + u$ + ";"
             WriteBufLine MainTxtBuf, "while(1){"
             typbak = typ
+            ' Loop increment: Add step to current variable value and store in temporary
+            ' This happens at the end of each iteration, before checking termination condition
             WriteBufLine MainTxtBuf, "fornext_value" + u$ + "=fornext_step" + u$ + "+(" + refer$(v$, typ, 0) + ");"
             IF Error_Happened THEN GOTO errmes
             typ = typbak
             WriteBufLine MainTxtBuf, "fornext_entrylabel" + u$ + ":"
+            ' Update loop variable: Assign incremented value back to the loop control variable
             setrefer v$, typ, "fornext_value" + u$, 1
             IF Error_Happened THEN GOTO errmes
+            ' Termination condition: Check if loop should exit based on step direction
+            ' Negative step: exit when value < final (counting down)
+            ' Positive step: exit when value > final (counting up)
             WriteBufLine MainTxtBuf, "if (fornext_step_negative" + u$ + "){"
             WriteBufLine MainTxtBuf, "if (fornext_value" + u$ + "<fornext_finalvalue" + u$ + ") break;"
             WriteBufLine MainTxtBuf, "}else{"
@@ -6099,25 +6127,32 @@ DO
     IF n = 1 THEN
         IF firstelement$ = "ELSE" THEN
 
-            'Routine to add error checking for ELSE so we'll no longer be able to do things like the following:
-            'IF x = 1 THEN
-            '    SELECT CASE s
-            '        CASE 1
-            '    END SELECT ELSE y = 2
-            'END IF
-            'Notice the ELSE with the SELECT CASE?  Before this patch, commands like those were considered valid QB64 code.
+            ' ELSE statement validation: Prevents invalid syntax like "END SELECT ELSE y = 2"
+            ' This routine validates that ELSE appears in a valid context (after IF, not after SELECT CASE, etc.)
+            ' Example of invalid code this prevents:
+            '   IF x = 1 THEN
+            '       SELECT CASE s
+            '           CASE 1
+            '       END SELECT ELSE y = 2  ' ERROR: ELSE after SELECT CASE
+            '   END IF
             temp$ = UCASE$(LTRIM$(RTRIM$(wholeline)))
+            ' Normalize whitespace: Convert tabs to spaces for consistent parsing
             DO WHILE INSTR(temp$, CHR$(9))
                 ASC(temp$, INSTR(temp$, CHR$(9))) = 32
             LOOP
-            goodelse = 0 'a check to see if it's a good else
-            IF LEFT$(temp$, 2) = "IF" THEN goodelse = -1: GOTO skipelsecheck 'If we have an IF, the else is probably good
-            IF LEFT$(temp$, 4) = "ELSE" THEN goodelse = -1: GOTO skipelsecheck 'If it's an else by itself,then we'll call it good too at this point and let the rest of the syntax checking check for us
+            goodelse = 0 ' Validation flag: 0 = invalid, -1 = valid
+            ' Quick validation: IF or standalone ELSE at start of line are always valid
+            IF LEFT$(temp$, 2) = "IF" THEN goodelse = -1: GOTO skipelsecheck
+            IF LEFT$(temp$, 4) = "ELSE" THEN goodelse = -1: GOTO skipelsecheck
+            ' Remove all spaces to check for label prefixes (e.g., "label:ELSE")
             DO
                 spacelocation = INSTR(temp$, " ")
                 IF spacelocation THEN temp$ = LEFT$(temp$, spacelocation - 1) + MID$(temp$, spacelocation + 1)
             LOOP UNTIL spacelocation = 0
-            IF INSTR(temp$, ":ELSE") OR INSTR(temp$, ":IF") THEN goodelse = -1: GOTO skipelsecheck 'I personally don't like the idea of a :ELSE statement, but this checks for that and validates it as well.  YUCK!  (I suppose this might be useful if there's a label where the ELSE is, like thisline: ELSE
+            ' Allow label prefixes: "label:ELSE" or "label:IF" are considered valid
+            IF INSTR(temp$, ":ELSE") OR INSTR(temp$, ":IF") THEN goodelse = -1: GOTO skipelsecheck
+            ' Skip leading digits and colons (line numbers and labels) to find actual statement
+            ' This handles cases like "100 ELSE" or "mylabel:ELSE"
             count = 0
             DO
                 count = count + 1
@@ -6126,7 +6161,8 @@ DO
                     CASE ELSE: EXIT DO
                 END SELECT
             LOOP UNTIL count >= LEN(temp$)
-            IF MID$(temp$, count, 4) = "ELSE" OR MID$(temp$, count, 2) = "IF" THEN goodelse = -1 'We only had numbers before our else
+            ' Validate: After skipping numbers/labels, must find "ELSE" or "IF"
+            IF MID$(temp$, count, 4) = "ELSE" OR MID$(temp$, count, 2) = "IF" THEN goodelse = -1
             IF NOT goodelse THEN a$ = "Invalid Syntax for ELSE": GOTO errmes
             skipelsecheck:
             'End of ELSE Error checking
@@ -8185,21 +8221,30 @@ DO
                 'get the next element
                 IF i >= n + 1 THEN e$ = "" ELSE e$ = getelement(a$, i): i = i + 1
 
-                'check if next element is a ( to create an array
+                ' Array dimension parsing: Extract dimension specifications from parentheses
+                ' Handles multi-dimensional arrays like DIM arr(10, 20, 30) or nested expressions
                 elements$ = ""
 
                 IF e$ = "(" THEN
+                    ' Balanced parenthesis counter: Track nesting depth to handle nested expressions
+                    ' Example: DIM arr(10, func(5), 20) - must match all opening/closing parens
                     B = 1
                     FOR i = i TO n
                         e$ = getelement(ca$, i)
+                        ' Increment counter for nested opening parentheses
                         IF e$ = "(" THEN B = B + 1
+                        ' Decrement counter for closing parentheses
                         IF e$ = ")" THEN B = B - 1
+                        ' When counter reaches 0, we've found the matching closing paren
                         IF B = 0 THEN EXIT FOR
+                        ' Accumulate dimension specification string (e.g., "10, 20, 30")
                         IF LEN(elements$) THEN elements$ = elements$ + sp + e$ ELSE elements$ = e$
                     NEXT
+                    ' Validate: All parentheses must be balanced
                     IF B <> 0 THEN a$ = "Expected )": GOTO errmes
                     i = i + 1 'set i to point to the next element
 
+                    ' COMMON arrays use "?" as placeholder (dimensions resolved later)
                     IF commonoption THEN elements$ = "?"
 
 
@@ -10716,14 +10761,6 @@ DO
                                 'convertspacing=1
 
 
-                                'if debug=1 then
-                                'print #9,"LPRINT:"
-                                'print #9,s
-                                'print #9,an
-                                'print #9,l$
-                                'print #9,x2$
-                                'end if
-
                             END IF
 
 
@@ -11851,12 +11888,6 @@ lastunresolved = unresolved
 'IF sflistn <> -1 THEN
 'IF sflistn <> oldsflistn THEN
 'recompile = 1
-'
-'if debug then
-'print #9,"recompile set to 1 to resolve array elements"
-'print #9,"sflistn=";sflistn
-'print #9,"oldsflistn=";oldsflistn
-'end if
 '
 'END IF
 'END IF
@@ -18285,7 +18316,9 @@ FUNCTION evaluatefunc$ (a2$, args AS LONG, typ AS LONG)
     END IF
 
     IF n$ = "UBOUND" OR n$ = "LBOUND" THEN
-        IF r$ = ",NULL" THEN r$ = ",1" ' FIXME: ??????
+        ' Default dimension parameter to 1 when omitted (UBOUND/LBOUND syntax: arrayName[, dimension%])
+        ' When the optional dimension argument is not provided, it's represented as ",NULL" and must be converted to ",1"
+        IF r$ = ",NULL" THEN r$ = ",1"
         IF n$ = "UBOUND" THEN r2$ = "func_ubound(" ELSE r2$ = "func_lbound("
         e$ = refer$(ulboundarray$, sourcetyp, 1)
         IF Error_Happened THEN EXIT FUNCTION
