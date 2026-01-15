@@ -45,6 +45,36 @@ extern int32 environment_2d__screen_y1;
 extern int32 environment_2d__screen_scaled_width;
 extern int32 environment_2d__screen_scaled_height;
 
+// Display control globals
+extern int32 screen_hide;
+extern int32 autodisplay;
+extern void display();
+
+// Fullscreen state globals
+extern int32 full_screen;
+extern int32 full_screen_set;
+extern int32 fullscreen_smooth;
+extern int32 fullscreen_allowedmode;
+extern int32 fullscreen_allowedsmooth;
+extern int32 force_display_update;
+
+// Resize state globals
+extern int32 resize_snapback;
+extern int32 resize_auto;
+extern int32 resize_event;
+extern int32 resize_event_x;
+extern int32 resize_event_y;
+
+// File drop state globals
+extern int32 acceptFileDrop;
+extern int32 totalDroppedFiles;
+#ifdef QB64_WINDOWS
+#include <windows.h>
+extern HDROP hdrop;
+#else
+static void* hdrop_stub = nullptr;
+#endif
+
 // ============================================================================
 // IMAGE SYSTEM ACCESSORS
 // ============================================================================
@@ -212,4 +242,160 @@ int32_t libqb_get_screen_scaled_width() {
 
 int32_t libqb_get_screen_scaled_height() {
     return environment_2d__screen_scaled_height;
+}
+
+// ============================================================================
+// DISPLAY CONTROL ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_screen_hide() {
+    return screen_hide;
+}
+
+void libqb_set_screen_hide(int32_t value) {
+    screen_hide = value;
+}
+
+int32_t libqb_get_autodisplay() {
+    return autodisplay;
+}
+
+void libqb_set_autodisplay(int32_t value) {
+    autodisplay = value;
+}
+
+void libqb_display() {
+    display();
+}
+
+// ============================================================================
+// FULLSCREEN STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_full_screen() {
+    return full_screen;
+}
+
+void libqb_set_full_screen(int32_t value) {
+    full_screen = value;
+}
+
+int32_t libqb_get_full_screen_set() {
+    return full_screen_set;
+}
+
+void libqb_set_full_screen_set(int32_t value) {
+    full_screen_set = value;
+}
+
+int32_t libqb_get_fullscreen_smooth() {
+    return fullscreen_smooth;
+}
+
+void libqb_set_fullscreen_smooth(int32_t value) {
+    fullscreen_smooth = value;
+}
+
+int32_t libqb_get_fullscreen_allowedmode() {
+    return fullscreen_allowedmode;
+}
+
+void libqb_set_fullscreen_allowedmode(int32_t value) {
+    fullscreen_allowedmode = value;
+}
+
+int32_t libqb_get_fullscreen_allowedsmooth() {
+    return fullscreen_allowedsmooth;
+}
+
+void libqb_set_fullscreen_allowedsmooth(int32_t value) {
+    fullscreen_allowedsmooth = value;
+}
+
+int32_t libqb_get_force_display_update() {
+    return force_display_update;
+}
+
+void libqb_set_force_display_update(int32_t value) {
+    force_display_update = value;
+}
+
+// ============================================================================
+// RESIZE STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_resize_snapback() {
+    return resize_snapback;
+}
+
+void libqb_set_resize_snapback(int32_t value) {
+    resize_snapback = value;
+}
+
+int32_t libqb_get_resize_auto() {
+    return resize_auto;
+}
+
+void libqb_set_resize_auto(int32_t value) {
+    resize_auto = value;
+}
+
+int32_t libqb_get_resize_event() {
+    return resize_event;
+}
+
+void libqb_set_resize_event(int32_t value) {
+    resize_event = value;
+}
+
+int32_t libqb_get_resize_event_x() {
+    return resize_event_x;
+}
+
+void libqb_set_resize_event_x(int32_t value) {
+    resize_event_x = value;
+}
+
+int32_t libqb_get_resize_event_y() {
+    return resize_event_y;
+}
+
+void libqb_set_resize_event_y(int32_t value) {
+    resize_event_y = value;
+}
+
+// ============================================================================
+// FILE DROP STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_accept_filedrop() {
+    return acceptFileDrop;
+}
+
+void libqb_set_accept_filedrop(int32_t value) {
+    acceptFileDrop = value;
+}
+
+int32_t libqb_get_total_dropped_files() {
+    return totalDroppedFiles;
+}
+
+void libqb_set_total_dropped_files(int32_t value) {
+    totalDroppedFiles = value;
+}
+
+void* libqb_get_hdrop() {
+#ifdef QB64_WINDOWS
+    return static_cast<void*>(hdrop);
+#else
+    return hdrop_stub;
+#endif
+}
+
+void libqb_set_hdrop(void* value) {
+#ifdef QB64_WINDOWS
+    hdrop = static_cast<HDROP>(value);
+#else
+    hdrop_stub = value;
+#endif
 }

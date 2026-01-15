@@ -12642,75 +12642,7 @@ void sub__icon(int32 handle_icon, int32 handle_window_icon, int32 passed) {
 } // sub__icon
 #endif // DEPENDENCY_ICON
 
-int32 func_screenwidth() {
-#ifdef QB64_WINDOWS
-    return GetSystemMetrics(SM_CXSCREEN);
-#else
-#    ifdef QB64_GLUT
-    OPTIONAL_GLUT(0);
-    return libqb_glut_get(GLUT_SCREEN_WIDTH);
-#    else
-    return 0;
-#    endif
-#endif
-}
-
-int32 func_screenheight() {
-#ifdef QB64_WINDOWS
-    return GetSystemMetrics(SM_CYSCREEN);
-#else
-#    ifdef QB64_GLUT
-    OPTIONAL_GLUT(0);
-    return libqb_glut_get(GLUT_SCREEN_HEIGHT);
-#    else
-    return 0;
-#    endif
-#endif
-}
-
-void sub_screenicon() {
-#ifdef QB64_GLUT
-    NEEDS_GLUT();
-    libqb_glut_iconify_window();
-#endif
-}
-
-int32 func_windowexists() {
-#ifdef QB64_GLUT
-    return libqb_is_glut_up();
-#else
-    return -1;
-#endif
-}
-
-int32 func_screenicon() {
-#ifdef QB64_GLUT
-#    ifdef QB64_WINDOWS
-    HWND win = (HWND)func__handle();
-    if (!win) {
-        return 0;
-    }
-    return -IsIconic(win);
-#    else
-    /*
-        Linux code not compiling for now
-        #include <X11/X.h>
-        #include <X11/Xlib.h>
-        extern Display *X11_display;
-        extern Window X11_window;
-        extern int32 screen_hide;
-        XWindowAttributes attribs;
-        while (!(X11_display && X11_window));
-        XGetWindowAttributes(X11_display, X11_window, &attribs);
-        if (attribs.map_state == IsUnmapped) return -1;
-        return 0;
-    #endif */
-    return 0; // if we get here and haven't exited already, we failed somewhere along the way.
-#    endif
-#else
-    return 0;
-#endif
-}
+// func_screenwidth, func_screenheight, sub_screenicon, func_windowexists, func_screenicon moved to window.cpp
 
 int32 func__autodisplay() {
     if (autodisplay) {
@@ -13388,40 +13320,7 @@ qbs *func__os() {
 
 // func__screenx, func__screeny moved to screen.cpp
 
-void sub__screenmove(int32 x, int32 y, int32 passed) {
-    if (is_error_pending())
-        return;
-    if (!passed)
-        goto error;
-    if (passed == 3)
-        goto error;
-    if (full_screen)
-        return;
-
-#if defined(QB64_GUI) && defined(QB64_GLUT)
-    NEEDS_GLUT();
-
-    if (passed == 2) {
-        libqb_glut_position_window(x, y);
-    } else {
-        int32 SW = -1, SH, WW, WH;
-        while (SW == -1) {
-            SW = libqb_glut_get(GLUT_SCREEN_WIDTH);
-        }
-        SH = libqb_glut_get(GLUT_SCREEN_HEIGHT);
-        WW = libqb_glut_get(GLUT_WINDOW_WIDTH);
-        WH = libqb_glut_get(GLUT_WINDOW_HEIGHT);
-        x = (SW - WW) / 2;
-        y = (SH - WH) / 2;
-        libqb_glut_position_window(x, y);
-    }
-#endif
-
-    return;
-
-error:
-    error(5);
-}
+// sub__screenmove moved to window.cpp
 
 void key_update() {
 
@@ -16413,78 +16312,7 @@ void sub__writefile(qbs *filespec, qbs *contents) {
     }
 }
 
-void sub__filedrop(int32 on_off = NULL) {
-#ifdef QB64_WINDOWS
-    HWND win = (HWND)func__handle();
-    if (!win)
-        return;
-
-    if ((on_off == NULL) || (on_off == 1)) {
-        DragAcceptFiles(win, TRUE);
-        acceptFileDrop = -1;
-    }
-    if (on_off == 2) {
-        DragAcceptFiles(win, FALSE);
-        acceptFileDrop = 0;
-    }
-#endif
-}
-
-int32 func__filedrop() {
-    return acceptFileDrop;
-}
-
-void sub__finishdrop() {
-#ifdef QB64_WINDOWS
-    DragFinish(hdrop);
-    totalDroppedFiles = 0;
-#endif
-}
-
-int32 func__totaldroppedfiles() {
-#ifdef QB64_WINDOWS
-    return totalDroppedFiles;
-#endif
-    return 0;
-}
-
-qbs *func__droppedfile(int32 fileIndex, int32 passed) {
-#ifdef QB64_WINDOWS
-    static int32 index = -1;
-    static char szNextFile[MAX_PATH];
-
-    if (totalDroppedFiles > 0) {
-        index++;
-        if (passed)
-            index = fileIndex - 1;
-        if ((index > totalDroppedFiles - 1) || (index < 0)) {
-            // out of bounds;
-            // if reading _DROPPEDFILE$ sequentially (without an
-            // index), hdrop is reset and the list is cleared.
-            if (!passed)
-                sub__finishdrop();
-            index = -1;
-            return qbs_new_txt("");
-        }
-        // fetch file[index] from hdrop:
-        if (DragQueryFileA(hdrop, index, szNextFile, MAX_PATH) > 0) {
-            if ((!passed) && (index == totalDroppedFiles - 1)) {
-                // last file read sequentially
-                sub__finishdrop();
-                index = -1;
-            }
-            return qbs_new_txt(szNextFile);
-        } else {
-            // error fetching file from hdrop;
-            sub__finishdrop();
-            index = -1;
-        }
-    } else {
-        index = -1;
-    }
-#endif
-    return qbs_new_txt("");
-}
+// sub__filedrop, func__filedrop, sub__finishdrop, func__totaldroppedfiles, func__droppedfile moved to window.cpp
 
 // sub__resize, func__resize, func__resizewidth, func__resizeheight,
 // func__scaledwidth, func__scaledheight moved to screen.cpp

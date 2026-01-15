@@ -18,6 +18,7 @@
 #include "command.h"
 #include "datetime.h"
 #include "error_handle.h"
+#include "libqb_state.h"
 #include "qbs.h"
 #include "shell.h"
 
@@ -169,10 +170,6 @@ static int32_t cmd_command(qbs *str2) {
 }
 #endif
 
-// FIXME: Move this elsewhere
-extern int32_t full_screen;
-extern int32_t full_screen_set;
-
 int64_t func_shell(qbs *str) {
     if (is_error_pending())
         return 1;
@@ -181,12 +178,12 @@ int64_t func_shell(qbs *str) {
 
     // exit full screen mode if necessary
     static int32_t full_screen_mode;
-    full_screen_mode = full_screen;
+    full_screen_mode = libqb_get_full_screen();
     if (full_screen_mode) {
-        full_screen_set = 0;
+        libqb_set_full_screen_set(0);
         do {
             Sleep(0);
-        } while (full_screen);
+        } while (libqb_get_full_screen());
     } // full_screen_mode
     static qbs *strz = NULL;
     static qbs *str1 = NULL;
@@ -453,10 +450,10 @@ shell_complete:
 
     // reenter full screen mode if necessary
     if (full_screen_mode) {
-        full_screen_set = full_screen_mode;
+        libqb_set_full_screen_set(full_screen_mode);
         do {
             Sleep(0);
-        } while (!full_screen);
+        } while (!libqb_get_full_screen());
     } // full_screen_mode
 
     return return_code;
@@ -681,12 +678,12 @@ void sub_shell(qbs *str, int32_t passed) {
 
     // exit full screen mode if necessary
     static int32_t full_screen_mode;
-    full_screen_mode = full_screen;
+    full_screen_mode = libqb_get_full_screen();
     if (full_screen_mode) {
-        full_screen_set = 0;
+        libqb_set_full_screen_set(0);
         do {
             Sleep(0);
-        } while (full_screen);
+        } while (libqb_get_full_screen());
     } // full_screen_mode
     static qbs *strz = NULL;
     static qbs *str1 = NULL;
@@ -948,10 +945,10 @@ shell_complete:
 
     // reenter full screen mode if necessary
     if (full_screen_mode) {
-        full_screen_set = full_screen_mode;
+        libqb_set_full_screen_set(full_screen_mode);
         do {
             Sleep(0);
-        } while (!full_screen);
+        } while (!libqb_get_full_screen());
     } // full_screen_mode
 }
 

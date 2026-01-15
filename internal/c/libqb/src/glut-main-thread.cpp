@@ -27,6 +27,7 @@
 #include "completion.h"
 #include "glut-thread.h"
 #include "gui.h"
+#include "libqb_state.h"
 #include "mac-key-monitor.h"
 #include "mac-mouse-support.h"
 #include "mutex.h"
@@ -36,7 +37,6 @@
 // somewhere more global so that they can be referenced by libqb.cpp
 extern uint8_t *window_title;
 extern int32_t framebufferobjects_supported;
-extern int32_t screen_hide;
 
 void MAIN_LOOP(void *);
 void GLUT_KEYBOARD_FUNC(unsigned char key, int x, int y);
@@ -142,7 +142,7 @@ bool libqb_is_glut_up() {
 }
 
 void libqb_glut_presetup(int argc, char **argv) {
-    if (!screen_hide) {
+    if (!libqb_get_screen_hide()) {
         initialize_glut(argc, argv); // Initialize GLUT if the screen isn't hidden
         glut_is_started = true;
     } else {

@@ -99,6 +99,86 @@ int32_t libqb_get_screen_scaled_width();
 int32_t libqb_get_screen_scaled_height();
 
 // ============================================================================
+// DISPLAY CONTROL ACCESSORS
+// ============================================================================
+
+// Screen visibility
+int32_t libqb_get_screen_hide();
+void libqb_set_screen_hide(int32_t value);
+
+// Auto-display mode (-1=toggle request, 0=off, 1=on)
+int32_t libqb_get_autodisplay();
+void libqb_set_autodisplay(int32_t value);
+
+// Force display update
+void libqb_display();
+
+// ============================================================================
+// FULLSCREEN STATE ACCESSORS
+// ============================================================================
+
+// Current fullscreen mode (0=off, 1=stretch, 2=squarepixels)
+int32_t libqb_get_full_screen();
+void libqb_set_full_screen(int32_t value);
+
+// Pending fullscreen mode change (-1=no change pending)
+int32_t libqb_get_full_screen_set();
+void libqb_set_full_screen_set(int32_t value);
+
+// Fullscreen smooth scaling
+int32_t libqb_get_fullscreen_smooth();
+void libqb_set_fullscreen_smooth(int32_t value);
+
+// Allowed fullscreen modes
+int32_t libqb_get_fullscreen_allowedmode();
+void libqb_set_fullscreen_allowedmode(int32_t value);
+
+int32_t libqb_get_fullscreen_allowedsmooth();
+void libqb_set_fullscreen_allowedsmooth(int32_t value);
+
+// Force display update flag
+int32_t libqb_get_force_display_update();
+void libqb_set_force_display_update(int32_t value);
+
+// ============================================================================
+// RESIZE STATE ACCESSORS
+// ============================================================================
+
+// Resize snapback (1=enabled, 0=disabled)
+int32_t libqb_get_resize_snapback();
+void libqb_set_resize_snapback(int32_t value);
+
+// Resize auto mode
+int32_t libqb_get_resize_auto();
+void libqb_set_resize_auto(int32_t value);
+
+// Resize event flag and dimensions
+int32_t libqb_get_resize_event();
+void libqb_set_resize_event(int32_t value);
+
+int32_t libqb_get_resize_event_x();
+void libqb_set_resize_event_x(int32_t value);
+
+int32_t libqb_get_resize_event_y();
+void libqb_set_resize_event_y(int32_t value);
+
+// ============================================================================
+// FILE DROP STATE ACCESSORS
+// ============================================================================
+
+// Accept file drop flag (-1=enabled, 0=disabled)
+int32_t libqb_get_accept_filedrop();
+void libqb_set_accept_filedrop(int32_t value);
+
+// Total dropped files count
+int32_t libqb_get_total_dropped_files();
+void libqb_set_total_dropped_files(int32_t value);
+
+// HDROP handle (Windows file drop handle) - stored as void*
+void* libqb_get_hdrop();
+void libqb_set_hdrop(void* value);
+
+// ============================================================================
 // IMPLEMENTATION NOTES
 // ============================================================================
 

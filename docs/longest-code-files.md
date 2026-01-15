@@ -56,7 +56,8 @@ The `libqb.cpp` file has been reduced from ~31,111 lines to **19,119 lines** thr
 | QBS Str | 260 | `libqb/src/qbs_str.cpp` |
 | Port I/O | 249 | `libqb/src/port_io.cpp` |
 | QBS CMem | 235 | `libqb/src/qbs_cmem.cpp` |
-| State Accessor | 215 | `libqb/src/libqb_state.cpp` |
+| Window | 347 | `libqb/src/window.cpp` |
+| State Accessor | 401 | `libqb/src/libqb_state.cpp` |
 | QBS ToStr | 193 | `libqb/src/qbs__tostr.cpp` |
 | GLUT Main Thread | 189 | `libqb/src/glut-main-thread.cpp` |
 | Utility | 176 | `libqb/src/utility.cpp` |
@@ -77,7 +78,6 @@ The `libqb.cpp` file has been reduced from ~31,111 lines to **19,119 lines** thr
 |-----------------|-------|-------------|
 | Buffer | 94 | `libqb/src/buffer.cpp` |
 | Console-Only Main | 79 | `libqb/src/console-only-main-thread.cpp` |
-| Window | 77 | `libqb/src/window.cpp` |
 | Command | 69 | `libqb/src/command.cpp` |
 | HTTP Stub | 68 | `libqb/src/http-stub.cpp` |
 | Legacy Memory | 64 | `libqb/src/mem_legacy.cpp` |
@@ -90,8 +90,8 @@ The `libqb.cpp` file has been reduced from ~31,111 lines to **19,119 lines** thr
 | Metric | Value |
 |--------|-------|
 | Original libqb.cpp | 31,111 lines |
-| Current libqb.cpp | 19,119 lines |
-| Total extracted | 26,572 lines (47 modules) |
-| Reduction | 11,992 lines (38.5%) |
+| Current libqb.cpp | 18,947 lines |
+| Total extracted | 27,028 lines (47 modules) |
+| Reduction | 12,164 lines (39.1%) |
 
 *Last updated: January 2026*

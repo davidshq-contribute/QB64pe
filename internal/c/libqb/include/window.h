@@ -36,6 +36,52 @@ qbs *func__title();
 /// @returns -1 (true) if window has focus, 0 (false) otherwise
 int32_t func__hasfocus();
 
+/// Gets the width of the screen/desktop in pixels.
+/// @returns Screen width in pixels, or 0 if not available
+int32_t func_screenwidth();
+
+/// Gets the height of the screen/desktop in pixels.
+/// @returns Screen height in pixels, or 0 if not available
+int32_t func_screenheight();
+
+/// Iconifies (minimizes) the window.
+void sub_screenicon();
+
+/// Checks if the QB64 window exists.
+/// @returns -1 (true) if window exists, 0 (false) otherwise
+int32_t func_windowexists();
+
+/// Checks if the window is currently iconified (minimized).
+/// @returns -1 (true) if iconified, 0 (false) otherwise
+int32_t func_screenicon();
+
+/// Moves the window to a specified position on the desktop.
+/// @param x X coordinate (or special value for centering)
+/// @param y Y coordinate
+/// @param passed Bit flags: bit 0 = x passed, bit 1 = y passed (3 = _MIDDLE)
+void sub__screenmove(int32_t x, int32_t y, int32_t passed);
+
+/// Enables or disables file drop acceptance.
+/// @param on_off 1 or 0 to enable, 2 to disable
+void sub__filedrop(int32_t on_off);
+
+/// Gets the current file drop acceptance state.
+/// @returns -1 if file drop is enabled, 0 if disabled
+int32_t func__filedrop();
+
+/// Finishes processing dropped files and clears the drop list.
+void sub__finishdrop();
+
+/// Gets the total number of dropped files.
+/// @returns Number of dropped files
+int32_t func__totaldroppedfiles();
+
+/// Gets a dropped file by index.
+/// @param fileIndex 1-based file index (or sequential access if not passed)
+/// @param passed 1 if fileIndex was provided, 0 for sequential access
+/// @returns QB64 string containing the file path, or empty string on error
+qbs *func__droppedfile(int32_t fileIndex, int32_t passed);
+
 // ============================================================================
 // INTERNAL HELPERS
 // ============================================================================

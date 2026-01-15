@@ -2,16 +2,17 @@
 
 ## Current State
 
-The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **19,119 lines (38.5% reduction)**. Forty-seven modules have been extracted to `libqb/src/`, with 15 major functional modules and many supporting infrastructure modules. The state accessor layer (`libqb_state.h`) enables controlled access to shared global state.
+The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **18,947 lines (39.1% reduction)**. Forty-seven modules have been extracted to `libqb/src/`, with 15 major functional modules and many supporting infrastructure modules. The state accessor layer (`libqb_state.h`) enables controlled access to shared global state.
 
 ### Completed Extractions
 - Graphics (7,830 lines), Text/Font (2,127 lines), File I/O (1,916 lines)
 - Shell (1,540 lines), GFS (1,191 lines), Filesystem (1,044 lines)
 - Networking (894 lines), Platform (894 lines), Color (795 lines)
 - QBS string handling (725 lines), HTTP (530 lines), Memory (411 lines)
-- Mouse, Port I/O, Screen, Keyboard, Utility, Console, Window, Legacy Memory
-- State Accessor layer (215 lines) - enables further modularization
-- Total: 26,572 lines in 47 modules
+- State Accessor layer (401 lines) - enables further modularization
+- Window (347 lines) - desktop dimensions, window state, file drop
+- Mouse, Port I/O, Screen, Keyboard, Utility, Console, Legacy Memory
+- Total: 27,028 lines in 47 modules
 
 ### Remaining Challenges
 - **Global state coupling**: Image system (`img[]`, `pages[]`), font arrays, environment 2D variables still accessed via externs in some modules
@@ -135,9 +136,10 @@ Replace message queue with event-driven architecture:
 2. ~~**Extract Text module**~~ - DONE (2,121 lines)
 3. ~~**Add unit tests for extracted modules**~~ - DONE (15/15, 100%)
 4. ~~**Document remaining module APIs**~~ - DONE (15/15 in module-interfaces.md)
-5. **Expand Window module** - Add ~270 more lines (_SCREENMOVE, _ICON, etc.)
-6. **Extract Hardware Texture functions** - ~400 lines, low coupling
-7. **Add input buffer accessors** - Unblocks Input module extraction
+5. ~~**Expand Window module**~~ - DONE (347 lines, includes _SCREENMOVE, file drop)
+6. ~~**Expand State Accessor layer**~~ - DONE (401 lines, screen/fullscreen/resize/file drop)
+7. **Extract Hardware Texture functions** - ~766 lines, complex OpenGL code (deferred)
+8. **Add input buffer accessors** - Unblocks Input module extraction
 
 See `docs/modernization-recommendations.md` for detailed ROI analysis.
 

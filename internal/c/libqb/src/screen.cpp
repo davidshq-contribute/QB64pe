@@ -8,6 +8,7 @@
 #include "screen.h"
 #include "error_handle.h"
 #include "glut-thread.h"
+#include "libqb_state.h"
 
 #include "../../os.h"  // For int32 type definitions
 
@@ -25,59 +26,38 @@
 #endif
 #endif
 
-// External references from libqb.cpp
-extern int32 screen_hide;
-extern int32 autodisplay;
-extern void display();
-
-extern int32 full_screen;
-extern int32 full_screen_set;
-extern int32 fullscreen_smooth;
-extern int32 fullscreen_allowedmode;
-extern int32 fullscreen_allowedsmooth;
-extern int32 force_display_update;
-
-extern int32 resize_snapback;
-extern int32 resize_auto;
-extern int32 resize_event;
-extern int32 resize_event_x;
-extern int32 resize_event_y;
-
-extern int32 environment_2d__screen_scaled_width;
-extern int32 environment_2d__screen_scaled_height;
-
 //----------------------------------------------------------------------------------------------------------------------
 // Display control
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
  * Enables automatic display updates.
- * 
+ *
  * When enabled, the display will automatically refresh after drawing operations
  * without requiring explicit calls to _DISPLAY.
  */
 void sub__autodisplay() {
-    autodisplay = 1;
+    libqb_set_autodisplay(1);
 }
 
 /**
  * Manually updates the display and disables automatic display updates.
- * 
+ *
  * Forces an immediate screen refresh. If autodisplay is enabled, it will be
  * disabled after this call completes. Does nothing if the screen is hidden.
  */
 void sub__display() {
-    if (screen_hide)
+    if (libqb_get_screen_hide())
         return;
 
     // disable autodisplay (if enabled)
-    if (autodisplay) {
-        autodisplay = -1; // toggle request
-        while (autodisplay)
+    if (libqb_get_autodisplay()) {
+        libqb_set_autodisplay(-1); // toggle request
+        while (libqb_get_autodisplay())
             Sleep(1);
         return; // note: autodisplay is set to 0 after display() has been called so a second call to display() is unnecessary
     }
-    display();
+    libqb_display();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -107,12 +87,12 @@ void sub__fullscreen(int32 method, int32 passed) {
     if (method == 3)
         x = 2;
     if (passed & 1)
-        fullscreen_smooth = 1;
+        libqb_set_fullscreen_smooth(1);
     else
-        fullscreen_smooth = 0;
-    if (full_screen != x)
-        full_screen_set = x;
-    force_display_update = 1;
+        libqb_set_fullscreen_smooth(0);
+    if (libqb_get_full_screen() != x)
+        libqb_set_full_screen_set(x);
+    libqb_set_force_display_update(1);
 }
 
 /**
@@ -128,17 +108,19 @@ void sub__allowfullscreen(int32 method, int32 smooth) {
     // ref: "[{_STRETCH|_SQUAREPIXELS|_OFF|_ALL|OFF}][, _SMOOTH|_OFF|_ALL|OFF]"
     //            1          2         3    4   5         1      2    3   4
 
-    fullscreen_allowedmode = method;
+    int32 allowedmode = method;
     if (method == 3 || method == 5)
-        fullscreen_allowedmode = -1;
+        allowedmode = -1;
     if (method == 4 || method == 0)
-        fullscreen_allowedmode = 0;
+        allowedmode = 0;
+    libqb_set_fullscreen_allowedmode(allowedmode);
 
-    fullscreen_allowedsmooth = smooth;
+    int32 allowedsmooth = smooth;
     if (smooth == 2 || smooth == 4)
-        fullscreen_allowedsmooth = -1;
+        allowedsmooth = -1;
     if (smooth == 3 || smooth == 0)
-        fullscreen_allowedsmooth = 0;
+        allowedsmooth = 0;
+    libqb_set_fullscreen_allowedsmooth(allowedsmooth);
 }
 
 /**
@@ -150,11 +132,10 @@ void sub__allowfullscreen(int32 method, int32 smooth) {
  * @return Current fullscreen mode (0=windowed, 1=stretch, 2=square pixels)
  */
 int32 func__fullscreen() {
-    static int32 x;
-    x = full_screen_set;
+    int32 x = libqb_get_full_screen_set();
     if (x != -1)
         return x;
-    return full_screen;
+    return libqb_get_full_screen();
 }
 
 /**
@@ -163,7 +144,7 @@ int32 func__fullscreen() {
  * @return -1 if smooth scaling is enabled, 0 if disabled
  */
 int32 func__fullscreensmooth() {
-    return -fullscreen_smooth;
+    return -libqb_get_fullscreen_smooth();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -181,15 +162,15 @@ int32 func__fullscreensmooth() {
  */
 void sub__resize(int32 on_off, int32 stretch_smooth) {
     if (on_off == 1)
-        resize_snapback = 0;
+        libqb_set_resize_snapback(0);
     if (on_off == 2)
-        resize_snapback = 1;
+        libqb_set_resize_snapback(1);
     // no change if omitted
 
     if (stretch_smooth) {
-        resize_auto = stretch_smooth;
+        libqb_set_resize_auto(stretch_smooth);
     } else {
-        resize_auto = 0; // revert if omitted
+        libqb_set_resize_auto(0); // revert if omitted
     }
 }
 
@@ -202,10 +183,10 @@ void sub__resize(int32 on_off, int32 stretch_smooth) {
  * @return -1 if resize event occurred, 0 otherwise
  */
 int32 func__resize() {
-    if (resize_snapback)
+    if (libqb_get_resize_snapback())
         return 0; // resize must be enabled
-    if (resize_event) {
-        resize_event = 0;
+    if (libqb_get_resize_event()) {
+        libqb_set_resize_event(0);
         return -1;
     }
     return 0;
@@ -217,7 +198,7 @@ int32 func__resize() {
  * @return Width in pixels of the resized window
  */
 int32 func__resizewidth() {
-    return resize_event_x;
+    return libqb_get_resize_event_x();
 }
 
 /**
@@ -226,7 +207,7 @@ int32 func__resizewidth() {
  * @return Height in pixels of the resized window
  */
 int32 func__resizeheight() {
-    return resize_event_y;
+    return libqb_get_resize_event_y();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -241,7 +222,7 @@ int32 func__resizeheight() {
  * @return Scaled screen width in pixels
  */
 int32 func__scaledwidth() {
-    return environment_2d__screen_scaled_width;
+    return libqb_get_screen_scaled_width();
 }
 
 /**
@@ -252,7 +233,7 @@ int32 func__scaledwidth() {
  * @return Scaled screen height in pixels
  */
 int32 func__scaledheight() {
-    return environment_2d__screen_scaled_height;
+    return libqb_get_screen_scaled_height();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

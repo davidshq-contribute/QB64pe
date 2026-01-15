@@ -72,7 +72,6 @@ extern uint8_t charset8x8[256][8][8];
 extern uint8_t charset8x16[256][16][8];
 extern qbs *singlespace;
 extern int32_t key_display_redraw;
-extern int32_t autodisplay;
 extern int32_t lock_display;
 extern int32_t lock_display_required;
 extern int32_t screen_last_valid;
@@ -1918,7 +1917,7 @@ void sub__font(int32_t f, int32_t i, int32_t passed) {
 
     if (im->text) {
         if (im->flags & IMG_SCREEN) {
-            if (autodisplay) {
+            if (libqb_get_autodisplay()) {
                 if (lock_display == 0)
                     lock_display = 1;
                 while (lock_display != 2)
@@ -1931,7 +1930,7 @@ void sub__font(int32_t f, int32_t i, int32_t passed) {
                     im->font = f;
                 }
             }
-            if (autodisplay) {
+            if (libqb_get_autodisplay()) {
                 if (lock_display_required)
                     lock_display = 0;
             }
