@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 21,183 lines (reduced from 31,111 - a 31.9% reduction)
+**Current status:** 20,900 lines (reduced from 31,111 - a 32.8% reduction)
 
 ---
 
@@ -24,7 +24,7 @@ This document tracks the modularization of `internal/c/libqb.cpp`, the core runt
 | **Window** | `libqb/src/window.cpp` | 77 | `func__handle`, `func__title`, `func__hasfocus` |
 | **Legacy Memory** | `libqb/src/mem_legacy.cpp` | 61 | `func_peek`, `sub_poke`, `sub_defseg` |
 | **Text & Font** | `libqb/src/text.cpp` | 2,121 | `printchr`, `qbs_print`, `qbg_sub_locate`, `sub_cls`, `func_csrlin`, `func_pos`, `func_tab`, `func_spc`, font management (`_LOADFONT`, `_FONT`, `_FREEFONT`), print modes |
-| **Port I/O (stub)** | `libqb/src/port_io.cpp` | 33 | Header-only module: `sub_out`, `func_inp`, `sub_wait` (implementations in libqb.cpp) |
+| **Port I/O** | `libqb/src/port_io.cpp` | 249 | `sub_out`, `func_inp`, `sub_wait` - VGA palette emulation, keyboard scancode, retrace timing |
 
 **Build system:** All modules added to `libqb/build.mk`
 
@@ -58,16 +58,15 @@ int32_t libqb_get_screen_height();
 
 ---
 
-## Ready for Extraction (with State Accessors)
+## Potential Future Extractions
 
-These modules can now be extracted using the state accessor layer:
+| Module | Est. Lines | Complexity | Notes |
+|--------|------------|------------|-------|
+| **Keyboard Input** | ~200 | Medium | `func__keyhit`, `func__keydown`, `sub__mapunicode` - could extend keyboard.cpp |
+| **Platform Code** | ~150 | Medium | `sub__screenprint` has Windows/Mac/Linux keyboard simulation |
+| **Printer** | ~100 | High | `sub__printimage` needs deep img_struct access |
 
-| Module | Est. Lines | Required Accessors | Status |
-|--------|------------|-------------------|--------|
-| **Port I/O** | ~150 | `libqb_get_write_page()` (for palette access) | Stub created (port_io.h/port_io.cpp) |
-| **Window Queries** | ~80 | Platform APIs only (no accessor needed) | Pending |
-
-*Note: Text & Font module and Tab/Spc functions have been fully extracted to `text.cpp`.*
+*Note: Text & Font module, Tab/Spc functions, and Port I/O are now fully extracted.*
 
 ---
 
@@ -108,6 +107,50 @@ These globals are accessed across modules. Many now have accessors via `libqb_st
 
 ### Input Buffers (no accessors yet)
 - `keyhit[]`, `port60h_event[]`, key state arrays
+
+---
+
+## Extern Declaration Audit
+
+**Total:** 189 extern declarations across 19 module files.
+
+### By Module (sorted by count)
+
+| Module | Count | Notes |
+|--------|-------|-------|
+| text.cpp | 53 | Largest - many font/image/lprint dependencies |
+| graphics.cpp | 24 | Image system, blend tables |
+| libqb_state.cpp | 21 | Expected - implements accessors |
+| mouse.cpp | 16 | Display page, console state |
+| screen.cpp | 16 | Image system, display state |
+| fileio.cpp | 15 | GFS system, error handling |
+| console.cpp | 8 | Console state variables |
+| color.cpp | 7 | Image system, page indexes |
+| port_io.cpp | 6 | Retrace flags, keyboard buffer |
+| Others | 23 | Various smaller dependencies |
+
+### Categories of Extern Usage
+
+1. **Function declarations** (~60%) - Forward declarations for functions in other modules. These are acceptable and follow C++ patterns.
+
+2. **Global state with accessors** (~25%) - Variables like `write_page`, `write_page_index` that have accessors in `libqb_state.h` but modules still use extern. Could be migrated.
+
+3. **Global state without accessors** (~15%) - Variables like `lpos`, `autodisplay`, `lock_display` that would need new accessors.
+
+### Migration Opportunities
+
+These extern declarations could be replaced with existing accessors:
+
+| Current Extern | Accessor Available |
+|---------------|-------------------|
+| `extern img_struct *write_page` | `libqb_get_write_page()` |
+| `extern img_struct *read_page` | `libqb_get_read_page()` |
+| `extern img_struct *display_page` | `libqb_get_display_page()` |
+| `extern int32_t write_page_index` | `libqb_get_write_page_index()` |
+| `extern int32_t read_page_index` | `libqb_get_read_page_index()` |
+| `extern int32_t display_page_index` | `libqb_get_display_page_index()` |
+
+**Recommendation:** Migrating to accessors is low priority - the current extern approach works correctly. Consider migration when touching these files for other reasons.
 
 ---
 
@@ -187,7 +230,7 @@ libqb.cpp includes 33 modularized headers:
 | `libqb/include/mem_legacy.h` | Legacy memory declarations |
 | `libqb/src/text.cpp` | Text output, cursor control, font management (fully implemented) |
 | `libqb/include/text.h` | Text/font function declarations (~25 functions) |
-| `libqb/src/port_io.cpp` | Port I/O module stub (header-only, implementations pending) |
+| `libqb/src/port_io.cpp` | Port I/O module - VGA palette emulation, keyboard scancode, retrace timing |
 | `libqb/include/port_io.h` | Port I/O function declarations (INP, OUT, WAIT) |
 
 ### Build System
@@ -196,3 +239,15 @@ New modules use this pattern in `libqb/build.mk`:
 ```makefile
 libqb-objs-y += $(PATH_LIBQB)/src/module.o
 ```
+
+---
+
+## Recent Changes
+
+### January 2026
+
+- **Port I/O module completed** - Full implementation of `sub_out`, `func_inp`, `sub_wait` with VGA palette emulation and keyboard scancode support (249 lines)
+- **Dead code removal** - Removed 118 lines of unused MACVK_* global constants (were shadowed by local statics)
+- **Module include fixes** - Added `libqb-common.h` to console.cpp, keyboard.cpp, text.cpp for proper platform macro definitions
+- **Extern declaration audit** - Documented 189 extern declarations across 19 modules with migration recommendations
+- **libqb.cpp reduced to 20,900 lines** (32.8% reduction from original 31,111)
