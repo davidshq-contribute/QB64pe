@@ -31,6 +31,8 @@ $VERSIONINFO:Comments='QB64 is a modern extended BASIC programming language that
 '$INCLUDE:'utilities\give_error.bi'
 '$INCLUDE:'utilities\statevars.bi'
 '$INCLUDE:'utilities\type.bi'
+'$INCLUDE:'compiler\compiler_state.bi'
+'$INCLUDE:'compiler\parser.bi'
 
 DEFLNG A-Z
 
@@ -24321,6 +24323,8 @@ END FUNCTION
 '$INCLUDE:'utilities\format.bas'
 '$INCLUDE:'utilities\terminal.bas'
 '$INCLUDE:'emit\logging.bas'
+'$INCLUDE:'compiler\compiler_state.bas'
+'$INCLUDE:'compiler\parser.bas'
 
 DEFLNG A-Z
 

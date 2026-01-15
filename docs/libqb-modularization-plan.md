@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 19,119 lines (reduced from 31,111 - a 38.5% reduction)
+**Current status:** 18,947 lines (reduced from 31,111 - a 39.1% reduction)
 
 ---
 
@@ -19,9 +19,9 @@ This document tracks the modularization of `internal/c/libqb.cpp`, the core runt
 | **Screen** | `libqb/src/screen.cpp` | 195 | `sub__display`, `sub__fullscreen`, `sub__resize`, dimension queries |
 | **Utility** | `libqb/src/utility.cpp` | 173 | `sub_randomize`, `func_rnd`, `sub__fps`, `sub__blink`, `sub__controlchr` |
 | **Console** | `libqb/src/console.cpp` | 171 | Console output functions |
-| **State Accessor** | `libqb/src/libqb_state.cpp` | 168 | Image/font/page accessors (enables further modularization) |
+| **State Accessor** | `libqb/src/libqb_state.cpp` | 401 | Image/font/page/screen/fullscreen/resize/filedrop accessors (enables further modularization) |
 | **Keyboard** | `libqb/src/keyboard.cpp` | 177 | Lock key functions, `func__keyhit`, `func__keydown`, `sub__mapunicode`, `func__mapunicode` |
-| **Window** | `libqb/src/window.cpp` | 77 | `func__handle`, `func__title`, `func__hasfocus` |
+| **Window** | `libqb/src/window.cpp` | 347 | `func__handle`, `func__title`, `func__hasfocus`, desktop dimensions, window state, file drop |
 | **Legacy Memory** | `libqb/src/mem_legacy.cpp` | 61 | `func_peek`, `sub_poke`, `sub_defseg` |
 | **Text & Font** | `libqb/src/text.cpp` | 2,121 | `printchr`, `qbs_print`, `qbg_sub_locate`, `sub_cls`, `func_csrlin`, `func_pos`, `func_tab`, `func_spc`, font management (`_LOADFONT`, `_FONT`, `_FREEFONT`), print modes |
 | **Port I/O** | `libqb/src/port_io.cpp` | 249 | `sub_out`, `func_inp`, `sub_wait` - VGA palette emulation, keyboard scancode, retrace timing |
@@ -62,7 +62,7 @@ int32_t libqb_get_screen_height();
 
 ## Remaining Code Analysis
 
-The ~19,100 remaining lines break down into these functional areas:
+The ~18,900 remaining lines break down into these functional areas:
 
 | Area | Lines | Location | Self-Contained? |
 |------|-------|----------|-----------------|
@@ -86,10 +86,10 @@ The ~19,100 remaining lines break down into these functional areas:
 | Module | Lines | Effort | Impact | Status |
 |--------|-------|--------|--------|--------|
 | **Networking** | ~894 | Low | High | ✅ **DONE** - TCP/socket functions extracted with conditional stub. |
-| **Hardware Textures** | ~400 | Low | Medium | `newimg()`, `freeimg()`, `new_hardware_img()`, texture upload functions. |
-| **Window Operations** | ~300 | Low | Medium | Expand existing window.cpp with `sub__screenmove()`, `sub__icon()`, file drop handlers. |
+| **Hardware Textures** | ~766 | Medium | Medium | `newimg()`, `freeimg()`, `new_hardware_img()`, texture upload functions, hardware_img_put/tri2d/tri3d. |
+| **Window Operations** | ~300 | Low | Medium | ✅ **DONE** - Expanded window.cpp with desktop dimensions, window state, file drop (77→347 lines). |
 
-**Recommendation:** Extract hardware textures next - good line count with clean boundaries.
+**Recommendation:** Extract hardware textures next - good line count, but complex OpenGL code requiring careful testing.
 
 ### Tier 2: Medium ROI (Needs accessor layer expansion)
 
@@ -126,10 +126,10 @@ The ~19,100 remaining lines break down into these functional areas:
    - Created `networking-stub.cpp` for programs not using sockets
    - Uses conditional compilation via `DEP_SOCKETS` in build.mk
 
-2. **Expand Window Module** (~300 lines)
-   - Add: `sub__screenmove`, `sub__icon`, `sub__filedrop`, `func__filedrop`
-   - Current window.cpp is only 77 lines - room to grow
-   - Platform wrappers already exist in the file
+2. ✅ **~~Expand Window Module~~** - COMPLETED
+   - Added: `sub__screenmove`, `sub__filedrop`, `func__filedrop`, `sub__finishdrop`, `func__totaldroppedfiles`, `func__droppedfile`, desktop dimension functions, window state functions
+   - Window.cpp grew from 77 to 347 lines
+   - State accessor layer expanded (168→401 lines) for screen/fullscreen/resize/filedrop accessors
 
 3. **Extract Hardware Texture Functions** (~400 lines)
    - Functions: `newimg`, `freeimg`, `imgrevert`, `new_hardware_img`, texture management
@@ -145,9 +145,9 @@ The ~19,100 remaining lines break down into these functional areas:
 
 ### Strategic Considerations
 
-**Diminishing Returns:** We've extracted 38.5% of the code. The remaining ~19K lines are increasingly interdependent. Further extraction yields smaller modules with higher effort.
+**Diminishing Returns:** We've extracted 39.1% of the code. The remaining ~19K lines are increasingly interdependent. Further extraction yields smaller modules with higher effort.
 
-**Practical Ceiling:** Realistically, we can reach ~42-45% reduction (expand window + hardware = ~700 more lines). Beyond that requires architectural changes to the accessor layer.
+**Practical Ceiling:** Realistically, we can reach ~42-45% reduction (hardware textures = ~766 more lines). Beyond that requires architectural changes to the accessor layer.
 
 **Alternative Focus:** Instead of more extractions, consider:
 - Improving existing module interfaces (reduce extern declarations)
@@ -183,23 +183,25 @@ These globals are accessed across modules. Many now have accessors via `libqb_st
 
 ## Extern Declaration Audit
 
-**Total:** 183 extern declarations across 19 module files (down from 194 after migration).
+**Total:** ~168 extern declarations across 19 module files (down from 194 after migrations).
 
 ### By Module (sorted by count)
 
 | Module | Count | Notes |
 |--------|-------|-------|
-| text.cpp | 52 | Largest - many font/image/lprint dependencies (migrated 1) |
+| text.cpp | 51 | Largest - many font/image/lprint dependencies (migrated 1) |
 | graphics.cpp | 24 | Image system, blend tables |
-| libqb_state.cpp | 21 | Expected - implements accessors |
+| libqb_state.cpp | 36 | Expected - implements accessors |
 | mouse.cpp | 14 | Console state (migrated 2 to accessors) |
-| screen.cpp | 16 | Image system, display state |
+| screen.cpp | 0 | ✅ Fully migrated to accessors |
 | fileio.cpp | 15 | GFS system, error handling |
 | console.cpp | 8 | Console state variables |
 | color.cpp | 4 | Migrated 3 to accessors |
 | port_io.cpp | 6 | Retrace flags, keyboard buffer |
 | keyboard.cpp | 5 | Keyhit buffer, keyheld function, codepage array |
-| Others | 18 | Various smaller dependencies |
+| shell.cpp | 0 | ✅ Migrated fullscreen accessors |
+| glut-main-thread.cpp | 0 | ✅ Migrated screen_hide accessor |
+| Others | 5 | Various smaller dependencies |
 
 ### Categories of Extern Usage
 
@@ -217,7 +219,10 @@ The following modules have been migrated to use accessor functions:
 |--------|------------------|-------|
 | **color.cpp** | `write_page`, `write_page_index`, `read_page_index` | Fully migrated to accessors |
 | **mouse.cpp** | `display_page`, `read_page` | Fully migrated to accessors |
-| **text.cpp** | `write_page_index` | Partial - `write_page` kept as extern (250+ usages) |
+| **text.cpp** | `write_page_index`, `autodisplay` | Partial - `write_page` kept as extern (250+ usages) |
+| **screen.cpp** | 17 externs | ✅ Fully migrated (display, fullscreen, resize state) |
+| **shell.cpp** | `full_screen`, `full_screen_set` | ✅ Migrated to accessors |
+| **glut-main-thread.cpp** | `screen_hide` | ✅ Migrated to accessor |
 
 ### Remaining Migration Opportunities
 
@@ -327,14 +332,22 @@ libqb-objs-y += $(PATH_LIBQB)/src/module.o
 
 ## Recent Changes
 
-### January 2026
+### January 2026 (Latest)
+
+- **Window module expanded** - Added 11 new functions from libqb.cpp (77→347 lines): `func_screenwidth`, `func_screenheight`, `sub_screenicon`, `func_windowexists`, `func_screenicon`, `sub__screenmove`, `sub__filedrop`, `func__filedrop`, `sub__finishdrop`, `func__totaldroppedfiles`, `func__droppedfile`
+- **State accessor layer expanded** - Added 30 new accessors (168→401 lines) for display control, fullscreen, resize, and file drop state
+- **Screen.cpp fully migrated to accessors** - Replaced all 17 extern declarations with state accessor calls
+- **Shell.cpp, text.cpp, glut-main-thread.cpp migrated** - Replaced fullscreen and display externs with accessors
+- **libqb.cpp reduced to 18,947 lines** (39.1% reduction from original 31,111)
+- **Test coverage expanded** - Added 15 new tests to test_window.cpp for expanded functionality
+
+### January 2026 (Earlier)
 
 - **Networking module extracted** - Created networking.cpp (894 lines) with all TCP/IP socket functions: `func__openclient`, `func__openhost`, `func__openconnection`, `func__connected`, `func__connectionaddress`, `tcp_init`, `tcp_done`, stream operations. Added conditional compilation with networking-stub.cpp for programs not using sockets. Uses `DEP_SOCKETS` flag in build.mk.
-- **libqb.cpp reduced to 19,119 lines** (38.5% reduction from original 31,111)
 - **Platform module extracted** - Created new platform.cpp with `sub__screenprint` (870 lines) for keyboard input simulation (Windows SendInput, macOS CGEvent)
 - **Accessor migration completed** - Migrated color.cpp (3 externs), mouse.cpp (2 externs), text.cpp (1 extern) to use `libqb_state.h` accessor functions instead of extern declarations
 - **Keyboard input functions extracted** - Added `func__keyhit`, `func__keydown`, `sub__mapunicode`, `func__mapunicode` to keyboard.cpp (now 177 lines)
 - **Port I/O module completed** - Full implementation of `sub_out`, `func_inp`, `sub_wait` with VGA palette emulation and keyboard scancode support (249 lines)
 - **Dead code removal** - Removed 118 lines of unused MACVK_* global constants (were shadowed by local statics)
 - **Module include fixes** - Added `libqb-common.h` to console.cpp, keyboard.cpp, text.cpp for proper platform macro definitions
-- **Extern declaration audit** - Documented 183 extern declarations across 19 modules (down from 194 after migration)
+- **Extern declaration audit** - Documented ~168 extern declarations across 19 modules (down from 194 after migrations)

@@ -10,7 +10,7 @@ END FUNCTION
 ' Helper function: Finds the position of the last path separator in a string
 '
 ' Returns: Position of last '/' or '\', or 0 if not found
-FUNCTION FindLastPathSeparator& (path$ AS STRING)
+FUNCTION FindLastPathSeparator& (path$)
     DIM AS LONG i
     DIM a$
     
@@ -29,7 +29,7 @@ END FUNCTION
 ' Stops searching if a path separator is encountered
 '
 ' Returns: Position of last '.', or 0 if not found
-FUNCTION FindLastDot& (filename$ AS STRING)
+FUNCTION FindLastDot& (filename$)
     DIM AS LONG i, a
     
     FOR i = LEN(filename$) TO 1 STEP -1
@@ -63,10 +63,10 @@ END FUNCTION
 '
 ' Returns: The path + trailing separator, or empty if no path
 FUNCTION getfilepath$ (f$)
-    DIM AS LONG pos
-    pos = FindLastPathSeparator(f$)
-    IF pos > 0 THEN
-        getfilepath$ = LEFT$(f$, pos)
+    DIM AS LONG sepPos
+    sepPos = FindLastPathSeparator(f$)
+    IF sepPos > 0 THEN
+        getfilepath$ = LEFT$(f$, sepPos)
     ELSE
         getfilepath$ = ""
     END IF
@@ -125,11 +125,11 @@ SUB PATH_SLASH_CORRECT (a$)
 END SUB
 
 ' Return a pathname where all "\" are correctly escaped
-FUNCTION GetEscapedPath$ (path_name AS STRING)
+FUNCTION GetEscapedPath$ (path_name$)
     DIM buf AS STRING, z AS _UNSIGNED LONG, a AS _UNSIGNED _BYTE
 
-    FOR z = 1 TO LEN(path_name)
-        a = ASC(path_name, z)
+    FOR z = 1 TO LEN(path_name$)
+        a = ASC(path_name$, z)
         buf = buf + CHR$(a)
         IF a = 92 THEN buf = buf + "\"
     NEXT
@@ -154,11 +154,11 @@ FUNCTION RemoveDoubleSlashes$ (f2$)
 END FUNCTION
 
 ' Adds a trailing \ or / to a directory name if needed
-FUNCTION FixDirectoryName$ (dir_name AS STRING)
-    IF LEN(dir_name) > 0 AND RIGHT$(dir_name, 1) <> pathsep$ THEN
-        FixDirectoryName = dir_name + pathsep$
+FUNCTION FixDirectoryName$ (dir_name$)
+    IF LEN(dir_name$) > 0 AND RIGHT$(dir_name$, 1) <> pathsep$ THEN
+        FixDirectoryName = dir_name$ + pathsep$
     ELSE
-        FixDirectoryName = dir_name
+        FixDirectoryName = dir_name$
     END IF
 END FUNCTION
 

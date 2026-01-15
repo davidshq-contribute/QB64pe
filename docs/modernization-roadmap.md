@@ -9,10 +9,15 @@ The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **18,947
 - Shell (1,540 lines), GFS (1,191 lines), Filesystem (1,044 lines)
 - Networking (894 lines), Platform (894 lines), Color (795 lines)
 - QBS string handling (725 lines), HTTP (530 lines), Memory (411 lines)
-- State Accessor layer (401 lines) - enables further modularization
-- Window (347 lines) - desktop dimensions, window state, file drop
+- State Accessor layer (401 lines) - 30+ accessors for display/fullscreen/resize/filedrop
+- Window (347 lines) - desktop dimensions, window state, file drop, _SCREENMOVE
 - Mouse, Port I/O, Screen, Keyboard, Utility, Console, Legacy Memory
-- Total: 27,028 lines in 47 modules
+- Total: 27,028+ lines in 47 modules
+
+### Recent Progress
+- Screen.cpp fully migrated to use state accessors (17 externs removed)
+- Shell.cpp, text.cpp, glut-main-thread.cpp migrated to use accessors
+- State accessor layer expanded with display control, fullscreen, resize, and file drop accessors
 
 ### Remaining Challenges
 - **Global state coupling**: Image system (`img[]`, `pages[]`), font arrays, environment 2D variables still accessed via externs in some modules
@@ -137,9 +142,11 @@ Replace message queue with event-driven architecture:
 3. ~~**Add unit tests for extracted modules**~~ - DONE (15/15, 100%)
 4. ~~**Document remaining module APIs**~~ - DONE (15/15 in module-interfaces.md)
 5. ~~**Expand Window module**~~ - DONE (347 lines, includes _SCREENMOVE, file drop)
-6. ~~**Expand State Accessor layer**~~ - DONE (401 lines, screen/fullscreen/resize/file drop)
-7. **Extract Hardware Texture functions** - ~766 lines, complex OpenGL code (deferred)
-8. **Add input buffer accessors** - Unblocks Input module extraction
+6. ~~**Expand State Accessor layer**~~ - DONE (401 lines, 30+ accessors)
+7. ~~**Migrate screen.cpp to accessors**~~ - DONE (17 externs removed)
+8. ~~**Migrate shell.cpp, glut-main-thread.cpp**~~ - DONE (fullscreen/screen_hide)
+9. **Extract Hardware Texture functions** - ~766 lines, complex OpenGL code (next target)
+10. **Add input buffer accessors** - Unblocks Input module extraction
 
 See `docs/modernization-recommendations.md` for detailed ROI analysis.
 

@@ -7,27 +7,13 @@
 
 #include "keyboard.h"
 #include "error_handle.h"
+#include "libqb_state.h"
 
 #include <stdint.h>
 
 #ifdef QB64_WINDOWS
 #include <windows.h>
 #endif
-
-// ============================================================================
-// EXTERNAL DEPENDENCIES (from libqb.cpp)
-// ============================================================================
-
-// Keyhit cyclic buffer
-extern int64_t keyhit[];
-extern int32_t keyhit_next;
-extern int32_t keyhit_nextfree;
-
-// Key state checking
-extern int32_t keyheld(uint32_t x);
-
-// Codepage mapping table
-extern uint16_t codepage437_to_unicode16[];
 
 #ifdef QB64_WINDOWS
 // Helper function to toggle a lock key
@@ -133,12 +119,8 @@ int32_t func__keyhit() {
     //   int32 keyhit_nextfree=0;
     //   int32 keyhit_next=0;
     //   note: if full, the oldest message is discarded to make way for the new message
-    if (keyhit_next != keyhit_nextfree) {
-        int32_t x = *(int32_t *)&keyhit[keyhit_next];
-        keyhit_next = (keyhit_next + 1) & 0x1FFF;
-        return x;
-    }
-    return 0;
+    int64_t value = libqb_keyhit_pop();
+    return static_cast<int32_t>(value);  // Return low 32-bits (key code)
 }
 
 int32_t func__keydown(int32_t x) {
@@ -146,7 +128,7 @@ int32_t func__keydown(int32_t x) {
         error(5);
         return 0;
     }
-    if (keyheld(x))
+    if (libqb_keyheld(static_cast<uint32_t>(x)))
         return -1;
     return 0;
 }
@@ -162,7 +144,7 @@ void sub__mapunicode(int32_t unicode_code, int32_t ascii_code) {
         error(5);
         return;
     }
-    codepage437_to_unicode16[ascii_code] = unicode_code;
+    libqb_set_codepage_mapping(ascii_code, static_cast<uint16_t>(unicode_code));
 }
 
 int32_t func__mapunicode(int32_t ascii_code) {
@@ -172,5 +154,5 @@ int32_t func__mapunicode(int32_t ascii_code) {
         error(5);
         return 0;
     }
-    return codepage437_to_unicode16[ascii_code];
+    return libqb_get_codepage_mapping(ascii_code);
 }

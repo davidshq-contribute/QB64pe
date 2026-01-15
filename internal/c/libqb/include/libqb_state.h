@@ -179,6 +179,93 @@ void* libqb_get_hdrop();
 void libqb_set_hdrop(void* value);
 
 // ============================================================================
+// KEYHIT BUFFER ACCESSORS
+// ============================================================================
+
+// Pop the next key event from the buffer (returns 0 if empty)
+int64_t libqb_keyhit_pop();
+
+// Get the count of pending key events
+int32_t libqb_keyhit_pending();
+
+// Push a key event to the buffer
+void libqb_keyhit_push(int64_t value);
+
+// Clear all pending key events
+void libqb_keyhit_clear();
+
+// ============================================================================
+// KEYHELD STATE ACCESSORS
+// ============================================================================
+
+// Check if a key is currently held (returns 1 if held, 0 if not)
+int32_t libqb_keyheld(uint32_t keycode);
+
+// ============================================================================
+// PORT 60H BUFFER ACCESSORS
+// ============================================================================
+
+// Get the count of pending port 60h events
+int32_t libqb_port60h_events_count();
+
+// Peek at the front event without removing it
+uint8_t libqb_port60h_peek();
+
+// Pop the front event from the buffer
+uint8_t libqb_port60h_pop();
+
+// Push a scancode to the buffer
+void libqb_port60h_push(uint8_t scancode);
+
+// Push a key release scancode (scancode | 0x80)
+void libqb_port60h_push_release(uint8_t scancode);
+
+// ============================================================================
+// MOUSE QUEUE ACCESSORS
+// ============================================================================
+
+// Opaque struct for mouse state (avoids exposing internal mouse_message struct)
+struct libqb_mouse_state {
+    int32_t x;
+    int32_t y;
+    int32_t movementX;
+    int32_t movementY;
+    int32_t buttons;
+    int32_t wheel;
+};
+
+// Get the current mouse state
+void libqb_mouse_get_current(struct libqb_mouse_state* state);
+
+// Advance to the next queued mouse event (returns -1 if advanced, 0 if no more)
+int32_t libqb_mouse_input_next();
+
+// Check if there are pending mouse events (returns 1 if yes, 0 if no)
+int32_t libqb_mouse_has_pending();
+
+// ============================================================================
+// MOUSE STATE ACCESSORS
+// ============================================================================
+
+// Mouse visibility (0=visible, 1=hidden)
+int32_t libqb_get_mouse_hidden();
+void libqb_set_mouse_hidden(int32_t value);
+
+// Mouse cursor style
+int32_t libqb_get_mouse_cursor_style();
+void libqb_set_mouse_cursor_style(int32_t style);
+
+// ============================================================================
+// CODEPAGE MAPPING ACCESSORS
+// ============================================================================
+
+// Get unicode mapping for an ASCII code (0-255)
+uint16_t libqb_get_codepage_mapping(int32_t ascii_code);
+
+// Set unicode mapping for an ASCII code (0-255)
+void libqb_set_codepage_mapping(int32_t ascii_code, uint16_t unicode_code);
+
+// ============================================================================
 // IMPLEMENTATION NOTES
 // ============================================================================
 
@@ -192,6 +279,7 @@ void libqb_set_hdrop(void* value);
 // - Font system: font[], fontwidth[], fontheight[], fontflags[], lastfont
 // - Page indexes: write_page_index, read_page_index, display_page_index
 // - Environment: environment_2d__screen_* variables
+// - Input buffers: keyhit[], keyheld_buffer, port60h_event[], mouse_message_queue
 //
 // Usage: Include this header and call accessor functions instead of using
 // extern declarations for global variables.

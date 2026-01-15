@@ -10,6 +10,8 @@
 
 #include "../../os.h"  // For int32, uint32 type definitions
 
+#include <cstring>  // For memmove
+
 // ============================================================================
 // EXTERNAL REFERENCES FROM libqb.cpp
 // ============================================================================
@@ -74,6 +76,44 @@ extern HDROP hdrop;
 #else
 static void* hdrop_stub = nullptr;
 #endif
+
+// Keyhit buffer globals
+extern int64 keyhit[8192];
+extern int32 keyhit_next;
+extern int32 keyhit_nextfree;
+
+// Keyheld function (wrapper for internal keyheld() function)
+extern int32 keyheld(uint32 keycode);
+
+// Port 60h buffer globals
+extern uint8 port60h_event[256];
+extern int32 port60h_events;
+
+// Mouse message queue struct (defined in libqb.cpp)
+struct mouse_message {
+    int32 x;
+    int32 y;
+    int32 movementX;
+    int32 movementY;
+    int32 buttons;
+    int32 wheel;
+};
+
+struct mouse_message_queue_struct {
+    mouse_message *queue;
+    int32 lastIndex;
+    int32 current;
+    int32 last;
+};
+
+extern mouse_message_queue_struct mouse_message_queue;
+
+// Mouse state globals
+extern int32 mouse_hiddden;  // Note: typo in original code (3 d's)
+extern int mouse_cursor_style;
+
+// Codepage mapping array
+extern uint16 codepage437_to_unicode16[256];
 
 // ============================================================================
 // IMAGE SYSTEM ACCESSORS
@@ -398,4 +438,145 @@ void libqb_set_hdrop(void* value) {
 #else
     hdrop_stub = value;
 #endif
+}
+
+// ============================================================================
+// KEYHIT BUFFER ACCESSORS
+// ============================================================================
+
+int64_t libqb_keyhit_pop() {
+    if (keyhit_next == keyhit_nextfree) {
+        return 0;
+    }
+    int64_t value = keyhit[keyhit_next & 0x1FFF];
+    keyhit_next++;
+    return value;
+}
+
+int32_t libqb_keyhit_pending() {
+    return keyhit_nextfree - keyhit_next;
+}
+
+void libqb_keyhit_push(int64_t value) {
+    keyhit[keyhit_nextfree & 0x1FFF] = value;
+    keyhit_nextfree++;
+}
+
+void libqb_keyhit_clear() {
+    keyhit_next = keyhit_nextfree;
+}
+
+// ============================================================================
+// KEYHELD STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_keyheld(uint32_t keycode) {
+    return keyheld(static_cast<uint32>(keycode));
+}
+
+// ============================================================================
+// PORT 60H BUFFER ACCESSORS
+// ============================================================================
+
+int32_t libqb_port60h_events_count() {
+    return port60h_events;
+}
+
+uint8_t libqb_port60h_peek() {
+    // Return front of queue (or last scancode if empty - matches hardware behavior)
+    return port60h_event[0];
+}
+
+uint8_t libqb_port60h_pop() {
+    if (port60h_events == 0) {
+        // Return last scancode without popping (matches hardware behavior)
+        return port60h_event[0];
+    }
+    uint8_t value = port60h_event[0];
+    port60h_events--;
+    if (port60h_events > 0) {
+        memmove(port60h_event, port60h_event + 1, port60h_events);
+    }
+    return value;
+}
+
+void libqb_port60h_push(uint8_t scancode) {
+    if (port60h_events < 256) {
+        port60h_event[port60h_events] = scancode;
+        port60h_events++;
+    }
+}
+
+void libqb_port60h_push_release(uint8_t scancode) {
+    libqb_port60h_push(scancode | 0x80);
+}
+
+// ============================================================================
+// MOUSE QUEUE ACCESSORS
+// ============================================================================
+
+void libqb_mouse_get_current(struct libqb_mouse_state* state) {
+    if (state == nullptr) {
+        return;
+    }
+    mouse_message* msg = &mouse_message_queue.queue[mouse_message_queue.current];
+    state->x = msg->x;
+    state->y = msg->y;
+    state->movementX = msg->movementX;
+    state->movementY = msg->movementY;
+    state->buttons = msg->buttons;
+    state->wheel = msg->wheel;
+}
+
+int32_t libqb_mouse_input_next() {
+    if (mouse_message_queue.current == mouse_message_queue.last) {
+        return 0;
+    }
+    mouse_message_queue.current++;
+    if (mouse_message_queue.current > mouse_message_queue.lastIndex) {
+        mouse_message_queue.current = 0;
+    }
+    return -1;
+}
+
+int32_t libqb_mouse_has_pending() {
+    return (mouse_message_queue.current != mouse_message_queue.last) ? 1 : 0;
+}
+
+// ============================================================================
+// MOUSE STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_mouse_hidden() {
+    return mouse_hiddden;
+}
+
+void libqb_set_mouse_hidden(int32_t value) {
+    mouse_hiddden = value;
+}
+
+int32_t libqb_get_mouse_cursor_style() {
+    return mouse_cursor_style;
+}
+
+void libqb_set_mouse_cursor_style(int32_t style) {
+    mouse_cursor_style = style;
+}
+
+// ============================================================================
+// CODEPAGE MAPPING ACCESSORS
+// ============================================================================
+
+uint16_t libqb_get_codepage_mapping(int32_t ascii_code) {
+    if (ascii_code < 0 || ascii_code > 255) {
+        return 0;
+    }
+    return codepage437_to_unicode16[ascii_code];
+}
+
+void libqb_set_codepage_mapping(int32_t ascii_code, uint16_t unicode_code) {
+    if (ascii_code < 0 || ascii_code > 255) {
+        return;
+    }
+    codepage437_to_unicode16[ascii_code] = unicode_code;
 }

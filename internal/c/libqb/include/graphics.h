@@ -62,6 +62,33 @@ struct img_struct {
 #define IMG_SCREEN 2  // img is linked to other screen pages
 #define IMG_FREEMEM 4 // if set, it means memory must be freed
 
+// ============================================================================
+// SOFTWARE IMAGE MANAGEMENT FUNCTIONS
+// ============================================================================
+
+// Restore default palette for screen mode
+void restorepalette(img_struct *im);
+
+// Set a pixel with alpha blending support
+void pset(int32_t x, int32_t y, uint32_t col);
+
+// Allocate a new image index (returns index, 0 on failure)
+uint32_t newimg();
+
+// Free an image by index (returns 1 on success, 0 on failure)
+int32_t freeimg(uint32_t i);
+
+// Revert image to default state for its screen mode
+void imgrevert(int32_t i);
+
+// Create image frame from existing buffer
+int32_t imgframe(uint8_t *o, int32_t x, int32_t y, int32_t bpp);
+
+// Create new image with allocated memory
+int32_t imgnew(int32_t x, int32_t y, int32_t bpp);
+
+// ============================================================================
+
 // used by HSB/RGB color conversion routines
 struct hsb_color
 {
@@ -133,6 +160,11 @@ struct RENDER_STATE_GLOBAL { // settings not bound to specific source/target
 /********** Render State **********/
 
 #define INVALID_HARDWARE_HANDLE -1
+
+// Hardware image handle offset (added to all hardware image handles to avoid collision)
+#define HARDWARE_IMG_HANDLE_OFFSET -16777216
+#define NEW_HARDWARE_IMG__BUFFER_CONTENT 1
+#define NEW_HARDWARE_IMG__DUPLICATE_PROVIDED_BUFFER 2
 
 struct hardware_img_struct {
     int32_t w;
@@ -471,6 +503,133 @@ void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element,
 /// @param mask Color mask for pixel data
 /// @param passed Parameter passing flags
 void sub_graphics_put(float x1f, float y1f, void *element, int32_t option, uint32_t mask, int32_t passed);
+
+// ============================================================================
+// HARDWARE TEXTURE FUNCTIONS
+// ============================================================================
+
+// Forward declaration for list type
+struct list;
+
+// Texture creation and management
+
+/// Generates a new OpenGL texture handle.
+/// @returns OpenGL texture ID
+int32_t new_texture_handle();
+
+/// Creates a new hardware accelerated image.
+/// @param x Image width
+/// @param y Image height
+/// @param pixels Pointer to pixel buffer (BGRA format)
+/// @param flags Creation flags (NEW_HARDWARE_IMG__BUFFER_CONTENT, etc.)
+/// @returns Hardware image handle
+int32_t new_hardware_img(int32_t x, int32_t y, uint32_t *pixels, int32_t flags);
+
+/// Converts buffered pixel data to GPU texture (lazy loading).
+/// @param handle Hardware image handle
+void hardware_img_buffer_to_texture(int32_t handle);
+
+/// Deallocates hardware image and frees GPU resources.
+/// @param handle Hardware image handle
+/// @param caller_id Debug identifier for tracking
+void free_hardware_img(int32_t handle, int32_t caller_id);
+
+/// Ensures a depth buffer exists for 3D rendering to image.
+/// @param hardware_img Pointer to hardware image struct
+void hardware_img_requires_depthbuffer(hardware_img_struct *hardware_img);
+
+/// Safe retrieval of hardware image struct with validation.
+/// @param handle Hardware image handle
+/// @returns Pointer to hardware_img_struct or NULL if invalid
+hardware_img_struct *get_hardware_img(int32_t handle);
+
+/// Converts user-facing handle to internal list index.
+/// @param handle Hardware image handle
+/// @returns Internal list index
+int32_t get_hardware_img_index(int32_t handle);
+
+// NPO2 (Non-Power-of-2) texture support
+
+/// Generates power-of-2 texture from non-power-of-2 image.
+/// @param px Pointer to width (updated to PO2 width)
+/// @param py Pointer to height (updated to PO2 height)
+/// @param pixels Source pixel buffer
+/// @returns Pointer to PO2 pixel buffer (may be internal buffer)
+uint32_t *NPO2_texture_generate(int32_t *px, int32_t *py, uint32_t *pixels);
+
+// Render state management
+
+/// Changes the source texture for drawing operations.
+/// @param new_handle Hardware image handle or INVALID_HARDWARE_HANDLE
+void set_render_source(int32_t new_handle);
+
+/// Changes the rendering destination (primary context or FBO).
+/// @param new_handle Hardware image handle, 0 for primary, or INVALID_HARDWARE_HANDLE
+void set_render_dest(int32_t new_handle);
+
+/// Renders all accumulated vertices to GPU.
+void hardware_buffer_flush();
+
+/// Sets texture filtering modes.
+/// @param new_mode_shrunk Filter mode when texture is shrunk
+/// @param new_mode_stretched Filter mode when texture is stretched
+void set_smooth(int32_t new_mode_shrunk, int32_t new_mode_stretched);
+
+/// Sets texture wrapping mode.
+/// @param new_mode TEXTURE_WRAP_MODE__DONT_WRAP or TEXTURE_WRAP_MODE__WRAP
+void set_texture_wrap(int32_t new_mode);
+
+// Hardware drawing functions
+
+/// Draws rectangular image region to destination.
+/// @param dst_x1, dst_y1 Destination top-left
+/// @param dst_x2, dst_y2 Destination bottom-right
+/// @param src_img Source hardware image handle
+/// @param dst_img Destination handle (0 for screen)
+/// @param src_x1, src_y1 Source top-left
+/// @param src_x2, src_y2 Source bottom-right
+/// @param use_alpha Whether to use alpha blending
+/// @param smooth Whether to apply texture filtering
+void hardware_img_put(int32_t dst_x1, int32_t dst_y1, int32_t dst_x2, int32_t dst_y2,
+                      int32_t src_img, int32_t dst_img, int32_t src_x1, int32_t src_y1,
+                      int32_t src_x2, int32_t src_y2, int32_t use_alpha, int32_t smooth);
+
+/// Maps a triangle from source image to destination (2D).
+void hardware_img_tri2d(float dst_x1, float dst_y1, float dst_x2, float dst_y2,
+                        float dst_x3, float dst_y3, int32_t src_img, int32_t dst_img,
+                        float src_x1, float src_y1, float src_x2, float src_y2,
+                        float src_x3, float src_y3, int32_t use_alpha, int32_t smooth);
+
+/// Maps a triangle from source image to destination (3D with Z coordinates).
+void hardware_img_tri3d(float dst_x1, float dst_y1, float dst_z1,
+                        float dst_x2, float dst_y2, float dst_z2,
+                        float dst_x3, float dst_y3, float dst_z3,
+                        int32_t src_img, int32_t dst_img,
+                        float src_x1, float src_y1, float src_x2, float src_y2,
+                        float src_x3, float src_y3, int32_t use_alpha,
+                        int32_t smooth, int32_t cull_mode, int32_t depthbuffer_mode);
+
+/// Clears the depth buffer for a hardware image.
+/// @param dst_img Destination hardware image handle (0 for primary context)
+void clear_depthbuffer(int32_t dst_img);
+
+// Hardware texture global state (defined in graphics.cpp)
+extern RENDER_STATE_GLOBAL render_state;
+extern RENDER_STATE_DEST dest_render_state0;
+extern list *hardware_img_handles;
+
+// NPO2 texture support globals
+extern int32_t force_NPO2_fix;
+extern uint32_t *NPO2_buffer;
+extern int32_t NPO2_buffer_size_in_pixels;
+
+// Vertex buffer globals
+extern float *hardware_buffer_vertices;
+extern int32_t hardware_buffer_vertices_max;
+extern int32_t hardware_buffer_vertices_count;
+extern float *hardware_buffer_texcoords;
+extern int32_t hardware_buffer_texcoords_max;
+extern int32_t hardware_buffer_texcoords_count;
 
 // ============================================================================
 // IMPLEMENTATION NOTES

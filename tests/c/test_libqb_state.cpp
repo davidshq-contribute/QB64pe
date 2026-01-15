@@ -89,6 +89,44 @@ extern "C" {
     int32_t libqb_get_screen_y1();
     int32_t libqb_get_screen_scaled_width();
     int32_t libqb_get_screen_scaled_height();
+
+    // Keyhit buffer accessors
+    int64_t libqb_keyhit_pop();
+    int32_t libqb_keyhit_pending();
+    void libqb_keyhit_push(int64_t value);
+    void libqb_keyhit_clear();
+
+    // Keyheld state accessor
+    int32_t libqb_keyheld(uint32_t keycode);
+
+    // Port 60h buffer accessors
+    int32_t libqb_port60h_events_count();
+    uint8_t libqb_port60h_peek();
+    uint8_t libqb_port60h_pop();
+    void libqb_port60h_push(uint8_t scancode);
+    void libqb_port60h_push_release(uint8_t scancode);
+
+    // Mouse queue accessors
+    struct libqb_mouse_state {
+        int32_t x;
+        int32_t y;
+        int32_t movementX;
+        int32_t movementY;
+        int32_t buttons;
+        int32_t wheel;
+    };
+    void libqb_mouse_get_current(struct libqb_mouse_state* state);
+    int32_t libqb_mouse_input_next();
+    int32_t libqb_mouse_has_pending();
+
+    // Mouse state accessors
+    int32_t libqb_get_mouse_hidden();
+    void libqb_set_mouse_hidden(int32_t value);
+    int32_t libqb_get_mouse_cursor_style();
+    void libqb_set_mouse_cursor_style(int32_t style);
+
+    // Codepage mapping accessor
+    uint16_t libqb_get_codepage_mapping(int32_t ascii_code);
 }
 
 // ============================================================================
@@ -384,6 +422,242 @@ void test_accessor_purpose() {
     test_assert(1);
 }
 
+// ============================================================================
+// KEYHIT BUFFER ACCESSOR TESTS
+// ============================================================================
+
+void test_keyhit_linkage() {
+    // Verify keyhit accessor functions are linked
+    int64_t (*pop)() = libqb_keyhit_pop;
+    int32_t (*pending)() = libqb_keyhit_pending;
+    void (*push)(int64_t) = libqb_keyhit_push;
+    void (*clear)() = libqb_keyhit_clear;
+
+    test_assert(pop != NULL);
+    test_assert(pending != NULL);
+    test_assert(push != NULL);
+    test_assert(clear != NULL);
+}
+
+void test_keyhit_push_pop() {
+    // Clear any existing events first
+    libqb_keyhit_clear();
+    test_assert_ints_with_name("Initial pending 0", 0, libqb_keyhit_pending());
+
+    // Push a key event
+    libqb_keyhit_push(65);  // 'A'
+    test_assert_ints_with_name("Pending after push", 1, libqb_keyhit_pending());
+
+    // Pop and verify
+    int64_t value = libqb_keyhit_pop();
+    test_assert(value == 65);
+    test_assert_ints_with_name("Pending after pop", 0, libqb_keyhit_pending());
+}
+
+void test_keyhit_empty_pop() {
+    // Clear and verify empty pop returns 0
+    libqb_keyhit_clear();
+    int64_t value = libqb_keyhit_pop();
+    test_assert(value == 0);
+}
+
+void test_keyhit_multiple_events() {
+    // Clear and push multiple events
+    libqb_keyhit_clear();
+    libqb_keyhit_push(65);  // 'A'
+    libqb_keyhit_push(66);  // 'B'
+    libqb_keyhit_push(67);  // 'C'
+    test_assert_ints_with_name("Pending 3", 3, libqb_keyhit_pending());
+
+    // Pop in FIFO order
+    test_assert(libqb_keyhit_pop() == 65);
+    test_assert(libqb_keyhit_pop() == 66);
+    test_assert(libqb_keyhit_pop() == 67);
+    test_assert_ints_with_name("Pending 0", 0, libqb_keyhit_pending());
+
+    // Extra pop should return 0
+    test_assert(libqb_keyhit_pop() == 0);
+}
+
+void test_keyhit_clear() {
+    // Push events and clear
+    libqb_keyhit_push(65);
+    libqb_keyhit_push(66);
+    libqb_keyhit_clear();
+    test_assert_ints_with_name("Cleared pending", 0, libqb_keyhit_pending());
+    test_assert(libqb_keyhit_pop() == 0);
+}
+
+// ============================================================================
+// KEYHELD ACCESSOR TESTS
+// ============================================================================
+
+void test_keyheld_linkage() {
+    // Verify keyheld accessor function is linked
+    int32_t (*keyheld_fn)(uint32_t) = libqb_keyheld;
+    test_assert(keyheld_fn != NULL);
+}
+
+void test_keyheld_returns_value() {
+    // Call keyheld - result depends on keyboard state
+    // Just verify function can be called without crashing
+    int32_t result = libqb_keyheld(65);  // Check 'A' key
+    (void)result;  // Result depends on whether key is held
+    test_assert(1);
+}
+
+// ============================================================================
+// PORT 60H BUFFER ACCESSOR TESTS
+// ============================================================================
+
+void test_port60h_linkage() {
+    // Verify port 60h accessor functions are linked
+    int32_t (*count)() = libqb_port60h_events_count;
+    uint8_t (*peek)() = libqb_port60h_peek;
+    uint8_t (*pop)() = libqb_port60h_pop;
+    void (*push)(uint8_t) = libqb_port60h_push;
+    void (*push_release)(uint8_t) = libqb_port60h_push_release;
+
+    test_assert(count != NULL);
+    test_assert(peek != NULL);
+    test_assert(pop != NULL);
+    test_assert(push != NULL);
+    test_assert(push_release != NULL);
+}
+
+void test_port60h_push_pop() {
+    // Drain any existing events
+    while (libqb_port60h_events_count() > 0) {
+        libqb_port60h_pop();
+    }
+
+    // Push a scancode
+    libqb_port60h_push(0x1E);  // 'A' scancode
+    test_assert_ints_with_name("Count after push", 1, libqb_port60h_events_count());
+
+    // Peek should return value without removing
+    test_assert(libqb_port60h_peek() == 0x1E);
+    test_assert_ints_with_name("Count after peek", 1, libqb_port60h_events_count());
+
+    // Pop should return and remove
+    test_assert(libqb_port60h_pop() == 0x1E);
+    test_assert_ints_with_name("Count after pop", 0, libqb_port60h_events_count());
+}
+
+void test_port60h_push_release() {
+    // Drain events
+    while (libqb_port60h_events_count() > 0) {
+        libqb_port60h_pop();
+    }
+
+    // Push release scancode (should set high bit)
+    libqb_port60h_push_release(0x1E);
+    uint8_t value = libqb_port60h_pop();
+    test_assert(value == (0x1E | 0x80));
+}
+
+void test_port60h_empty_pop() {
+    // Drain events
+    while (libqb_port60h_events_count() > 0) {
+        libqb_port60h_pop();
+    }
+
+    // Empty pop should return 0
+    test_assert(libqb_port60h_pop() == 0);
+    test_assert(libqb_port60h_peek() == 0);
+}
+
+// ============================================================================
+// MOUSE ACCESSOR TESTS
+// ============================================================================
+
+void test_mouse_linkage() {
+    // Verify mouse accessor functions are linked
+    void (*get_current)(struct libqb_mouse_state*) = libqb_mouse_get_current;
+    int32_t (*input_next)() = libqb_mouse_input_next;
+    int32_t (*has_pending)() = libqb_mouse_has_pending;
+    int32_t (*get_hidden)() = libqb_get_mouse_hidden;
+    void (*set_hidden)(int32_t) = libqb_set_mouse_hidden;
+    int32_t (*get_cursor)() = libqb_get_mouse_cursor_style;
+    void (*set_cursor)(int32_t) = libqb_set_mouse_cursor_style;
+
+    test_assert(get_current != NULL);
+    test_assert(input_next != NULL);
+    test_assert(has_pending != NULL);
+    test_assert(get_hidden != NULL);
+    test_assert(set_hidden != NULL);
+    test_assert(get_cursor != NULL);
+    test_assert(set_cursor != NULL);
+}
+
+void test_mouse_get_current() {
+    // Get current mouse state - should not crash
+    struct libqb_mouse_state state;
+    libqb_mouse_get_current(&state);
+    // Values depend on actual mouse state - just verify no crash
+    test_assert(1);
+}
+
+void test_mouse_hidden_roundtrip() {
+    // Save original
+    int32_t orig = libqb_get_mouse_hidden();
+
+    // Set and verify
+    libqb_set_mouse_hidden(1);
+    test_assert_ints_with_name("Mouse hidden set", 1, libqb_get_mouse_hidden());
+
+    libqb_set_mouse_hidden(0);
+    test_assert_ints_with_name("Mouse visible set", 0, libqb_get_mouse_hidden());
+
+    // Restore
+    libqb_set_mouse_hidden(orig);
+}
+
+void test_mouse_cursor_style_roundtrip() {
+    // Save original
+    int32_t orig = libqb_get_mouse_cursor_style();
+
+    // Set and verify
+    libqb_set_mouse_cursor_style(2);
+    test_assert_ints_with_name("Cursor style set", 2, libqb_get_mouse_cursor_style());
+
+    // Restore
+    libqb_set_mouse_cursor_style(orig);
+}
+
+// ============================================================================
+// CODEPAGE ACCESSOR TESTS
+// ============================================================================
+
+void test_codepage_linkage() {
+    // Verify codepage accessor is linked
+    uint16_t (*get_mapping)(int32_t) = libqb_get_codepage_mapping;
+    test_assert(get_mapping != NULL);
+}
+
+void test_codepage_valid_range() {
+    // Test valid ASCII codes (0-255)
+    // ASCII 'A' (65) should map to Unicode 'A' (65)
+    uint16_t result = libqb_get_codepage_mapping(65);
+    test_assert(result == 65);
+
+    // ASCII space (32) should map to Unicode space (32)
+    result = libqb_get_codepage_mapping(32);
+    test_assert(result == 32);
+}
+
+void test_codepage_invalid_range() {
+    // Test invalid ASCII codes
+    uint16_t result = libqb_get_codepage_mapping(-1);
+    test_assert(result == 0);
+
+    result = libqb_get_codepage_mapping(256);
+    test_assert(result == 0);
+
+    result = libqb_get_codepage_mapping(1000);
+    test_assert(result == 0);
+}
+
 int main() {
     struct unit_test tests[] = {
         // Linkage tests
@@ -424,6 +698,34 @@ int main() {
 
         // Documentation tests
         { test_accessor_purpose, "test-accessor-purpose" },
+
+        // Keyhit buffer accessor tests
+        { test_keyhit_linkage, "test-keyhit-linkage" },
+        { test_keyhit_push_pop, "test-keyhit-push-pop" },
+        { test_keyhit_empty_pop, "test-keyhit-empty-pop" },
+        { test_keyhit_multiple_events, "test-keyhit-multiple-events" },
+        { test_keyhit_clear, "test-keyhit-clear" },
+
+        // Keyheld accessor tests
+        { test_keyheld_linkage, "test-keyheld-linkage" },
+        { test_keyheld_returns_value, "test-keyheld-returns-value" },
+
+        // Port 60h buffer accessor tests
+        { test_port60h_linkage, "test-port60h-linkage" },
+        { test_port60h_push_pop, "test-port60h-push-pop" },
+        { test_port60h_push_release, "test-port60h-push-release" },
+        { test_port60h_empty_pop, "test-port60h-empty-pop" },
+
+        // Mouse accessor tests
+        { test_mouse_linkage, "test-mouse-linkage" },
+        { test_mouse_get_current, "test-mouse-get-current" },
+        { test_mouse_hidden_roundtrip, "test-mouse-hidden-roundtrip" },
+        { test_mouse_cursor_style_roundtrip, "test-mouse-cursor-style-roundtrip" },
+
+        // Codepage accessor tests
+        { test_codepage_linkage, "test-codepage-linkage" },
+        { test_codepage_valid_range, "test-codepage-valid-range" },
+        { test_codepage_invalid_range, "test-codepage-invalid-range" },
     };
 
     return run_tests("libqb_state", tests, sizeof(tests) / sizeof(*tests));

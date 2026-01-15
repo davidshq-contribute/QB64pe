@@ -16,6 +16,8 @@
 
 #include "../../os.h"
 
+#include <cinttypes>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 

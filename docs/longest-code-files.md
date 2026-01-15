@@ -8,7 +8,7 @@ This document lists the longest code files in the QB64pe repository, ranked by l
 |------|------|-------|-----------|
 | 1 | `source/qb64pe.bas` | 24,330 | .bas |
 | 2 | `source/ide/ide_methods.bas` | 20,864 | .bas |
-| 3 | `internal/c/libqb.cpp` | 19,119 | .cpp |
+| 3 | `internal/c/libqb.cpp` | 18,947 | .cpp |
 | 4 | `internal/c/libqb/src/graphics.cpp` | 7,830 | .cpp |
 | 5 | `source/subs_functions/subs_functions.bas` | 4,309 | .bas |
 | 6 | `internal/c/parts/audio/audio.cpp` | 3,911 | .cpp |
@@ -21,7 +21,7 @@ This document lists the longest code files in the QB64pe repository, ranked by l
 
 ## Modularization Progress
 
-The `libqb.cpp` file has been reduced from ~31,111 lines to **19,119 lines** through modularization:
+The `libqb.cpp` file has been reduced from ~31,111 lines to **18,947 lines** through modularization:
 
 ### Major Extracted Modules (>500 lines)
 

@@ -36,8 +36,6 @@ struct mouse_message_queue_struct {
 
 // External globals from libqb.cpp
 extern mouse_message_queue_struct mouse_message_queue;
-extern int32 mouse_hiddden;
-extern int mouse_cursor_style;
 extern int32 *fontwidth;
 extern int32 *fontheight;
 extern int32 environment_2d__screen_width;
@@ -60,7 +58,7 @@ void sub__mousehide() {
     libqb_glut_set_cursor(GLUT_CURSOR_NONE);
 #    endif
 #endif
-    mouse_hiddden = -1;
+    libqb_set_mouse_hidden(-1);
 }
 
 void sub__mouseshow(qbs *style, int32 passed) {
@@ -76,47 +74,47 @@ void sub__mouseshow(qbs *style, int32 passed) {
     if (passed) {
         qbs_set(str, qbs_ucase(style));
         if (qbs_equal(str, qbs_new_txt("DEFAULT"))) {
-            mouse_cursor_style = GLUT_CURSOR_LEFT_ARROW;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_LEFT_ARROW);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("LINK"))) {
-            mouse_cursor_style = GLUT_CURSOR_INFO;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_INFO);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("TEXT"))) {
-            mouse_cursor_style = GLUT_CURSOR_TEXT;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_TEXT);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("CROSSHAIR"))) {
-            mouse_cursor_style = GLUT_CURSOR_CROSSHAIR;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_CROSSHAIR);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("VERTICAL"))) {
-            mouse_cursor_style = GLUT_CURSOR_UP_DOWN;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_UP_DOWN);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("HORIZONTAL"))) {
-            mouse_cursor_style = GLUT_CURSOR_LEFT_RIGHT;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_LEFT_RIGHT);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("TOPLEFT_BOTTOMRIGHT"))) {
-            mouse_cursor_style = GLUT_CURSOR_TOP_LEFT_CORNER;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_TOP_LEFT_CORNER);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("TOPRIGHT_BOTTOMLEFT"))) {
-            mouse_cursor_style = GLUT_CURSOR_TOP_RIGHT_CORNER;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_TOP_RIGHT_CORNER);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("WAIT"))) {
-            mouse_cursor_style = GLUT_CURSOR_WAIT;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_WAIT);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("HELP"))) {
-            mouse_cursor_style = GLUT_CURSOR_HELP;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_HELP);
             goto cursor_valid;
         }
         if (qbs_equal(str, qbs_new_txt("CYCLE")) || qbs_equal(str, qbs_new_txt("MOVE"))) {
-            mouse_cursor_style = GLUT_CURSOR_CYCLE;
+            libqb_set_mouse_cursor_style(GLUT_CURSOR_CYCLE);
             goto cursor_valid;
         }
         error(5);
@@ -124,13 +122,13 @@ void sub__mouseshow(qbs *style, int32 passed) {
     }
 cursor_valid:
 
-    libqb_glut_set_cursor(mouse_cursor_style);
+    libqb_glut_set_cursor(libqb_get_mouse_cursor_style());
 #endif
-    mouse_hiddden = 0;
+    libqb_set_mouse_hidden(0);
 }
 
 int32_t func__mousehidden() {
-    return mouse_hiddden;
+    return libqb_get_mouse_hidden();
 }
 
 float func__mousemovementx() {

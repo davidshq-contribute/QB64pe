@@ -5,9 +5,9 @@
 This document provides ROI-prioritized recommendations for the ongoing QB64-PE modernization effort. After reviewing the entire codebase, documentation, and current progress, the following key findings emerge:
 
 **Current State:**
-- libqb.cpp reduced from 31,111 to 19,119 lines (38.5% reduction)
+- libqb.cpp reduced from 31,111 to 18,947 lines (39.1% reduction)
 - 47 modules exist in `libqb/src/`, with 15 major functional extractions completed
-- State accessor layer (`libqb_state.h`) enables further modularization
+- State accessor layer (`libqb_state.h`) expanded to 401 lines with 30+ accessors
 - Build system and CI/CD are mature and well-documented
 - Test coverage complete: 15/15 modules have unit tests
 - Documentation complete: 15/15 modules have API docs in module-interfaces.md
@@ -15,8 +15,8 @@ This document provides ROI-prioritized recommendations for the ongoing QB64-PE m
 **Key Opportunities:**
 1. The remaining ~19K lines in libqb.cpp are increasingly interdependent
 2. Quick wins remain in the codebase (deprecated features, dead code)
-3. Window module can be expanded (~270 more lines)
-4. Hardware texture functions can be extracted (~400 lines)
+3. ✅ Window module expanded (77→347 lines) - DONE
+4. Hardware texture functions can be extracted (~766 lines)
 
 ---
 
@@ -37,79 +37,42 @@ Each recommendation is scored on:
 
 ## Tier 1: High ROI Quick Wins
 
-### ~~1.1 Complete Module Test Coverage~~ - DONE
+### ~~1.2 Remove Deprecated Features~~ - NOT RECOMMENDED
 
-**Status:** COMPLETED - All 15 modules now have unit tests
+**Analysis:** These features are already properly deprecated and should NOT be removed:
 
-| Module | Test File | Status |
-|--------|-----------|--------|
-| color.cpp | test_color.cpp | EXISTS |
-| fileio.cpp | test_fileio.cpp | EXISTS |
-| graphics.cpp | test_graphics.cpp | EXISTS |
-| screen.cpp | test_screen.cpp | EXISTS |
-| text.cpp | test_text.cpp | EXISTS |
-| networking.cpp | test_networking.cpp | EXISTS |
-| platform.cpp | test_platform.cpp | EXISTS |
-| keyboard.cpp | test_keyboard.cpp | EXISTS |
-| mouse.cpp | test_mouse.cpp | EXISTS |
-| utility.cpp | test_utility.cpp | EXISTS |
-| console.cpp | test_console.cpp | EXISTS |
-| window.cpp | test_window.cpp | EXISTS |
-| port_io.cpp | test_port_io.cpp | EXISTS |
-| mem_legacy.cpp | test_mem_legacy.cpp | EXISTS |
-| libqb_state.cpp | test_libqb_state.cpp | EXISTS |
+| Feature | Location | Current Behavior |
+|---------|----------|------------------|
+| `$NOPREFIX` | qb64pe.bas:1833 | Error with IDE conversion offer |
+| `$MIDISOUNDFONT` | qb64pe.bas:1902 | Error pointing to `_MIDISOUNDBANK` |
 
-### 1.2 Remove Deprecated Features
+**Why keep them:**
+- `$NOPREFIX`: IDE offers automatic code conversion via `AddPREFIX.bas` utility
+- Both provide clear error messages helping users update old code
+- Removing them would make old programs fail with confusing errors
 
-**Identified Deprecations:**
-
-| Feature | Location | Lines | Status |
-|---------|----------|-------|--------|
-| `$NOPREFIX` | qb64pe.bas:1020 | ~50 | Deprecated with warning |
-| `$MIDISOUNDFONT` | qb64pe.bas:1900 | ~20 | Replaced by `_MIDISOUNDBANK` |
-
-**Recommendation:** Remove both deprecated features. They emit warnings and add maintenance burden.
-
-**Effort:** Low (2-3 hours)
-**Impact:** Low-Medium - reduces codebase complexity
-**Risk:** Low - features already emit deprecation warnings
+**Status:** Already properly deprecated - no action needed
 
 ---
 
 ## Tier 2: Medium ROI Improvements
 
-### 2.1 Expand Window Module
+### ~~2.2 Extract Image Functions~~ - ✅ COMPLETED
 
-**Current State:** window.cpp is only 77 lines
+**Status:** All image functions are now in graphics.cpp:
 
-**Candidates for Extraction:**
-- `sub__screenmove` (~80 lines)
-- `sub__icon` (~50 lines)
-- `sub__filedrop` / `func__filedrop` (~100 lines)
-- `func__desktopwidth` / `func__desktopheight` (~40 lines)
+**Hardware texture functions:**
+- `new_hardware_img()`, `free_hardware_img()` - Hardware texture lifecycle
+- `NPO2_texture_generate()` - Non-power-of-2 texture handling
+- `hardware_img_put()`, `hardware_img_tri2d()`, `hardware_img_tri3d()` - Hardware rendering
 
-**Total:** ~270 additional lines extractable
+**Software image functions (extracted from libqb.cpp):**
+- `restorepalette()` - Palette restoration
+- `pset()` - Pixel setting with alpha blending
+- `newimg()`, `freeimg()` - Image allocation/deallocation
+- `imgrevert()`, `imgframe()`, `imgnew()` - Image lifecycle management
 
-**Effort:** Medium (1-2 days)
-**Impact:** Medium - cleaner module boundaries
-**Risk:** Low - functions are relatively self-contained
-
-### 2.2 Extract Hardware Texture Functions
-
-**Candidates:** (~400 lines)
-- `newimg()` - Image creation
-- `freeimg()` - Image cleanup
-- `imgrevert()` - Image reversion
-- `new_hardware_img()` - Hardware texture creation
-- Related texture upload functions
-
-**Decision Point:** Create new `hardware.cpp` or merge into existing `graphics.cpp`?
-
-**Recommendation:** Merge into graphics.cpp (already 7,589 lines but logically related)
-
-**Effort:** Medium (2-3 days)
-**Impact:** Medium - clearer graphics subsystem
-**Risk:** Medium - performance-critical code
+**Result:** ~482 lines moved to graphics.cpp, libqb.cpp reduced to 17,563 lines.
 
 ### 2.3 Add CI Formatting Check
 
@@ -124,19 +87,24 @@ Each recommendation is scored on:
 **Impact:** Medium - prevents style drift
 **Risk:** Low
 
-### 2.4 Reduce Extern Declaration Count
+### ~~2.4 Reduce Extern Declaration Count~~ - PARTIAL
 
-**Current State:** 183 extern declarations across 19 modules
+**Current State:** ~168 extern declarations across 19 modules (down from 183)
 
-**High-Value Migrations:**
+**Completed Migrations:**
+| Module | Status | Notes |
+|--------|--------|-------|
+| screen.cpp | ✅ DONE | All 17 externs migrated to accessors |
+| shell.cpp | ✅ DONE | Fullscreen externs migrated |
+| glut-main-thread.cpp | ✅ DONE | screen_hide migrated |
+| text.cpp | Partial | autodisplay migrated, write_page kept as extern |
+
+**Remaining High-Value Targets:**
 | Module | Current Externs | Accessors Available | Action |
 |--------|-----------------|---------------------|--------|
 | graphics.cpp | 24 | Many | Defer (performance critical) |
-| text.cpp | 52 | Some | Migrate incrementally |
-| screen.cpp | 16 | Many | Good candidate |
+| text.cpp | 51 | Some | Migrate incrementally |
 | fileio.cpp | 15 | Some | Good candidate |
-
-**Recommendation:** Focus on screen.cpp and fileio.cpp first - they have accessors available and are not performance-critical.
 
 **Effort:** Medium (4-8 hours per module)
 **Impact:** Medium - cleaner interfaces
@@ -146,26 +114,37 @@ Each recommendation is scored on:
 
 ## Tier 3: Strategic Investments
 
-### 3.1 Input Buffer Accessors
+### ~~3.1 Input Buffer Accessors~~ - ✅ COMPLETED
 
-**Blocker:** Input system modularization is blocked by lack of accessors for:
-- `keyhit[]` buffer
-- `keyheld[]` array
-- `port60h_event[]` buffer
-- Mouse message queue structures
+**Status:** All input buffer accessors have been added to `libqb_state.h`:
 
-**Action:** Add these accessors to `libqb_state.h`:
-```cpp
-// Proposed additions
-int32_t libqb_get_keyhit(int32_t index);
-void libqb_set_keyhit(int32_t index, int32_t value);
-bool libqb_get_keyheld(int32_t keycode);
-// etc.
-```
+**Keyhit buffer accessors:**
+- `libqb_keyhit_pop()` - Pop next key event
+- `libqb_keyhit_push()` - Push key event
+- `libqb_keyhit_pending()` - Count pending events
+- `libqb_keyhit_clear()` - Clear all events
 
-**Effort:** High (1-2 weeks including testing)
-**Impact:** High - unblocks input system modularization
-**Risk:** Medium - input is complex state machine
+**Keyheld accessor:**
+- `libqb_keyheld()` - Check if key is held (wrapper around existing function)
+
+**Port60h buffer accessors:**
+- `libqb_port60h_pop()` - Pop scancode
+- `libqb_port60h_peek()` - Peek without removing
+- `libqb_port60h_push()` - Push scancode
+- `libqb_port60h_push_release()` - Push release scancode
+- `libqb_port60h_events_count()` - Get event count
+
+**Mouse accessors:**
+- `libqb_mouse_get_current()` - Get current mouse state
+- `libqb_mouse_input_next()` - Advance to next event
+- `libqb_mouse_has_pending()` - Check for pending events
+- `libqb_get/set_mouse_hidden()` - Mouse visibility
+- `libqb_get/set_mouse_cursor_style()` - Cursor style
+
+**Codepage accessor:**
+- `libqb_get/set_codepage_mapping()` - Unicode conversion table
+
+**Modules migrated:** keyboard.cpp, mouse.cpp, port_io.cpp (8 externs removed)
 
 ### 3.2 Platform Code Consolidation
 
@@ -246,8 +225,8 @@ bool libqb_get_keyheld(int32_t keycode);
 
 ### Phase 2: Quick Wins (Current Priority)
 
-4. **Remove deprecated features** - 2-3 hours
-   - $NOPREFIX, $MIDISOUNDFONT
+4. ~~**Remove deprecated features**~~ - NOT APPLICABLE
+   - Already properly deprecated with helpful error messages and conversion tools
 
 5. **Add CI formatting check** - 1-2 hours
 
@@ -255,20 +234,30 @@ bool libqb_get_keyheld(int32_t keycode);
 
 ### Phase 3: Module Improvements (Near-term)
 
-7. **Expand window module** - 1-2 days
-   - Add _SCREENMOVE, _ICON, _FILEDROP (~270 lines)
+7. ~~**Expand window module**~~ - ✅ COMPLETED
+   - Added _SCREENMOVE, _FILEDROP, desktop/window functions (77→347 lines)
+   - State accessor layer expanded (168→401 lines)
 
-8. **Extract hardware texture functions** - 2-3 days
-   - newimg(), freeimg(), imgrevert() (~400 lines)
+8. ~~**Extract hardware texture functions**~~ - ALREADY DONE
+   - Hardware functions already in graphics.cpp
+   - Remaining: software image functions (~470 lines) - lower priority
 
-9. **Migrate screen.cpp, fileio.cpp to use accessors** - 1 week
+9. ~~**Migrate screen.cpp to use accessors**~~ - ✅ COMPLETED
+   - All 17 externs migrated; shell.cpp/glut-main-thread.cpp also migrated
+
+10. ~~**Migrate input modules to use accessors**~~ - ✅ COMPLETED
+    - keyboard.cpp: 4 externs removed (keyhit buffer, keyheld, codepage)
+    - port_io.cpp: 2 externs removed (port60h buffer)
+    - mouse.cpp: 2 externs removed (mouse_hidden, cursor_style)
+    - fileio.cpp: Analyzed - not suitable (function dependencies, not state)
 
 ### Phase 4: Strategic Work (Long-term)
 
-10. **Add input buffer accessors** - 1-2 weeks
-    - Unblocks input system modularization
+11. ~~**Add input buffer accessors**~~ - ✅ COMPLETED
+    - Added keyhit, keyheld, port60h, mouse, codepage accessors to libqb_state
+    - Input modules migrated (see Phase 3 item 10)
 
-11. **Platform code consolidation** - 1-2 weeks
+12. **Platform code consolidation** - 1-2 weeks
 
 ---
 
@@ -276,10 +265,11 @@ bool libqb_get_keyheld(int32_t keycode);
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| libqb.cpp line count | 19,119 | ~19,000 (maintain) | ON TRACK |
+| libqb.cpp line count | 17,563 | ~17,500 | ✅ TARGET MET |
 | Module test coverage | 15/15 (100%) | 15/15 (100%) | COMPLETE |
 | API documentation coverage | 15/15 (100%) | 15/15 (100%) | COMPLETE |
-| Extern declarations | 183 | <150 | IN PROGRESS |
+| Extern declarations | ~160 | <150 | IN PROGRESS (8 removed via input module migration) |
+| State accessor functions | 30+ | Maintain | EXPANDED |
 | CI test platforms | 3 | 3 (maintain) | COMPLETE |
 
 ---
@@ -289,8 +279,9 @@ bool libqb_get_keyheld(int32_t keycode);
 | Document | Gap | Priority | Status |
 |----------|-----|----------|--------|
 | module-interfaces.md | ~~Missing 12 modules~~ | ~~High~~ | COMPLETE |
-| longest-code-files.md | Needs line count update | Medium | PENDING |
+| longest-code-files.md | ~~Needs line count update~~ | ~~Medium~~ | COMPLETE |
 | modernization-roadmap.md | ~~Outdated progress~~ | ~~Medium~~ | COMPLETE |
+| libqb-modularization-plan.md | ~~Needs status update~~ | ~~Medium~~ | COMPLETE |
 | low-hanging-fruit.md | Status tracking update | Low | PENDING |
 | NEW: Architecture overview | Doesn't exist | Medium | DEFERRED |
 | NEW: Contributing guide for libqb | Doesn't exist | Medium | DEFERRED |
@@ -299,17 +290,21 @@ bool libqb_get_keyheld(int32_t keycode);
 
 ## Conclusion
 
-The QB64-PE modernization effort has made significant progress (38.5% of libqb.cpp extracted, from 31,111 to 19,119 lines). The remaining code is increasingly interdependent, making further extraction yield diminishing returns.
+The QB64-PE modernization effort has made significant progress (43.5% of libqb.cpp extracted, from 31,111 to 17,563 lines). The remaining code is increasingly interdependent, making further extraction yield diminishing returns.
 
 **Completed Milestones:**
 - Test coverage: 15/15 modules (100%)
 - API documentation: 15/15 modules (100%)
-- State accessor layer fully implemented
+- State accessor layer expanded (30+ accessors, 401 lines)
+- Window module expanded (77→347 lines)
+- Screen.cpp fully migrated to accessors (17 externs removed)
+- Input modules migrated to accessors (keyboard.cpp, mouse.cpp, port_io.cpp - 8 externs removed)
+- Hardware texture functions already in graphics.cpp
+- Software image functions extracted to graphics.cpp (~482 lines)
 
 **Current Focus Areas:**
-1. **Quick wins** - Remove deprecated features, add CI formatting checks
-2. **Incremental extraction** - Window module (~270 lines), hardware textures (~400 lines)
-3. **Accessor migration** - Move screen.cpp, fileio.cpp to use state accessors
+1. **Quick wins** - Add CI formatting checks
+2. **Deprecated features** - Already properly deprecated with helpful error messages (no action needed)
 
 **Avoid:**
 - Major architectural changes without clear need

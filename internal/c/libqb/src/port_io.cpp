@@ -19,8 +19,6 @@
 #include "libqb_state.h"
 #include "rounding.h"
 
-#include <cstring>
-
 #ifdef QB64_WINDOWS
 #include <windows.h>
 #endif
@@ -51,10 +49,6 @@ extern int32_t H3C0_blink_enable;
 // Vertical retrace flags (set by display code in libqb.cpp)
 extern int32_t vertical_retrace_in_progress;
 extern int32_t vertical_retrace_happened;
-
-// Keyboard scancode buffer (managed by keyboard input code in libqb.cpp)
-extern uint8_t port60h_event[256];
-extern int32_t port60h_events;
 
 // Program termination flag
 extern uint8_t stop_program;
@@ -174,15 +168,7 @@ int32_t func_inp(int32_t port) {
 
     // Keyboard scancode port (0x60)
     if (port == 0x60) {
-        if (port60h_events) {
-            value = port60h_event[0];
-            if (port60h_events > 1)
-                memmove(port60h_event, port60h_event + 1, 255);
-            port60h_events--;
-            return value;
-        } else {
-            return port60h_event[0];
-        }
+        return libqb_port60h_pop();
     }
 
     unsupported_port_accessed = 1;
