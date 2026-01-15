@@ -10,11 +10,6 @@ Every module header should follow this structure:
 
 ```cpp
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE [Module Name] Module
 //  [Brief description of module purpose]
 //  Extracted from libqb.cpp for modularization
@@ -62,7 +57,7 @@ struct byte_element_struct;
 ### 1. Header Format
 - **Use include guards** (`#ifndef`/`#define`/`#endif`) instead of `#pragma once`
 - **Include guard naming**: `INCLUDE_LIBQB_[MODULE_NAME]_H`
-- **ASCII art banner**: Consistent QB64-PE branding in all headers
+- **Minimal header banner**: Module name and description in a clean format
 - **Module description**: Clear, concise description of purpose
 
 ### 2. Section Organization
@@ -105,7 +100,7 @@ The following modules have been standardized:
 2. **Better Documentation**: Clear module descriptions and implementation notes
 3. **Easier Maintenance**: Standardized format reduces cognitive load
 4. **Contributor Friendly**: Clear template for new modules
-5. **Professional Appearance**: Consistent branding and formatting
+5. **Professional Appearance**: Consistent, clean formatting without unnecessary decoration
 
 ## Future Work
 
