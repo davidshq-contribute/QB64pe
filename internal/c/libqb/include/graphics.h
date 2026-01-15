@@ -239,3 +239,11 @@ int32_t func__blend(int32_t i, int32_t passed);
 
 // DRAW command
 void sub_draw(qbs *s);
+
+// _PUTIMAGE command
+void sub__putimage(double f_dx1, double f_dy1, double f_dx2, double f_dy2, int32_t src, int32_t dst,
+                   double f_sx1, double f_sy1, double f_sx2, double f_sy2, int32_t passed);
+
+// Graphics GET/PUT commands
+void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element, uint32_t mask, int32_t passed);
+void sub_graphics_put(float x1f, float y1f, void *element, int32_t option, uint32_t mask, int32_t passed);
