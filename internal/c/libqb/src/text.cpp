@@ -29,13 +29,14 @@
 #endif
 
 // Forward declarations for FreeType font functions
-extern int32_t FontRenderTextASCII(int32_t fh, uint8_t *codepoints, int32_t codepoints_len, int32_t options, uint8_t **out_data, int32_t *out_x, int32_t *out_y);
-extern int32_t FontPrintWidthASCII(int32_t fh, uint8_t *codepoints, int32_t codepoints_len);
-extern int32_t FontPrintWidthUTF32(int32_t fh, char32_t *codepoints, int32_t codepoints_len);
-extern int32_t FontLoad(uint8_t *content, int32_t content_bytes, int32_t height, int32_t font_index, int32_t options);
+// Note: These are declared in font.h, but we forward declare them here to avoid circular dependencies
+extern bool FontRenderTextASCII(int32_t fh, const uint8_t *codepoint, int32_t codepoints, int32_t options, uint8_t **out_data, int32_t *out_x, int32_t *out_y);
+extern int32_t FontPrintWidthASCII(int32_t fh, const uint8_t *codepoint, int32_t codepoints);
+extern int32_t FontPrintWidthUTF32(int32_t fh, const char32_t *codepoint, int32_t codepoints);
+extern int32_t FontLoad(const uint8_t *content_original, int32_t content_bytes, int32_t default_pixel_height, int32_t which_font, int32_t &options);
 extern int32_t FontWidth(int32_t fh);
 extern void FontFree(int32_t fh);
-// FontLoadFileToMemory is declared in font.h
+extern uint8_t *FontLoadFileToMemory(const char *file_path_name, int32_t *out_bytes);
 
 // Forward declarations for other libqb functions
 extern void pset(int32_t x, int32_t y, uint32_t col);
@@ -167,7 +168,7 @@ void printchr(int32_t character) {
             static int32_t ok;
             static uint8_t *rt_data;
             static int32_t rt_w, rt_h;
-            ok = FontRenderTextASCII(font[f], (uint8_t *)&character, 1, 1, &rt_data, &rt_w, &rt_h);
+            ok = FontRenderTextASCII(font[f], (const uint8_t *)&character, 1, 1, &rt_data, &rt_w, &rt_h);
             if (!ok)
                 return;
 
@@ -221,7 +222,7 @@ void printchr(int32_t character) {
         static int32_t ok;
         static uint8_t *rt_data;
         static int32_t rt_w, rt_h;
-        ok = FontRenderTextASCII(font[f], (uint8_t *)&character, 1, 0, &rt_data, &rt_w, &rt_h);
+        ok = FontRenderTextASCII(font[f], (const uint8_t *)&character, 1, 0, &rt_data, &rt_w, &rt_h);
         if (!ok)
             return;
 
@@ -350,10 +351,10 @@ int32_t chrwidth(uint32_t character) {
 
     // Custom font
     if ((fontflags[f] & FONT_LOAD_UNICODE)) { // UNICODE character
-        w = FontPrintWidthUTF32(font[f], (char32_t *)&character, 1);
+        w = FontPrintWidthUTF32(font[f], (const char32_t *)&character, 1);
     } else { // ASCII character
         character &= 255;
-        w = FontPrintWidthASCII(font[f], (uint8_t *)&character, 1);
+        w = FontPrintWidthASCII(font[f], (const uint8_t *)&character, 1);
     }
 
     return w;
@@ -1538,7 +1539,7 @@ void sub__printstring(float x, float y, qbs *text, int32_t i, int32_t passed) {
             static int32_t ok;
             static uint8_t *rt_data;
             static int32_t rt_w, rt_h;
-            ok = FontRenderTextASCII(font[f], (uint8_t *)text->chr, text->len, 1, &rt_data, &rt_w, &rt_h);
+            ok = FontRenderTextASCII(font[f], (const uint8_t *)text->chr, text->len, 1, &rt_data, &rt_w, &rt_h);
             if (!ok)
                 goto printstring_exit;
 
@@ -1591,7 +1592,7 @@ void sub__printstring(float x, float y, qbs *text, int32_t i, int32_t passed) {
         static int32_t ok;
         static uint8_t *rt_data;
         static int32_t rt_w, rt_h;
-        ok = FontRenderTextASCII(font[f], (uint8_t *)text->chr, text->len, 0, &rt_data, &rt_w, &rt_h);
+        ok = FontRenderTextASCII(font[f], (const uint8_t *)text->chr, text->len, 0, &rt_data, &rt_w, &rt_h);
 
         if (!ok)
             goto printstring_exit;
@@ -1759,7 +1760,7 @@ int32_t func__printwidth(qbs *text, int32_t screenhandle, int32_t passed) {
     if (fwidth)
         return fwidth * text->len;
 
-    return FontPrintWidthASCII(font[fonthandle], text->chr, text->len);
+    return FontPrintWidthASCII(font[fonthandle], (const uint8_t *)text->chr, text->len);
 }
 
 // ============================================================================
@@ -1826,7 +1827,8 @@ int32_t func__loadfont(const qbs *qbsFileName, int32_t size, const qbs *qbsRequi
         image_log_trace("Loading font from memory. Size = %i", bytes);
     } else {
         std::string fileName(reinterpret_cast<char *>(qbsFileName->chr), qbsFileName->len);
-        content = FontLoadFileToMemory(filepath_fix_directory(fileName), &bytes);
+        std::string fixedPath = filepath_fix_directory(fileName);
+        content = FontLoadFileToMemory(fixedPath.c_str(), &bytes);
         image_log_trace("Loading font from file %s", fileName.c_str());
     }
 
@@ -1847,7 +1849,7 @@ int32_t func__loadfont(const qbs *qbsFileName, int32_t size, const qbs *qbsRequi
     i = lastfont;
 
 got_font_index:
-    auto h = FontLoad(content, bytes, size, font_index, options);
+    auto h = FontLoad((const uint8_t *)content, bytes, size, font_index, options);
 
     if (!isLoadFromMemory)
         free(content);

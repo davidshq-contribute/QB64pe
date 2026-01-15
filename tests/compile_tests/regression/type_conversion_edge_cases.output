@@ -1,0 +1,8 @@
+OK: INTEGER max value handled
+OK: Type conversion from INTEGER works
+OK: FLOAT to INTEGER conversion (INT) works
+OK: CINT conversion works
+OK: VAL string to number conversion works
+OK: STR$ number to string conversion works
+OK: _BYTE overflow wraps correctly
+All type conversion tests passed

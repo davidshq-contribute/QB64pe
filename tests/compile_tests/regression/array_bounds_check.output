@@ -1,0 +1,7 @@
+OK: Array bounds (0 TO 9) correct
+OK: Array bounds (1 TO 10) correct
+OK: Array bounds (-5 TO 5) correct
+OK: Array element access works
+OK: Multi-dimensional array access works
+OK: Multi-dimensional array bounds correct
+All array bounds tests passed

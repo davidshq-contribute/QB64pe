@@ -1,0 +1,6 @@
+OK: Empty string comparison works
+OK: Fixed-length empty string has correct length
+OK: LEN of empty string is 0
+OK: MID$ with empty string returns empty
+OK: LEFT$/RIGHT$ with empty string work
+All empty string tests passed
