@@ -34,6 +34,7 @@ libqb-objs-y += $(PATH_LIBQB)/src/utility.o
 libqb-objs-y += $(PATH_LIBQB)/src/window.o
 libqb-objs-y += $(PATH_LIBQB)/src/text.o
 libqb-objs-y += $(PATH_LIBQB)/src/port_io.o
+libqb-objs-y += $(PATH_LIBQB)/src/platform.o
 
 libqb-objs-y += $(PATH_LIBQB)/src/logging/logging.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/qb64pe_symbol.o
