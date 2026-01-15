@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 20,848 lines (reduced from 31,111 - a 33.0% reduction)
+**Current status:** 19,982 lines (reduced from 31,111 - a 35.8% reduction)
 
 ---
 
@@ -25,6 +25,7 @@ This document tracks the modularization of `internal/c/libqb.cpp`, the core runt
 | **Legacy Memory** | `libqb/src/mem_legacy.cpp` | 61 | `func_peek`, `sub_poke`, `sub_defseg` |
 | **Text & Font** | `libqb/src/text.cpp` | 2,121 | `printchr`, `qbs_print`, `qbg_sub_locate`, `sub_cls`, `func_csrlin`, `func_pos`, `func_tab`, `func_spc`, font management (`_LOADFONT`, `_FONT`, `_FREEFONT`), print modes |
 | **Port I/O** | `libqb/src/port_io.cpp` | 249 | `sub_out`, `func_inp`, `sub_wait` - VGA palette emulation, keyboard scancode, retrace timing |
+| **Platform** | `libqb/src/platform.cpp` | 870 | `sub__screenprint` - keyboard input simulation (Windows SendInput, macOS CGEvent) |
 
 **Build system:** All modules added to `libqb/build.mk`
 
@@ -62,10 +63,9 @@ int32_t libqb_get_screen_height();
 
 | Module | Est. Lines | Complexity | Notes |
 |--------|------------|------------|-------|
-| **Platform Code** | ~150 | Medium | `sub__screenprint` has Windows/Mac/Linux keyboard simulation |
 | **Printer** | ~100 | High | `sub__printimage` needs deep img_struct access |
 
-*Note: Text & Font module, Tab/Spc functions, Port I/O, and Keyboard Input are now fully extracted.*
+*Note: Text & Font module, Tab/Spc functions, Port I/O, Keyboard Input, and Platform Code are now fully extracted.*
 
 ---
 
@@ -238,6 +238,8 @@ libqb.cpp includes 33 modularized headers:
 | `libqb/include/text.h` | Text/font function declarations (~25 functions) |
 | `libqb/src/port_io.cpp` | Port I/O module - VGA palette emulation, keyboard scancode, retrace timing |
 | `libqb/include/port_io.h` | Port I/O function declarations (INP, OUT, WAIT) |
+| `libqb/src/platform.cpp` | Platform module - keyboard input simulation (_SCREENPRINT) |
+| `libqb/include/platform.h` | Platform function declarations |
 
 ### Build System
 
@@ -252,10 +254,11 @@ libqb-objs-y += $(PATH_LIBQB)/src/module.o
 
 ### January 2026
 
+- **Platform module extracted** - Created new platform.cpp with `sub__screenprint` (870 lines) for keyboard input simulation (Windows SendInput, macOS CGEvent)
 - **Accessor migration completed** - Migrated color.cpp (3 externs), mouse.cpp (2 externs), text.cpp (1 extern) to use `libqb_state.h` accessor functions instead of extern declarations
 - **Keyboard input functions extracted** - Added `func__keyhit`, `func__keydown`, `sub__mapunicode`, `func__mapunicode` to keyboard.cpp (now 177 lines)
 - **Port I/O module completed** - Full implementation of `sub_out`, `func_inp`, `sub_wait` with VGA palette emulation and keyboard scancode support (249 lines)
 - **Dead code removal** - Removed 118 lines of unused MACVK_* global constants (were shadowed by local statics)
 - **Module include fixes** - Added `libqb-common.h` to console.cpp, keyboard.cpp, text.cpp for proper platform macro definitions
 - **Extern declaration audit** - Documented 183 extern declarations across 19 modules (down from 194 after migration)
-- **libqb.cpp reduced to 20,848 lines** (33.0% reduction from original 31,111)
+- **libqb.cpp reduced to 19,982 lines** (35.8% reduction from original 31,111)
