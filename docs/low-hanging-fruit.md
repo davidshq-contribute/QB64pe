@@ -2,14 +2,44 @@
 
 This document identifies easy improvements, simple fixes, and quick wins that can be tackled by contributors of all skill levels. These tasks require minimal context and provide immediate value to the project.
 
+## Quick Status Summary
+
+| Category | Tasks | Completed | In Progress |
+|----------|-------|-----------|-------------|
+| Code Style | 2 | 0 | 0 |
+| Deprecated Removal | 2 | 0 | 0 |
+| Simple Refactoring | 2 | 0 | 0 |
+| Build Tools | 2 | 0 | 0 |
+| Code Organization | 1 | 0 | 0 |
+| **Total** | **9** | **0** | **0** |
+
+## Task Status Tracking
+
+| # | Task | Status | Priority | Effort |
+|---|------|--------|----------|--------|
+| 7 | Standardize Comment Style | NOT STARTED | Medium | 2-4 hours |
+| 8 | Fix Inconsistent Variable Naming | NOT STARTED | Medium | 1-2 hours |
+| 13 | Remove Deprecated `$NOPREFIX` Feature | NOT STARTED | High | 2-3 hours |
+| 14 | Remove Deprecated `$MIDISOUNDFONT` Keyword | NOT STARTED | High | 1-2 hours |
+| 15 | Extract Magic Numbers to Constants | NOT STARTED | Low | 30 min - 1 hour |
+| 17 | Simplify Complex Conditionals | NOT STARTED | Medium | 30 min - 1 hour |
+| 18 | Add Pre-commit Hooks | NOT STARTED | Medium | 2-3 hours |
+| 20 | Add Code Formatting Check to CI | NOT STARTED | High | 1-2 hours |
+| 24 | Organize Utility Functions | NOT STARTED | Low | 1-2 hours |
+
+**Status Legend:**
+- **NOT STARTED**: Task has not been begun
+- **IN PROGRESS**: Task is currently being worked on
+- **COMPLETED**: Task is finished and verified
+- **BLOCKED**: Task cannot proceed due to dependencies
+
 ## Table of Contents
 
-2. [Documentation Improvements](#documentation-improvements)
-3. [Code Style & Consistency](#code-style--consistency)
-4. [Testing & Quality Assurance](#testing--quality-assurance)
-5. [Deprecated Code Removal](#deprecated-code-removal)
-6. [Simple Refactoring](#simple-refactoring)
-7. [Build & Development Tools](#build--development-tools)
+1. [Code Style & Consistency](#code-style--consistency)
+2. [Deprecated Code Removal](#deprecated-code-removal)
+3. [Simple Refactoring](#simple-refactoring)
+4. [Build & Development Tools](#build--development-tools)
+5. [Code Organization](#code-organization)
 
 
 ---
@@ -17,6 +47,8 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
 ## Code Style & Consistency
 
 ### 7. Standardize Comment Style
+
+**Status:** NOT STARTED
 
 **Location**: Throughout codebase
 
@@ -30,12 +62,14 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
 - Doxygen-style `/** */` for C++ function documentation
 - `//` for inline C++ comments
 
-**Difficulty**: Easy  
-**Estimated Time**: 2-4 hours (can be done incrementally)
+**Difficulty**: Easy
+**Effort**: 2-4 hours (can be done incrementally)
 
 ---
 
 ### 8. Fix Inconsistent Variable Naming
+
+**Status:** NOT STARTED
 
 **Location**: Throughout codebase
 
@@ -45,14 +79,16 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
 - C++: `snake_case` for functions/variables, `PascalCase` for classes
 - BASIC: Follow QB64 conventions
 
-**Difficulty**: Easy  
-**Estimated Time**: 1-2 hours (can be done incrementally)
+**Difficulty**: Easy
+**Effort**: 1-2 hours (can be done incrementally)
 
 ---
 
 ## Deprecated Code Removal
 
 ### 13. Remove Deprecated `$NOPREFIX` Feature
+
+**Status:** NOT STARTED (Recommended for removal)
 
 **Location**: `source/qb64pe.bas`
 
@@ -61,17 +97,19 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
     a$ = "$NOPREFIX is a deprecated feature, QB64(PE) specific keywords MUST have the underscore"
 ```
 
-**Action**: 
+**Action**:
 1. Verify no tests or samples use this feature
 2. Remove the feature code
 3. Update documentation
 
-**Difficulty**: Medium  
-**Estimated Time**: 2-3 hours
+**Difficulty**: Medium
+**Effort**: 2-3 hours
 
 ---
 
 ### 14. Remove Deprecated `$MIDISOUNDFONT` Keyword
+
+**Status:** NOT STARTED (Recommended for removal)
 
 **Location**: `source/qb64pe.bas:1900`
 
@@ -80,19 +118,21 @@ This document identifies easy improvements, simple fixes, and quick wins that ca
             a$ = "$MIDISOUNDFONT is a deprecated keyword, use _MIDISOUNDBANK instead"
 ```
 
-**Action**: 
+**Action**:
 1. Check for usage in codebase
 2. Remove deprecated keyword handling
 3. Update any remaining references
 
-**Difficulty**: Easy  
-**Estimated Time**: 1-2 hours
+**Difficulty**: Easy
+**Effort**: 1-2 hours
 
 ---
 
 ## Simple Refactoring
 
 ### 15. Extract Magic Numbers to Constants
+
+**Status:** NOT STARTED
 
 **Location**: Throughout codebase
 
@@ -108,13 +148,14 @@ const int32_t MAX_BUFFER_SIZE = 1024;
 if (value > MAX_BUFFER_SIZE) { ... }
 ```
 
-**Difficulty**: Easy  
-**Estimated Time**: 30 minutes - 1 hour per file
-
+**Difficulty**: Easy
+**Effort**: 30 minutes - 1 hour per file
 
 ---
 
 ### 17. Simplify Complex Conditionals
+
+**Status:** NOT STARTED
 
 **Location**: Throughout codebase, especially in `source/qb64pe.bas`
 
@@ -125,14 +166,16 @@ if (value > MAX_BUFFER_SIZE) { ... }
 - Break into smaller functions
 - Use early returns where appropriate
 
-**Difficulty**: Easy to Medium  
-**Estimated Time**: 30 minutes - 1 hour per function
+**Difficulty**: Easy to Medium
+**Effort**: 30 minutes - 1 hour per function
 
 ---
 
 ## Build & Development Tools
 
 ### 18. Add Pre-commit Hooks
+
+**Status:** NOT STARTED
 
 **Location**: `.git/hooks/` or use a tool like `pre-commit`
 
@@ -144,24 +187,26 @@ if (value > MAX_BUFFER_SIZE) { ... }
 - Verify no debug code is committed
 - Check for common mistakes
 
-**Difficulty**: Medium  
-**Estimated Time**: 2-3 hours
+**Difficulty**: Medium
+**Effort**: 2-3 hours
 
 ---
 
 ### 20. Add Code Formatting Check to CI
 
+**Status:** NOT STARTED (Recommended - .clang-format exists but not enforced)
+
 **Location**: CI configuration files
 
-**Issue**: Code formatting may not be automatically checked in CI.
+**Issue**: `.clang-format` exists but code formatting is not automatically checked in CI.
 
 **Action**: Add a CI step that:
-- Checks code formatting
+- Runs `clang-format --dry-run --Werror` on changed files
 - Fails the build if formatting is incorrect
 - Provides instructions for fixing
 
-**Difficulty**: Easy  
-**Estimated Time**: 1 hour
+**Difficulty**: Easy
+**Effort**: 1-2 hours
 
 ---
 
@@ -169,31 +214,32 @@ if (value > MAX_BUFFER_SIZE) { ... }
 
 ### 24. Organize Utility Functions
 
+**Status:** NOT STARTED
+
 **Location**: `source/utilities/`
 
 **Issue**: Utility functions may be scattered or poorly organized.
 
 **Action**: Review and organize utility functions into logical groups with clear documentation.
 
-**Difficulty**: Easy  
-**Estimated Time**: 1-2 hours
+**Difficulty**: Easy
+**Effort**: 1-2 hours
 
 ---
 
 ## Summary
 
-These tasks are organized by category and difficulty. Start with "Very Easy" and "Easy" tasks to get familiar with the codebase, then move on to more substantial improvements.
+These tasks are organized by category and difficulty. Start with "Easy" tasks to get familiar with the codebase, then move on to more substantial improvements.
 
-**Recommended Starting Points**:
-1. Fix FIXME comment (#1)
-2. Remove commented-out debug code (#2)
-3. Add file header comments (#25)
-4. Improve test documentation (#12)
-5. Add function documentation (#4)
+**Highest ROI Starting Points** (see `modernization-recommendations.md` for full analysis):
+1. Add CI formatting check (#20) - Quick win, prevents style drift
+2. Remove deprecated `$MIDISOUNDFONT` (#14) - Easy cleanup
+3. Remove deprecated `$NOPREFIX` (#13) - Reduces maintenance burden
+4. Add pre-commit hooks (#18) - Improves developer experience
 
-**Total Estimated Time for All Tasks**: ~50-80 hours (can be done incrementally by multiple contributors)
+**Total Estimated Effort for All Tasks**: ~15-25 hours (can be done incrementally by multiple contributors)
 
 ---
 
-*Last Updated: [Current Date]*  
+*Last Updated: January 2026*
 *Contributors: Add your name when you complete a task!*

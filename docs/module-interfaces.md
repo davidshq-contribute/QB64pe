@@ -7,6 +7,18 @@ This document describes the public interfaces for completed libqb modules, provi
 - [File I/O Module (`fileio.h`)](#file-io-module)
 - [Color & Palette Module (`color.h`)](#color--palette-module)
 - [Screen Management Module (`screen.h`)](#screen-management-module)
+- [Text & Font Module (`text.h`)](#text--font-module)
+- [Graphics Module (`graphics.h`)](#graphics-module)
+- [Networking Module (`networking.h`)](#networking-module)
+- [Keyboard Module (`keyboard.h`)](#keyboard-module)
+- [Mouse Module (`mouse.h`)](#mouse-module)
+- [Platform Module (`platform.h`)](#platform-module)
+- [Utility Module (`utility.h`)](#utility-module)
+- [Window Module (`window.h`)](#window-module)
+- [Console Module (`console.h`)](#console-module)
+- [Port I/O Module (`port_io.h`)](#port-io-module)
+- [Legacy Memory Module (`mem_legacy.h`)](#legacy-memory-module)
+- [State Accessor Module (`libqb_state.h`)](#state-accessor-module)
 
 ---
 
@@ -343,6 +355,777 @@ Gets the screen X position.
 #### `int32_t func__screeny()`
 Gets the screen Y position.
 - **Returns**: Y coordinate in pixels
+
+---
+
+## Text & Font Module {#text--font-module}
+
+**Header**: `internal/c/libqb/include/text.h`
+**Source**: `internal/c/libqb/src/text.cpp` (2,121 lines)
+
+The Text & Font module provides text output, cursor control, and font management functionality.
+
+### Core Text Output
+
+#### `void printchr(int32_t character)`
+Renders a single character at the current cursor position.
+- **character**: Character code to render (ASCII or Unicode)
+
+#### `int32_t chrwidth(uint32_t character)`
+Gets the width of a character in pixels.
+- **character**: Character code to measure
+- **Returns**: Width in pixels
+
+#### `void newline()`
+Advances cursor to beginning of next line, scrolling if necessary.
+
+#### `void qbs_print(qbs *str, int32_t finish_on_new_line)`
+Prints a string at the current cursor position.
+- **str**: QB64 string to print
+- **finish_on_new_line**: Non-zero to add newline after printing
+
+#### `void tab()`
+Advances cursor to next tab stop (every 14 characters).
+
+#### `void makefit(qbs *text)`
+Ensures text fits on current line, wrapping if necessary.
+
+### Cursor Positioning
+
+#### `void qbg_sub_locate(int32_t row, int32_t column, int32_t cursor, int32_t start, int32_t stop, int32_t passed)`
+Sets cursor position and attributes (LOCATE statement).
+- **row**: Target row (1-based)
+- **column**: Target column (1-based)
+- **cursor**: Cursor visibility (0=hide, 1=show)
+- **start, stop**: Cursor shape (scanline range)
+- **passed**: Parameter passing flags
+
+#### `int32_t func_csrlin()`
+Gets current cursor row (CSRLIN function).
+- **Returns**: Current row number (1-based)
+
+#### `int32_t func_pos(int32_t ignore)`
+Gets current cursor column (POS function).
+- **ignore**: Ignored parameter (for QB compatibility)
+- **Returns**: Current column number (1-based)
+
+#### `qbs *func_tab(int32_t pos)`
+Generates spacing to reach specified column (TAB function).
+- **pos**: Target column position
+- **Returns**: String of spaces/newlines to reach position
+
+#### `qbs *func_spc(int32_t spaces)`
+Generates specified number of spaces (SPC function).
+- **spaces**: Number of spaces to generate
+- **Returns**: String of spaces
+
+### Font Management
+
+#### `int32_t func__loadfont(const qbs *filename, int32_t size, const qbs *requirements, int32_t font_index, int32_t passed)`
+Loads a TrueType font file (_LOADFONT).
+- **filename**: Path to font file (or font data if MEMORY option)
+- **size**: Font height in pixels
+- **requirements**: Options string (MONOSPACE, UNICODE, DONTBLEND, MEMORY, AUTOMONO)
+- **font_index**: Font face index for multi-font files
+- **passed**: Parameter passing flags
+- **Returns**: Font handle (>=32), or 0 on failure
+
+#### `void sub__font(int32_t f, int32_t i, int32_t passed)`
+Sets the active font for an image (_FONT).
+- **f**: Font handle (8, 14, 16 for built-in, >=32 for loaded)
+- **i**: Image handle (optional)
+- **passed**: Parameter passing flags
+
+#### `int32_t func__fontwidth(int32_t f, int32_t passed)`
+Gets font width in pixels (_FONTWIDTH).
+- **f**: Font handle (optional, uses current font if not passed)
+- **passed**: Parameter passing flags
+- **Returns**: Width in pixels (0 for variable-width fonts)
+
+#### `int32_t func__fontheight(int32_t f, int32_t passed)`
+Gets font height in pixels (_FONTHEIGHT).
+- **f**: Font handle (optional)
+- **passed**: Parameter passing flags
+- **Returns**: Height in pixels
+
+#### `int32_t func__font(int32_t i, int32_t passed)`
+Gets the font handle for an image (_FONT query).
+- **i**: Image handle (optional)
+- **passed**: Parameter passing flags
+- **Returns**: Current font handle
+
+#### `void sub__freefont(int32_t f)`
+Releases a loaded font (_FREEFONT).
+- **f**: Font handle to free
+
+### Print Modes
+
+#### `void sub__printmode(int32_t mode, int32_t i, int32_t passed)`
+Sets the print mode for text rendering (_PRINTMODE).
+- **mode**: 1=_FILLBACKGROUND, 2=_KEEPBACKGROUND, 3=_ONLYBACKGROUND
+- **i**: Image handle (optional)
+- **passed**: Parameter passing flags
+
+#### `int32_t func__printmode(int32_t i, int32_t passed)`
+Gets the current print mode (_PRINTMODE query).
+- **i**: Image handle (optional)
+- **passed**: Parameter passing flags
+- **Returns**: Current print mode (1, 2, or 3)
+
+#### `void sub__printstring(float x, float y, qbs *text, int32_t i, int32_t passed)`
+Prints text at specific pixel coordinates (_PRINTSTRING).
+- **x, y**: Pixel coordinates
+- **text**: String to print
+- **i**: Image handle (optional)
+- **passed**: Parameter passing flags
+
+#### `int32_t func__printwidth(qbs *text, int32_t screenhandle, int32_t passed)`
+Gets the width of text in pixels (_PRINTWIDTH).
+- **text**: String to measure
+- **screenhandle**: Image handle (optional)
+- **passed**: Parameter passing flags
+- **Returns**: Width in pixels
+
+### View Print
+
+#### `void qbg_sub_view_print(int32_t topline, int32_t bottomline, int32_t passed)`
+Sets the text viewport (VIEW PRINT statement).
+- **topline**: First row of viewport
+- **bottomline**: Last row of viewport
+- **passed**: Parameter passing flags
+
+### Clear Screen
+
+#### `void sub_cls(int32_t method, uint32_t use_color, int32_t passed)`
+Clears the screen or viewport (CLS statement).
+- **method**: 0=all, 1=graphics viewport, 2=text viewport
+- **use_color**: Color to use for clearing
+- **passed**: Parameter passing flags
+
+#### `void sub_clsDest(int32_t method, uint32_t use_color, int32_t dest, int32_t passed)`
+Clears a specific destination image.
+- **dest**: Destination image handle
+- Other parameters same as sub_cls
+
+### LPRINT Support
+
+#### `void qbs_lprint(qbs *str, int32_t finish_on_new_line)`
+Prints to the printer (LPRINT statement).
+- **str**: String to print
+- **finish_on_new_line**: Non-zero to add newline
+
+#### `int32_t func_lpos(int32_t lpt)`
+Gets the printer column position (LPOS function).
+- **lpt**: Printer number (0-3)
+- **Returns**: Current column position
+
+#### `void lprint_makefit(qbs *text)`
+Ensures text fits on printer line, wrapping if necessary (internal helper for LPRINT).
+- **text**: Text to format for printer
+
+### Internal Helpers
+
+#### `int32_t selectfont(int32_t f, img_struct *im)`
+Selects and activates a font for an image (internal helper function).
+- **f**: Font handle
+- **im**: Image structure pointer
+- **Returns**: Success status
+
+### Global Variables
+
+#### `int32_t no_control_characters`
+Global flag controlling control character interpretation (0=interpret, 1=print as-is).
+
+---
+
+## Graphics Module {#graphics-module}
+
+**Header**: `internal/c/libqb/include/graphics.h`
+**Source**: `internal/c/libqb/src/graphics.cpp` (7,589 lines)
+
+The Graphics module provides drawing primitives, image management, and hardware rendering support.
+
+### Drawing Primitives
+
+#### `void sub_line(float x1, float y1, float x2, float y2, uint32_t col, int32_t bf, uint32_t style, int32_t passed)`
+Draws a line or box (LINE statement).
+- **x1, y1**: Start point (or first corner)
+- **x2, y2**: End point (or second corner)
+- **col**: Color value
+- **bf**: Box flag (B=box, BF=filled box)
+- **style**: Line style pattern
+- **passed**: Parameter passing flags
+
+#### `void sub_circle(double x, double y, double r, uint32_t col, double start, double end, double aspect, int32_t passed)`
+Draws a circle or arc (CIRCLE statement).
+- **x, y**: Center coordinates
+- **r**: Radius
+- **col**: Color value
+- **start, end**: Arc angles (radians)
+- **aspect**: Aspect ratio
+- **passed**: Parameter passing flags
+
+#### `void sub_pset(float x, float y, uint32_t col, int32_t passed)`
+Sets a pixel color (PSET statement).
+- **x, y**: Pixel coordinates
+- **col**: Color value
+- **passed**: Parameter passing flags
+
+#### `void sub_preset(float x, float y, uint32_t col, int32_t passed)`
+Resets a pixel to background color (PRESET statement).
+
+#### `void sub_paint(float x, float y, uint32_t fillcol, uint32_t bordercol, qbs *backgroundstr, int32_t passed)`
+Fills an area with color (PAINT statement).
+- **x, y**: Start point
+- **fillcol**: Fill color
+- **bordercol**: Border color (stops filling)
+- **backgroundstr**: Fill pattern (optional)
+- **passed**: Parameter passing flags
+
+#### `double func_point(float x, float y, int32_t passed)`
+Gets pixel color or coordinates (POINT function).
+- **x, y**: Coordinates or attribute selector
+- **passed**: Parameter passing flags
+- **Returns**: Color value or coordinate
+
+#### `void sub_draw(qbs *s)`
+Executes DRAW command string (turtle graphics).
+- **s**: DRAW command string
+
+### Image Management
+
+#### `int32_t func__newimage(int32_t x, int32_t y, int32_t bpp, int32_t passed)`
+Creates a new image (_NEWIMAGE).
+- **x, y**: Image dimensions
+- **bpp**: Bits per pixel (0, 1, 2, 4, 8, 32, 256)
+- **passed**: Parameter passing flags
+- **Returns**: Image handle, or 0 on error
+
+#### `int32_t func__copyimage(int32_t i, int32_t mode, int32_t passed)`
+Creates a copy of an image (_COPYIMAGE).
+- **i**: Source image handle
+- **mode**: Copy mode (0=software, 1=hardware)
+- **passed**: Parameter passing flags
+- **Returns**: New image handle
+
+#### `void sub__freeimage(int32_t i, int32_t passed)`
+Frees an image (_FREEIMAGE).
+- **i**: Image handle to free
+- **passed**: Parameter passing flags
+
+#### `void freeallimages()`
+Frees all images and releases all image resources (cleanup function).
+Called automatically during program shutdown.
+
+#### `void sub__source(int32_t i)`
+Sets the source image for operations (_SOURCE).
+- **i**: Source image handle
+
+#### `void sub__dest(int32_t i)`
+Sets the destination image for drawing (_DEST).
+- **i**: Destination image handle
+
+#### `int32_t func__source()`
+Gets the current source image handle.
+
+#### `int32_t func__dest()`
+Gets the current destination image handle.
+
+#### `int32_t func__display()`
+Gets the display image handle.
+
+#### `int32_t func__width(int32_t i, int32_t passed)`
+Gets image width (_WIDTH).
+
+#### `int32_t func__height(int32_t i, int32_t passed)`
+Gets image height (_HEIGHT).
+
+#### `int32_t func__pixelsize(int32_t i, int32_t passed)`
+Gets bits per pixel (_PIXELSIZE).
+
+### Alpha Blending
+
+#### `void sub__blend(int32_t i, int32_t passed)`
+Enables alpha blending (_BLEND).
+
+#### `void sub__dontblend(int32_t i, int32_t passed)`
+Disables alpha blending (_DONTBLEND).
+
+#### `int32_t func__blend(int32_t i, int32_t passed)`
+Checks if blending is enabled.
+
+#### `void sub__setalpha(int32_t a, uint32_t c, uint32_t c2, int32_t i, int32_t passed)`
+Sets alpha values for colors (_SETALPHA).
+
+### Image Operations
+
+#### `void sub__putimage(double f_dx1, double f_dy1, double f_dx2, double f_dy2, int32_t src, int32_t dst, double f_sx1, double f_sy1, double f_sx2, double f_sy2, int32_t passed)`
+Copies image data between surfaces (_PUTIMAGE).
+- **f_dx1, f_dy1, f_dx2, f_dy2**: Destination rectangle
+- **src**: Source image handle
+- **dst**: Destination image handle
+- **f_sx1, f_sy1, f_sx2, f_sy2**: Source rectangle
+- **passed**: Parameter passing flags
+
+#### `void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element, uint32_t mask, int32_t passed)`
+Captures screen area to array (GET statement).
+
+#### `void sub_graphics_put(float x1f, float y1f, void *element, int32_t option, uint32_t mask, int32_t passed)`
+Draws array data to screen (PUT statement).
+
+### HSB Color Functions
+
+#### `uint32_t func__hsb32(double hue, double sat, double bri)`
+Creates RGB from HSB values (_HSB32).
+
+#### `double func__hue32(uint32_t argb)`
+Extracts hue from color (_HUE32).
+
+#### `double func__sat32(uint32_t argb)`
+Extracts saturation (_SAT32).
+
+#### `double func__bri32(uint32_t argb)`
+Extracts brightness (_BRI32).
+
+#### `uint32_t func__hsba32(double hue, double sat, double bri, double alf)`
+Creates an RGBA color from HSB values with alpha channel (_HSBA32).
+- **hue**: Hue value (0-360 degrees)
+- **sat**: Saturation (0.0-1.0)
+- **bri**: Brightness (0.0-1.0)
+- **alf**: Alpha channel (0.0-1.0)
+- **Returns**: 32-bit RGBA color value
+
+### 3D Graphics
+
+#### `void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed)`
+Controls depth buffer settings (_DEPTHBUFFER).
+
+#### `void sub__maptriangle(...)`
+Maps textured triangles for 3D rendering (_MAPTRIANGLE).
+
+---
+
+## Networking Module {#networking-module}
+
+**Header**: `internal/c/libqb/include/networking.h`
+**Source**: `internal/c/libqb/src/networking.cpp` (894 lines)
+
+The Networking module provides TCP/IP socket functionality.
+
+### Initialization
+
+#### `void networking_init()`
+Initializes the networking subsystem.
+
+#### `void tcp_init()`
+Initializes TCP/IP (called automatically).
+
+#### `void tcp_done()`
+Cleans up TCP/IP resources.
+
+### Connection Functions
+
+#### `int32_t func__openclient(qbs *info)`
+Opens a client connection (_OPENCLIENT).
+- **info**: Connection string (e.g., "TCP/IP:12345:host.example.com")
+- **Returns**: Negative handle on success, 0 on failure
+
+#### `int32_t func__openhost(qbs *info)`
+Opens a listening server (_OPENHOST).
+- **info**: Host string (e.g., "TCP/IP:12345")
+- **Returns**: Negative handle on success, 0 on failure
+
+#### `int32_t func__openconnection(int32_t i)`
+Accepts a connection from a host (_OPENCONNECTION).
+- **i**: Host handle
+- **Returns**: Negative handle on success, 0 if no pending connections
+
+#### `int32_t func__connected(int32_t i)`
+Checks if connection is active (_CONNECTED).
+- **i**: Connection handle
+- **Returns**: -1 if connected, 0 if disconnected
+
+#### `qbs *func__connectionaddress(int32_t i)`
+Gets connection address info (_CONNECTIONADDRESS$).
+- **i**: Connection handle
+- **Returns**: Address information string
+
+### Internal Functions
+
+#### `int32_t connection_new(int32_t method, qbs *info, int32_t value)`
+Creates a new network connection (internal helper).
+- **method**: Connection method (0=_OPENCLIENT, 1=_OPENHOST, 2=_OPENCONNECTION)
+- **info**: Connection info string
+- **value**: Host handle for _OPENCONNECTION method
+- **Returns**: Handle (>0), 0 on failure, -1 on invalid arguments
+
+#### `int32_t tcp_connected(void *connection)`
+Checks if a TCP connection is active (internal helper).
+- **connection**: TCP connection pointer
+- **Returns**: Non-zero if connected
+
+---
+
+## Keyboard Module {#keyboard-module}
+
+**Header**: `internal/c/libqb/include/keyboard.h`
+**Source**: `internal/c/libqb/src/keyboard.cpp` (177 lines)
+
+The Keyboard module provides keyboard input and lock key control.
+
+### Lock Key Queries
+
+#### `int32_t func__capslock()`
+Checks Caps Lock state (_CAPSLOCK query).
+- **Returns**: -1 if on, 0 if off
+
+#### `int32_t func__scrolllock()`
+Checks Scroll Lock state (_SCROLLLOCK query).
+
+#### `int32_t func__numlock()`
+Checks Num Lock state (_NUMLOCK query).
+
+### Lock Key Control
+
+#### `void sub__capslock(int32_t options)`
+Controls Caps Lock (_CAPSLOCK).
+- **options**: 1=ON, 2=OFF, 3=TOGGLE
+
+#### `void sub__scrolllock(int32_t options)`
+Controls Scroll Lock (_SCROLLLOCK).
+
+#### `void sub__numlock(int32_t options)`
+Controls Num Lock (_NUMLOCK).
+
+### Keyboard Input
+
+#### `int32_t func__keyhit()`
+Gets next key from buffer (_KEYHIT).
+- **Returns**: Key code, or 0 if buffer empty
+
+#### `int32_t func__keydown(int32_t x)`
+Checks if key is pressed (_KEYDOWN).
+- **x**: Key code to check
+- **Returns**: -1 if pressed, 0 otherwise
+
+### Unicode Mapping
+
+#### `void sub__mapunicode(int32_t unicode_code, int32_t ascii_code)`
+Maps Unicode to ASCII (_MAPUNICODE statement).
+
+#### `int32_t func__mapunicode(int32_t ascii_code)`
+Gets Unicode for ASCII (_MAPUNICODE function).
+
+---
+
+## Mouse Module {#mouse-module}
+
+**Header**: `internal/c/libqb/include/mouse.h`
+**Source**: `internal/c/libqb/src/mouse.cpp` (355 lines)
+
+The Mouse module provides mouse input and cursor control.
+
+### Cursor Visibility
+
+#### `void sub__mousehide()`
+Hides mouse cursor (_MOUSEHIDE).
+
+#### `void sub__mouseshow(qbs *style, int32_t passed)`
+Shows mouse cursor (_MOUSESHOW).
+- **style**: Cursor style (optional)
+- **passed**: Parameter passing flags
+
+#### `int32_t func__mousehidden()`
+Checks if cursor is hidden (_MOUSEHIDDEN).
+
+### Position Functions
+
+#### `float func__mousex()`
+Gets mouse X coordinate (_MOUSEX).
+
+#### `float func__mousey()`
+Gets mouse Y coordinate (_MOUSEY).
+
+#### `float func__mousemovementx()`
+Gets X movement delta (_MOUSEMOVEMENTX).
+
+#### `float func__mousemovementy()`
+Gets Y movement delta (_MOUSEMOVEMENTY).
+
+#### `void sub__mousemove(float x, float y)`
+Moves cursor to position (_MOUSEMOVE).
+
+### Input Functions
+
+#### `int32_t func__mouseinput()`
+Polls for mouse events (_MOUSEINPUT).
+- **Returns**: -1 if event available, 0 otherwise
+
+#### `int32_t func__mousebutton(int32_t i)`
+Checks button state (_MOUSEBUTTON).
+- **i**: Button number (1=left, 2=right, 3=middle)
+- **Returns**: -1 if pressed, 0 otherwise
+
+#### `int32_t func__mousewheel()`
+Gets wheel movement (_MOUSEWHEEL).
+- **Returns**: Wheel delta (positive=up, negative=down)
+
+---
+
+## Platform Module {#platform-module}
+
+**Header**: `internal/c/libqb/include/platform.h`
+**Source**: `internal/c/libqb/src/platform.cpp` (870 lines)
+
+The Platform module provides platform-specific functionality for keyboard input simulation and other platform-dependent operations.
+
+### Keyboard Input Simulation
+
+#### `void sub__screenprint(qbs *txt)`
+Simulates keyboard input to send text to the active window (_SCREENPRINT).
+- **txt**: Text string to send as keyboard input
+- **Platform support**: 
+  - Windows: Uses SendInput API to inject keystrokes
+  - macOS: Uses CGEvent API with virtual key codes
+  - Linux: Not currently implemented
+
+**Note**: This function sends keystrokes to the currently active window, which may be outside the QB64 program window. Use with caution as it can interfere with other applications.
+
+---
+
+## Utility Module {#utility-module}
+
+**Header**: `internal/c/libqb/include/utility.h`
+**Source**: `internal/c/libqb/src/utility.cpp` (173 lines)
+
+The Utility module provides miscellaneous utility functions.
+
+### Random Number Generation
+
+#### `void sub_randomize(double seed, int32_t passed)`
+Seeds random number generator (RANDOMIZE).
+- **seed**: Seed value
+- **passed**: Parameter passing flags
+
+#### `float func_rnd(float n, int32_t passed)`
+Generates random number (RND).
+- **n**: Control value (n<0: seed, n=0: repeat, n>0: next)
+- **passed**: Parameter passing flags
+- **Returns**: Random value 0.0 to 1.0
+
+### Frame Rate Control
+
+#### `void sub__fps(double fps, int32_t passed)`
+Sets frame rate limit (_FPS).
+- **fps**: Target frames per second
+- **passed**: 1 for _AUTO mode, 2 for specific fps
+
+### Blink Control
+
+#### `int32_t func__blink()`
+Gets text blink state (_BLINK query).
+- **Returns**: -1 if on, 0 if off
+
+#### `void sub__blink(int32_t onoff)`
+Sets text blink mode (_BLINK).
+
+### Control Characters
+
+#### `void sub__controlchr(int32_t onoff)`
+Controls character interpretation (_CONTROLCHR).
+- **onoff**: 1=ON (interpret), 0=OFF (print as-is)
+
+#### `int32_t func__controlchr()`
+Gets control character mode (_CONTROLCHR query).
+- **Returns**: Non-zero if control characters are enabled, 0 if disabled
+
+### Internal Helper Functions
+
+These functions are used internally by other modules and are not part of the public API:
+
+#### `double get_max_fps()`
+Gets the maximum frame rate limit.
+- **Returns**: Maximum FPS value
+
+#### `int32_t get_auto_fps()`
+Gets the auto FPS mode state.
+- **Returns**: Non-zero if auto FPS is enabled
+
+#### `void set_auto_fps(int32_t value)`
+Sets the auto FPS mode state.
+- **value**: Non-zero to enable, 0 to disable
+
+#### `void reset_rnd_state()`
+Resets the random number generator state (used by RUN command).
+
+#### `int32_t get_control_characters_disabled()`
+Gets the control character disabled state (used by text module).
+- **Returns**: Non-zero if control characters are disabled
+
+---
+
+## Window Module {#window-module}
+
+**Header**: `internal/c/libqb/include/window.h`
+**Source**: `internal/c/libqb/src/window.cpp` (77 lines)
+
+The Window module provides window handle and focus functions.
+
+#### `int64_t func__handle()`
+Gets native window handle (_HANDLE).
+- **Returns**: HWND on Windows, 0 on other platforms
+
+#### `qbs *func__title()`
+Gets window title (_TITLE$ query).
+- **Returns**: Current title string
+
+#### `int32_t func__hasfocus()`
+Checks if window has focus (_HASFOCUS).
+- **Returns**: -1 if focused, 0 otherwise
+
+### Internal Helper Functions
+
+#### `void set_foreground_window(intptr_t handle)`
+Brings a window to the foreground (Windows platform only).
+- **handle**: Window handle (HWND on Windows)
+- **Platform**: Windows only, no-op on other platforms
+
+---
+
+## Console Module {#console-module}
+
+**Header**: `internal/c/libqb/include/console.h`
+**Source**: `internal/c/libqb/src/console.cpp` (171 lines)
+
+The Console module provides console window management.
+
+### Window Control
+
+#### `int32_t func__console()`
+Gets console state (_CONSOLE query).
+- **Returns**: 1=visible, 0=hidden, -1=no console
+
+#### `void sub__console(int32_t onoff)`
+Shows/hides console (_CONSOLE).
+
+#### `void sub__consoletitle(qbs *s)`
+Sets console title (_CONSOLETITLE).
+
+#### `void sub__consolefont(qbs *FontName, int32_t FontSize)`
+Sets console font (_CONSOLEFONT).
+
+#### `void sub__console_cursor(int32_t visible, int32_t cursorsize, int32_t passed)`
+Controls console cursor (_CONSOLECURSOR).
+
+### Console Input
+
+#### `int32_t func__getconsoleinput()`
+Polls for console input (_GETCONSOLEINPUT).
+
+#### `int32_t func__cinp(int32_t toggle, int32_t passed)`
+Gets console character input (_CINP).
+
+---
+
+## Port I/O Module {#port-io-module}
+
+**Header**: `internal/c/libqb/include/port_io.h`
+**Source**: `internal/c/libqb/src/port_io.cpp` (249 lines)
+
+The Port I/O module provides legacy port access emulation.
+
+#### `void sub_out(int32_t port, int32_t data)`
+Writes to I/O port (OUT statement).
+- **port**: Port address (0x3C0-0x3C9 for VGA palette)
+- **data**: Byte value to write
+
+#### `int32_t func_inp(int32_t port)`
+Reads from I/O port (INP function).
+- **port**: Port address (0x3C9=palette, 0x3DA=retrace, 0x60=keyboard)
+- **Returns**: Byte value read
+
+#### `void sub_wait(int32_t port, int32_t andexpression, int32_t xorexpression, int32_t passed)`
+Waits for port condition (WAIT statement).
+
+---
+
+## Legacy Memory Module {#legacy-memory-module}
+
+**Header**: `internal/c/libqb/include/mem_legacy.h`
+**Source**: `internal/c/libqb/src/mem_legacy.cpp` (61 lines)
+
+The Legacy Memory module provides PEEK/POKE memory access.
+
+#### `void sub_defseg(int32_t segment, int32_t passed)`
+Sets memory segment (DEF SEG).
+- **segment**: Segment address
+- **passed**: Parameter passing flags
+
+#### `int32_t func_peek(int32_t offset)`
+Reads byte from memory (PEEK).
+- **offset**: Memory offset
+- **Returns**: Byte value
+
+#### `void sub_poke(int32_t offset, int32_t value)`
+Writes byte to memory (POKE).
+- **offset**: Memory offset
+- **value**: Byte value to write
+
+---
+
+## State Accessor Module {#state-accessor-module}
+
+**Header**: `internal/c/libqb/include/libqb_state.h`
+**Source**: `internal/c/libqb/src/libqb_state.cpp` (168 lines)
+
+The State Accessor module provides controlled access to global state, enabling modularization.
+
+### Image Accessors
+
+#### `img_struct* libqb_get_write_page()`
+Gets the current write page pointer.
+
+#### `img_struct* libqb_get_read_page()`
+Gets the current read page pointer.
+
+#### `img_struct* libqb_get_display_page()`
+Gets the current display page pointer.
+
+#### `img_struct* libqb_get_image(int32_t handle)`
+Gets image by handle.
+
+### Page Index Accessors
+
+#### `int32_t libqb_get_write_page_index()`
+Gets write page index.
+
+#### `void libqb_set_write_page_index(int32_t index)`
+Sets write page index.
+
+#### `int32_t libqb_get_read_page_index()`
+Gets read page index.
+
+#### `int32_t libqb_get_display_page_index()`
+Gets display page index.
+
+### Font Accessors
+
+#### `int32_t libqb_get_font_width(int32_t font_handle)`
+Gets font width for handle.
+
+#### `int32_t libqb_get_font_height(int32_t font_handle)`
+Gets font height for handle.
+
+#### `int32_t libqb_get_font_flags(int32_t font_handle)`
+Gets font flags for handle.
+
+### Screen Dimension Accessors
+
+#### `int32_t libqb_get_screen_width()`
+Gets screen width in pixels.
+
+#### `int32_t libqb_get_screen_height()`
+Gets screen height in pixels.
 
 ---
 

@@ -2,81 +2,100 @@
 
 ## Current State
 
-The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to ~23,442 lines (24.6% reduction). Eight modules have been extracted successfully. However, further modularization is blocked by deep architectural coupling.
+The libqb modularization effort has reduced `libqb.cpp` from ~31,111 to **17,492 lines (43.8% reduction)**. Fifteen major modules have been extracted successfully, enabled by the state accessor layer (`libqb_state.h`).
 
-### Blocking Issues
-- **Global state coupling**: Image system (`img[]`, `pages[]`), font arrays, environment 2D variables accessed directly across modules
-- **Cross-cutting dependencies**: Text/font rendering interleaved with image and display systems
-- **Platform-specific code**: Windows API, X11, macOS code mixed with core logic
+### Completed Extractions
+- Graphics (7,589 lines), Text/Font (2,121 lines), File I/O (1,680 lines)
+- Networking (894 lines), Platform (870 lines), Color (621 lines)
+- Mouse, Port I/O, Screen, Keyboard, Utility, Console, Window, Legacy Memory
+- State Accessor layer (168 lines) - enables further modularization
+
+### Remaining Challenges
+- **Global state coupling**: Image system (`img[]`, `pages[]`), font arrays, environment 2D variables still accessed via externs in some modules
+- **Complex interdependencies**: Display/render loop, input state machine, graphics mode management are tightly coupled
+- **Diminishing returns**: Remaining ~17.5K lines are increasingly interdependent; practical ceiling is ~42-45% reduction (already achieved 43.8%)
 
 ---
 
 ## Phase 1: Enable Further Modularization
 
-### 1.1 Global State Accessor Layer
+### 1.1 Global State Accessor Layer - COMPLETED
 
-Create `libqb/include/libqb_state.h` with accessor functions for commonly-accessed globals:
+Created `libqb/include/libqb_state.h` with accessor functions for commonly-accessed globals:
 
 ```cpp
 // Image system accessors
-img_struct* get_write_page();
-img_struct* get_display_page();
-img_struct* get_image(int32_t handle);
+img_struct* libqb_get_write_page();
+img_struct* libqb_get_display_page();
+img_struct* libqb_get_image(int32_t handle);
 
 // Font system accessors
-int32_t get_font_width(int32_t font_handle);
-int32_t get_font_height(int32_t font_handle);
+int32_t libqb_get_font_width(int32_t font_handle);
+int32_t libqb_get_font_height(int32_t font_handle);
 
 // Display state accessors
-int32_t get_display_page_index();
-void set_display_page_index(int32_t index);
+int32_t libqb_get_display_page_index();
+void libqb_set_display_page_index(int32_t index);
 ```
 
-This allows deferred modules (text, input, window) to be extracted without exposing raw global arrays.
+Modules migrated to use accessors: color.cpp, mouse.cpp, text.cpp (partial).
 
-### 1.2 Extract Remaining Modules
+### 1.2 Extract Remaining Modules - PARTIALLY COMPLETED
 
-With accessor layer in place, extract:
+| Module | Status | Notes |
+|--------|--------|-------|
+| Text/Font | DONE | 2,121 lines extracted |
+| Networking | DONE | 894 lines extracted with stub for non-socket builds |
+| Platform | DONE | 870 lines extracted (_SCREENPRINT) |
+| Input | BLOCKED | Needs input buffer accessors (keyhit[], keyheld[]) |
+| Window/UI | PARTIAL | 77 lines done, ~270 more extractable |
 
-| Module | Blocker Resolved By |
-|--------|---------------------|
-| Text/Font | Image and font accessors |
-| Input | Mouse queue + environment 2D accessors |
-| Window/UI | Display state accessors |
+### 1.3 Consolidate Platform Code - PARTIAL
 
-### 1.3 Consolidate Platform Code
-
-Move platform-specific code to dedicated files:
-- `libqb/src/platform_win.cpp`
-- `libqb/src/platform_linux.cpp`
-- `libqb/src/platform_macos.cpp`
-
-Use `#ifdef` guards or separate compilation units.
+Platform-specific code exists in `platform.cpp` for _SCREENPRINT. Further consolidation possible but lower priority than testing and documentation.
 
 ---
 
 ## Phase 2: Testing Infrastructure
 
 ### Current State
-- QB64 compiler tests exist (`tests/compile_tests/`)
-- C++ unit tests exist (`tests/c/`)
-- No integration tests for cross-module interactions
+- QB64 compiler tests exist (`tests/compile_tests/`) - 177 test files
+- C++ unit tests exist (`tests/c/`) - 18 test files
+- **Progress:** 15 of 15 extracted modules have unit tests (100%) - COMPLETE
 
-### Improvements
+### Existing Tests
+| Module | Test File | Status |
+|--------|-----------|--------|
+| color.cpp | test_color.cpp | EXISTS |
+| fileio.cpp | test_fileio.cpp | EXISTS |
+| graphics.cpp | test_graphics.cpp | EXISTS |
+| screen.cpp | test_screen.cpp | EXISTS |
+| text.cpp | test_text.cpp | EXISTS |
+| networking.cpp | test_networking.cpp | EXISTS |
+| platform.cpp | test_platform.cpp | EXISTS |
+| keyboard.cpp | test_keyboard.cpp | EXISTS |
+| mouse.cpp | test_mouse.cpp | EXISTS |
+| utility.cpp | test_utility.cpp | EXISTS |
+| console.cpp | test_console.cpp | EXISTS |
+| window.cpp | test_window.cpp | EXISTS |
+| port_io.cpp | test_port_io.cpp | EXISTS |
+| mem_legacy.cpp | test_mem_legacy.cpp | EXISTS |
+| libqb_state.cpp | test_libqb_state.cpp | EXISTS |
 
-1. **Add libqb module tests** - Unit tests for each extracted module
-2. **Add regression tests** - Capture current behavior before refactoring
-3. **CI test coverage** - Ensure all modules are tested on all platforms
+### Completed Test Coverage
 
-Test structure:
-```
-tests/c/
-├── test_graphics.cpp
-├── test_fileio.cpp
-├── test_screen.cpp
-├── test_color.cpp
-└── ...
-```
+1. ~~**Add tests for text.cpp**~~ - DONE (font metrics, control chars, LPOS)
+2. ~~**Add tests for networking.cpp**~~ - DONE (initialization, handle conversion, stubs)
+3. ~~**Add tests for platform.cpp**~~ - DONE (linkage, edge cases, platform detection)
+4. ~~**Add tests for keyboard.cpp**~~ - DONE (lock keys, key codes, unicode mapping)
+5. ~~**Add tests for mouse.cpp**~~ - DONE (buttons, wheel, cursor, queue structure)
+6. ~~**Add tests for utility.cpp**~~ - DONE (RND, FPS, blink, control chars)
+7. ~~**Add tests for console.cpp**~~ - DONE (console window, input, cursor)
+8. ~~**Add tests for window.cpp**~~ - DONE (handle, title, focus)
+9. ~~**Add tests for port_io.cpp**~~ - DONE (VGA palette, keyboard port, status register)
+10. ~~**Add tests for mem_legacy.cpp**~~ - DONE (DEF SEG, PEEK, POKE)
+11. ~~**Add tests for libqb_state.cpp**~~ - DONE (all state accessors)
+12. **CI test coverage** - All platforms already tested; ensure new tests run everywhere
 
 ---
 
@@ -109,11 +128,15 @@ Replace message queue with event-driven architecture:
 
 ## Practical Next Steps
 
-1. **Create `libqb_state.h`** with accessors for `write_page`, `display_page`, font arrays
-2. **Extract Text module** using new accessors
-3. **Add unit tests** for extracted modules
-4. **Extract Input module** once text is done
-5. **Consolidate platform code** into separate files
+1. ~~**Create `libqb_state.h`**~~ - DONE
+2. ~~**Extract Text module**~~ - DONE (2,121 lines)
+3. ~~**Add unit tests for extracted modules**~~ - DONE (15/15, 100%)
+4. ~~**Document remaining module APIs**~~ - DONE (15/15 in module-interfaces.md)
+5. **Expand Window module** - Add ~270 more lines (_SCREENMOVE, _ICON, etc.)
+6. **Extract Hardware Texture functions** - ~400 lines, low coupling
+7. **Add input buffer accessors** - Unblocks Input module extraction
+
+See `docs/modernization-recommendations.md` for detailed ROI analysis.
 
 ---
 
