@@ -8,6 +8,7 @@
 #include "error_handle.h"
 #include "glut-thread.h"
 #include "graphics.h"
+#include "libqb_state.h"
 #include "qbs.h"
 #include "rounding.h"
 #include "../../os.h"
@@ -35,8 +36,6 @@ struct mouse_message_queue_struct {
 extern mouse_message_queue_struct mouse_message_queue;
 extern int32 mouse_hiddden;
 extern int mouse_cursor_style;
-extern img_struct *display_page;
-extern img_struct *read_page;
 extern int32 *fontwidth;
 extern int32 *fontheight;
 extern int32 environment_2d__screen_width;
@@ -145,21 +144,22 @@ void sub__mousemove(float x, float y) {
     NEEDS_GLUT();
 
     int32 x2, y2, sx, sy;
-    if (display_page->text) {
-        sx = fontwidth[display_page->font] * display_page->width;
-        sy = fontheight[display_page->font] * display_page->height;
+    img_struct *dp = libqb_get_display_page();
+    if (dp->text) {
+        sx = fontwidth[dp->font] * dp->width;
+        sy = fontheight[dp->font] * dp->height;
         if (x < 0.5)
             goto error;
         if (y < 0.5)
             goto error;
-        if (x > ((float)display_page->width) + 0.5)
+        if (x > ((float)dp->width) + 0.5)
             goto error;
-        if (y > ((float)display_page->height) + 0.5)
+        if (y > ((float)dp->height) + 0.5)
             goto error;
         x -= 0.5;
         y -= 0.5;
-        x = x * (float)fontwidth[display_page->font];
-        y = y * (float)fontheight[display_page->font];
+        x = x * (float)fontwidth[dp->font];
+        y = y * (float)fontheight[dp->font];
         x2 = qbr_float_to_long(x);
         y2 = qbr_float_to_long(y);
         if (x2 < 0)
@@ -171,8 +171,8 @@ void sub__mousemove(float x, float y) {
         if (y2 > sy - 1)
             y2 = sy - 1;
     } else {
-        sx = display_page->width;
-        sy = display_page->height;
+        sx = dp->width;
+        sy = dp->height;
         x2 = qbr_float_to_long(x);
         y2 = qbr_float_to_long(y);
         if (x2 < 0)
@@ -206,7 +206,8 @@ float func__mousex() {
     static float f;
 
 #ifdef QB64_WINDOWS
-    if (read_page->console) {
+    img_struct *rp = libqb_get_read_page();
+    if (rp->console) {
         return consolemousex;
     }
 #endif
@@ -222,15 +223,16 @@ float func__mousex() {
         x = environment_2d__screen_width - 1;
 
     // restrict range to the current display page's range to avoid causing errors
-    x2 = display_page->width;
-    if (display_page->text)
-        x2 *= fontwidth[display_page->font];
+    img_struct *dp = libqb_get_display_page();
+    x2 = dp->width;
+    if (dp->text)
+        x2 *= fontwidth[dp->font];
     if (x >= x2)
         x = x2 - 1;
 
-    if (display_page->text) {
+    if (dp->text) {
         f = x;
-        x2 = fontwidth[display_page->font];
+        x2 = fontwidth[dp->font];
         f = f / (float)x2 + 0.5f;
         x2 = qbr_float_to_long(f);
         if (x2 > x)
@@ -249,7 +251,8 @@ float func__mousey() {
     static float f;
 
 #ifdef QB64_WINDOWS
-    if (read_page->console) {
+    img_struct *rp = libqb_get_read_page();
+    if (rp->console) {
         return consolemousey;
     }
 #endif
@@ -265,15 +268,16 @@ float func__mousey() {
         y = environment_2d__screen_height - 1;
 
     // restrict range to the current display page's range to avoid causing errors
-    y2 = display_page->height;
-    if (display_page->text)
-        y2 *= fontheight[display_page->font];
+    img_struct *dp = libqb_get_display_page();
+    y2 = dp->height;
+    if (dp->text)
+        y2 *= fontheight[dp->font];
     if (y >= y2)
         y = y2 - 1;
 
-    if (display_page->text) {
+    if (dp->text) {
         f = y;
-        y2 = fontheight[display_page->font];
+        y2 = fontheight[dp->font];
         f = f / (float)y2 + 0.5f;
         y2 = qbr_float_to_long(f);
         if (y2 > y)
@@ -302,7 +306,8 @@ int32 func__mousebutton(int32 i) {
         return 0;
     }
 #ifdef QB64_WINDOWS
-    if (read_page->console) { // console may support up to 5 mouse buttons according to the documentation.
+    img_struct *rp = libqb_get_read_page();
+    if (rp->console) { // console may support up to 5 mouse buttons according to the documentation.
         if (i == 1)
             return consolebutton & 1;
         if (i == 2)
@@ -335,7 +340,8 @@ int32 func__mousewheel() {
     static uint32 x;
 
 #ifdef QB64_WINDOWS
-    if (read_page->console) {
+    img_struct *rp = libqb_get_read_page();
+    if (rp->console) {
         if (consolebutton < -0x100)
             return -1;
         if (consolebutton > 0x100)

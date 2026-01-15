@@ -14,6 +14,7 @@
 #include "text.h"
 #include "error_handle.h"
 #include "gfs.h"
+#include "libqb_state.h"
 #include "qbs.h"
 #include "rounding.h"
 #include "utility.h"
@@ -62,7 +63,6 @@ extern int32_t nextimg;
 extern int32_t *page;
 extern int32_t pages;
 extern img_struct *write_page;
-extern uint32_t write_page_index;
 extern int32_t *font;
 extern int32_t *fontheight;
 extern int32_t *fontwidth;
@@ -1484,7 +1484,7 @@ void sub__printstring(float x, float y, qbs *text, int32_t i, int32_t passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     static img_struct *im;
     im = &img[i];
@@ -1747,7 +1747,7 @@ int32_t func__printwidth(qbs *text, int32_t screenhandle, int32_t passed) {
             }
         }
     } else {
-        screenhandle = write_page_index;
+        screenhandle = libqb_get_write_page_index();
     }
 
     if (text->len == 0)
@@ -1892,7 +1892,7 @@ void sub__font(int32_t f, int32_t i, int32_t passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     im = &img[i];
     // validate f
@@ -2028,7 +2028,7 @@ int32_t func__font(int32_t i, int32_t passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     return img[i].font;
 }
@@ -2086,7 +2086,7 @@ void sub__printmode(int32_t mode, int32_t i, int32_t passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     if (img[i].text) {
         if (mode != 1) {
@@ -2121,7 +2121,7 @@ int32_t func__printmode(int32_t i, int32_t passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     return img[i].print_mode;
 }

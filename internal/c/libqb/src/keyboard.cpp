@@ -1,15 +1,33 @@
 //----------------------------------------------------------------------------------------------------------------------
 //  QB64-PE Keyboard Module
-//  Lock key functions extracted from libqb.cpp
+//  Keyboard functions extracted from libqb.cpp
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "libqb-common.h"
 
 #include "keyboard.h"
+#include "error_handle.h"
+
+#include <stdint.h>
 
 #ifdef QB64_WINDOWS
 #include <windows.h>
 #endif
+
+// ============================================================================
+// EXTERNAL DEPENDENCIES (from libqb.cpp)
+// ============================================================================
+
+// Keyhit cyclic buffer
+extern int64_t keyhit[];
+extern int32_t keyhit_next;
+extern int32_t keyhit_nextfree;
+
+// Key state checking
+extern int32_t keyheld(uint32_t x);
+
+// Codepage mapping table
+extern uint16_t codepage437_to_unicode16[];
 
 #ifdef QB64_WINDOWS
 // Helper function to toggle a lock key
@@ -101,4 +119,58 @@ void sub__numlock(int32_t options) {
 #else
     (void)options; // Suppress unused parameter warning
 #endif
+}
+
+// ============================================================================
+// KEYBOARD INPUT FUNCTIONS
+// ============================================================================
+
+int32_t func__keyhit() {
+    // keyhit cyclic buffer:
+    //   int64 keyhit[8192];
+    //   keyhit specific internal flags: (stored in high 32-bits)
+    //     &4294967296->numpad was used
+    //   int32 keyhit_nextfree=0;
+    //   int32 keyhit_next=0;
+    //   note: if full, the oldest message is discarded to make way for the new message
+    if (keyhit_next != keyhit_nextfree) {
+        int32_t x = *(int32_t *)&keyhit[keyhit_next];
+        keyhit_next = (keyhit_next + 1) & 0x1FFF;
+        return x;
+    }
+    return 0;
+}
+
+int32_t func__keydown(int32_t x) {
+    if (x <= 0) {
+        error(5);
+        return 0;
+    }
+    if (keyheld(x))
+        return -1;
+    return 0;
+}
+
+void sub__mapunicode(int32_t unicode_code, int32_t ascii_code) {
+    if (is_error_pending())
+        return;
+    if ((unicode_code < 0) || (unicode_code > 65535)) {
+        error(5);
+        return;
+    }
+    if ((ascii_code < 0) || (ascii_code > 255)) {
+        error(5);
+        return;
+    }
+    codepage437_to_unicode16[ascii_code] = unicode_code;
+}
+
+int32_t func__mapunicode(int32_t ascii_code) {
+    if (is_error_pending())
+        return 0;
+    if ((ascii_code < 0) || (ascii_code > 255)) {
+        error(5);
+        return 0;
+    }
+    return codepage437_to_unicode16[ascii_code];
 }

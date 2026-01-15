@@ -11,6 +11,7 @@
 
 #include "error_handle.h"
 #include "graphics.h"
+#include "libqb_state.h"
 
 #include "color.h"
 
@@ -19,9 +20,6 @@ extern void validatepage(int32 i);
 extern int32 *page;
 extern int32 nextimg;
 extern img_struct *img;
-extern img_struct *write_page;
-extern int32 write_page_index;
-extern int32 read_page_index;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Color matching - finds closest palette entry for given RGB values
@@ -41,11 +39,12 @@ extern int32 read_page_index;
 uint32 matchcol(int32 r, int32 g, int32 b) {
     static int32 v, v2, n, n2, best, c;
     static int32 *p;
-    p = (int32 *)write_page->pal;
-    if (write_page->text)
+    img_struct *wp = libqb_get_write_page();
+    p = (int32 *)wp->pal;
+    if (wp->text)
         n2 = 16;
     else
-        n2 = write_page->mask + 1;
+        n2 = wp->mask + 1;
     v = 1000;
     best = 0;
     for (n = 0; n < n2; n++) {
@@ -149,7 +148,8 @@ uint32 func__rgb(int32 r, int32 g, int32 b, int32 i, int32 passed) {
             return matchcol(r, g, b, i);
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return (r << 16) + (g << 8) + b | 0xFF000000;
         } else { //==4
             return matchcol(r, g, b);
@@ -214,11 +214,12 @@ uint32 func__rgba(int32 r, int32 g, int32 b, int32 a, int32 i, int32 passed) {
             return matchcol(r, g, b, i);
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return (a << 24) + (r << 16) + (g << 8) + b;
         } else { //==4
-            if ((!a) && (write_page->transparent_color != -1))
-                return write_page->transparent_color;
+            if ((!a) && (wp->transparent_color != -1))
+                return wp->transparent_color;
             return matchcol(r, g, b);
         } //==4
     } // passed
@@ -269,14 +270,15 @@ int32 func__alpha(uint32 col, int32 i, int32 passed) {
             return 255;
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return col >> 24;
         } else { //==4
-            if ((col < 0) || (col > (write_page->mask))) {
+            if ((col < 0) || (col > (wp->mask))) {
                 error(5);
                 return 0;
             }
-            if (write_page->transparent_color == (int32)col)
+            if (wp->transparent_color == (int32)col)
                 return 0;
             return 255;
         } //==4
@@ -322,14 +324,15 @@ int32 func__red(uint32 col, int32 i, int32 passed) {
             return img[i].pal[col] >> 16 & 0xFF;
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return col >> 16 & 0xFF;
         } else { //==4
-            if ((col < 0) || (col > (write_page->mask))) {
+            if ((col < 0) || (col > (wp->mask))) {
                 error(5);
                 return 0;
             }
-            return write_page->pal[col] >> 16 & 0xFF;
+            return wp->pal[col] >> 16 & 0xFF;
         } //==4
     } // passed
 }
@@ -373,14 +376,15 @@ int32 func__green(uint32 col, int32 i, int32 passed) {
             return img[i].pal[col] >> 8 & 0xFF;
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return col >> 8 & 0xFF;
         } else { //==4
-            if ((col < 0) || (col > (write_page->mask))) {
+            if ((col < 0) || (col > (wp->mask))) {
                 error(5);
                 return 0;
             }
-            return write_page->pal[col] >> 8 & 0xFF;
+            return wp->pal[col] >> 8 & 0xFF;
         } //==4
     } // passed
 }
@@ -424,14 +428,15 @@ int32 func__blue(uint32 col, int32 i, int32 passed) {
             return img[i].pal[col] & 0xFF;
         } //==4
     } else {
-        if (write_page->bytes_per_pixel == 4) {
+        img_struct *wp = libqb_get_write_page();
+        if (wp->bytes_per_pixel == 4) {
             return col & 0xFF;
         } else { //==4
-            if ((col < 0) || (col > (write_page->mask))) {
+            if ((col < 0) || (col > (wp->mask))) {
                 error(5);
                 return 0;
             }
-            return write_page->pal[col] & 0xFF;
+            return wp->pal[col] & 0xFF;
         } //==4
     } // passed
 }
@@ -474,7 +479,7 @@ void sub__clearcolor(uint32 c, int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     im = &img[i];
     // text?
@@ -555,7 +560,7 @@ int32 func__clearcolor(int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     if (img[i].text)
         return -1;
@@ -597,7 +602,7 @@ uint32 func__defaultcolor(int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     return img[i].color;
 }
@@ -631,7 +636,7 @@ uint32 func__backgroundcolor(int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     return img[i].background_color;
 }
@@ -670,7 +675,7 @@ uint32 func__palettecolor(int32 n, int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     if (!img[i].pal) {
         error(5);
@@ -713,7 +718,7 @@ void sub__palettecolor(int32 n, uint32 c, int32 i, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     if (!img[i].pal) {
         error(5);
@@ -755,7 +760,7 @@ void sub__copypalette(int32 i, int32 i2, int32 passed) {
             }
         }
     } else {
-        i = read_page_index;
+        i = libqb_get_read_page_index();
     }
     if (!img[i].pal) {
         error(5);
@@ -778,7 +783,7 @@ void sub__copypalette(int32 i, int32 i2, int32 passed) {
             }
         }
     } else {
-        i = write_page_index;
+        i = libqb_get_write_page_index();
     }
     if (!img[i].pal) {
         error(5);

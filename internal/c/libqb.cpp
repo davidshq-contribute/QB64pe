@@ -15077,58 +15077,8 @@ failed:;
 
 #endif
 
-int32 func__keyhit() {
-    /*
-        //keyhit cyclic buffer
-        int64 keyhit[8192];
-        //    keyhit specific internal flags: (stored in high 32-bits)
-        //    &4294967296->numpad was used
-        int32 keyhit_nextfree=0;
-        int32 keyhit_next=0;
-        //note: if full, the oldest message is discarded to make way for the new message
-    */
-    if (keyhit_next != keyhit_nextfree) {
-        static int32 x;
-        x = *(int32 *)&keyhit[keyhit_next];
-        keyhit_next = (keyhit_next + 1) & 0x1FFF;
-        return x;
-    }
-    return 0;
-}
-
-int32 func__keydown(int32 x) {
-    if (x <= 0) {
-        error(5);
-        return 0;
-    }
-    if (keyheld(x))
-        return -1;
-    return 0;
-}
-
-void sub__mapunicode(int32 unicode_code, int32 ascii_code) {
-    if (is_error_pending())
-        return;
-    if ((unicode_code < 0) || (unicode_code > 65535)) {
-        error(5);
-        return;
-    }
-    if ((ascii_code < 0) || (ascii_code > 255)) {
-        error(5);
-        return;
-    }
-    codepage437_to_unicode16[ascii_code] = unicode_code;
-}
-
-int32 func__mapunicode(int32 ascii_code) {
-    if (is_error_pending())
-        return NULL;
-    if ((ascii_code < 0) || (ascii_code > 255)) {
-        error(5);
-        return NULL;
-    }
-    return (codepage437_to_unicode16[ascii_code]);
-}
+// func__keyhit, func__keydown, sub__mapunicode, func__mapunicode
+// moved to libqb/src/keyboard.cpp
 
 int32 addone(int32 x) {
     return x + 1;
