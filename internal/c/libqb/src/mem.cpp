@@ -11,19 +11,55 @@
 uint64_t mem_lock_id = 1073741823; // this value should never be 0 or 1
 int32_t mem_lock_max = 10000;
 int32_t mem_lock_next = 0;
-mem_lock *mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+mem_lock *mem_lock_base = NULL;
 mem_lock *mem_lock_tmp;
 
 int32_t mem_lock_freed_max = 1000; // number of allocated entries
 int32_t mem_lock_freed_n = 0;      // number of entries
-intptr_t *mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_max);
+intptr_t *mem_lock_freed = NULL;
+
+// Initialize global memory management structures (called on first use)
+static int mem_init_done = 0;
+static int initialize_mem_system() {
+    if (mem_init_done) return 1;
+
+    if (!mem_lock_base) {
+        mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+        if (!mem_lock_base) {
+            return 0; // Critical error: cannot allocate initial memory lock array
+        }
+    }
+
+    if (!mem_lock_freed) {
+        mem_lock_freed = (intptr_t *)malloc(sizeof(intptr_t) * mem_lock_freed_max);
+        if (!mem_lock_freed) {
+            free(mem_lock_base);
+            mem_lock_base = NULL;
+            return 0; // Critical error: cannot allocate initial freed lock array
+        }
+    }
+
+    mem_init_done = 1;
+    return 1;
+}
 
 void new_mem_lock() {
+    // Initialize global memory system on first call
+    if (!initialize_mem_system()) {
+        error(518); // critical error: out of memory
+        return;
+    }
+
     if (mem_lock_freed_n) {
         mem_lock_tmp = (mem_lock *)mem_lock_freed[--mem_lock_freed_n];
     } else {
         if (mem_lock_next == mem_lock_max) {
-            mem_lock_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+            mem_lock *new_base = (mem_lock *)malloc(sizeof(mem_lock) * mem_lock_max);
+            if (!new_base) {
+                error(518); // critical error: out of memory
+                return;
+            }
+            mem_lock_base = new_base;
             mem_lock_next = 0;
         }
         mem_lock_tmp = &mem_lock_base[mem_lock_next++];
@@ -37,8 +73,15 @@ void free_mem_lock(mem_lock *lock) {
         free(lock->offset); // malloc type
     // add to freed list
     if (mem_lock_freed_n == mem_lock_freed_max) {
-        mem_lock_freed_max *= 2;
-        mem_lock_freed = (intptr_t *)realloc(mem_lock_freed, sizeof(intptr_t) * mem_lock_freed_max);
+        int32_t new_max = mem_lock_freed_max * 2;
+        intptr_t *temp = (intptr_t *)realloc(mem_lock_freed, sizeof(intptr_t) * new_max);
+        if (!temp) {
+            // realloc failed - mem_lock_freed still valid, just can't grow
+            // This lock will be lost, but we won't corrupt memory
+            return;
+        }
+        mem_lock_freed = temp;
+        mem_lock_freed_max = new_max;
     }
     mem_lock_freed[mem_lock_freed_n++] = (intptr_t)lock;
 }
