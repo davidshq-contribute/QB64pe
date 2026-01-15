@@ -60,6 +60,13 @@
 #define QB_FALSE 0
 #define QB_TRUE -1
 
+// Standard integer types (required by os.h type macros)
+#ifdef __cplusplus
+#    include <cstdint>
+#else
+#    include <stdint.h>
+#endif
+
 #ifndef _countof
 #    ifdef __cplusplus
 #        include <cstddef>
