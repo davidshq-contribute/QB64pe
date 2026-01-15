@@ -1,8 +1,15 @@
 //----------------------------------------------------------------------------------------------------------------------
-// QB64-PE graphics support
+//  QB64-PE Graphics Module
+//  Graphics rendering, drawing primitives, and image management
+//  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#pragma once
+#ifndef INCLUDE_LIBQB_GRAPHICS_H
+#define INCLUDE_LIBQB_GRAPHICS_H
+
+// ============================================================================
+// DEPENDENCIES
+// ============================================================================
 
 #include <stdint.h>
 
@@ -190,60 +197,295 @@ struct hardware_graphics_command_struct {
 #define HARDWARE_GRAPHICS_COMMAND__MAPTRIANGLE3D 5
 #define HARDWARE_GRAPHICS_COMMAND__CLEAR_DEPTHBUFFER 6
 
+// ============================================================================
+// FORWARD DECLARATIONS
+// ============================================================================
+
+struct qbs;
+
+// ============================================================================
+// PUBLIC API DECLARATIONS
+// ============================================================================
+
+// HSB/RGB Color Conversion
+// These functions convert between HSB (Hue, Saturation, Brightness) and RGB color formats
+
+/// Creates an RGB color from HSB values.
+/// @param hue Hue value (0-360 degrees)
+/// @param sat Saturation (0.0-1.0)
+/// @param bri Brightness (0.0-1.0)
+/// @returns 32-bit RGB color value
 uint32_t func__hsb32(double hue, double sat, double bri);
+
+/// Creates an RGBA color from HSB values with alpha.
+/// @param hue Hue value (0-360 degrees)
+/// @param sat Saturation (0.0-1.0)
+/// @param bri Brightness (0.0-1.0)
+/// @param alf Alpha channel (0.0-1.0)
+/// @returns 32-bit RGBA color value
 uint32_t func__hsba32(double hue, double sat, double bri, double alf);
+
+/// Extracts the hue component from an RGB color.
+/// @param argb 32-bit color value
+/// @returns Hue value (0-360 degrees)
 double func__hue32(uint32_t argb);
+
+/// Extracts the saturation component from an RGB color.
+/// @param argb 32-bit color value
+/// @returns Saturation value (0.0-1.0)
 double func__sat32(uint32_t argb);
+
+/// Extracts the brightness component from an RGB color.
+/// @param argb 32-bit color value
+/// @returns Brightness value (0.0-1.0)
 double func__bri32(uint32_t argb);
 
+// 3D Graphics Functions
+
+/// Controls depth buffer settings for 3D rendering.
+/// @param options Depth buffer mode flags
+/// @param dst Destination image handle (optional)
+/// @param passed Parameter passing flags
 void sub__depthbuffer(int32_t options, int32_t dst, int32_t passed);
+
+/// Maps a triangle from source coordinates to destination coordinates (supports 3D).
+/// @param cull_options Face culling options
+/// @param sx1, sy1 Source triangle first vertex
+/// @param sx2, sy2 Source triangle second vertex
+/// @param sx3, sy3 Source triangle third vertex
+/// @param si Source image handle
+/// @param dx1, dy1, dz1 Destination triangle first vertex
+/// @param dx2, dy2, dz2 Destination triangle second vertex
+/// @param dx3, dy3, dz3 Destination triangle third vertex
+/// @param di Destination image handle
+/// @param smooth_options Texture smoothing options
+/// @param passed Parameter passing flags
 void sub__maptriangle(int32_t cull_options, float sx1, float sy1, float sx2, float sy2, float sx3, float sy3, int32_t si, float dx1, float dy1, float dz1,
                       float dx2, float dy2, float dz2, float dx3, float dy3, float dz3, int32_t di, int32_t smooth_options, int32_t passed);
 
-// Drawing primitives - moved to graphics.cpp
-// Helper functions (pset, pset_and_clip, fast_line, etc.) remain in libqb.cpp
+// ============================================================================
+// DRAWING PRIMITIVES
+// ============================================================================
+
+/// Sets a pixel with clipping (internal helper function).
+/// @param x X coordinate
+/// @param y Y coordinate
+/// @param col Color value
 void pset_and_clip(int32_t x, int32_t y, uint32_t col);
+
+/// Fills a rectangular area with a color (internal helper).
+/// @param x1f, y1f Top-left corner coordinates
+/// @param x2f, y2f Bottom-right corner coordinates
+/// @param col Fill color
 void qb32_boxfill(float x1f, float y1f, float x2f, float y2f, uint32_t col);
+
+/// Draws a line (internal helper).
+/// @param x1f, y1f Start point coordinates
+/// @param x2f, y2f End point coordinates
+/// @param col Line color
+/// @param style Line style pattern
 void qb32_line(float x1f, float y1f, float x2f, float y2f, uint32_t col, uint32_t style);
+
+/// Draws a line between two points.
+/// @param x1, y1 Start point coordinates
+/// @param x2, y2 End point coordinates
+/// @param col Line color
+/// @param bf Box fill flag (if non-zero, draws a filled box instead)
+/// @param style Line style pattern
+/// @param passed Parameter passing flags
 void sub_line(float x1, float y1, float x2, float y2, uint32_t col, int32_t bf, uint32_t style, int32_t passed);
+
+/// Draws a circle or arc.
+/// @param x, y Center coordinates
+/// @param r Radius
+/// @param col Circle color
+/// @param start Start angle (for arcs)
+/// @param end End angle (for arcs)
+/// @param aspect Aspect ratio
+/// @param passed Parameter passing flags
 void sub_circle(double x, double y, double r, uint32_t col, double start, double end, double aspect, int32_t passed);
+
+/// Sets a pixel to a specific color.
+/// @param x, y Pixel coordinates
+/// @param col Color value
+/// @param passed Parameter passing flags
 void sub_pset(float x, float y, uint32_t col, int32_t passed);
+
+/// Resets a pixel to the background color.
+/// @param x, y Pixel coordinates
+/// @param col Color value (typically ignored, uses background)
+/// @param passed Parameter passing flags
 void sub_preset(float x, float y, uint32_t col, int32_t passed);
 
-// Paint functions (two overloads for color fill vs pattern fill)
-struct qbs;
+/// Fills an area starting from a point with a solid color.
+/// @param x, y Starting point coordinates
+/// @param fillcol Fill color
+/// @param bordercol Border color (stops filling at this color)
+/// @param backgroundstr Background pattern string (optional)
+/// @param passed Parameter passing flags
 void sub_paint(float x, float y, uint32_t fillcol, uint32_t bordercol, qbs *backgroundstr, int32_t passed);
+
+/// Fills an area starting from a point with a pattern.
+/// @param x, y Starting point coordinates
+/// @param fillstr Fill pattern string
+/// @param bordercol Border color (stops filling at this color)
+/// @param backgroundstr Background pattern string (optional)
+/// @param passed Parameter passing flags
 void sub_paint(float x, float y, qbs *fillstr, uint32_t bordercol, qbs *backgroundstr, int32_t passed);
 
-// Point functions
-uint32_t point(int32_t x, int32_t y);  // Internal helper - reads pixel without clipping
-double func_point(float x, float y, int32_t passed);  // POINT function
+/// Reads a pixel color value (internal helper, no clipping).
+/// @param x, y Pixel coordinates
+/// @returns Color value at the specified pixel
+uint32_t point(int32_t x, int32_t y);
 
-// Image management functions
+/// Gets the color value of a pixel (QB64 POINT function).
+/// @param x, y Pixel coordinates
+/// @param passed Parameter passing flags
+/// @returns Color value or other pixel attributes
+double func_point(float x, float y, int32_t passed);
+
+// ============================================================================
+// IMAGE MANAGEMENT
+// ============================================================================
+
+/// Creates a new image buffer.
+/// @param x Image width in pixels
+/// @param y Image height in pixels
+/// @param bpp Bits per pixel (1, 2, 4, 8, 16, or 32)
+/// @param passed Parameter passing flags
+/// @returns Image handle, or 0 on error
 int32_t func__newimage(int32_t x, int32_t y, int32_t bpp, int32_t passed);
+
+/// Creates a copy of an existing image.
+/// @param i Source image handle
+/// @param mode Copy mode (0=software, 1=hardware, etc.)
+/// @param passed Parameter passing flags
+/// @returns New image handle, or 0 on error
 int32_t func__copyimage(int32_t i, int32_t mode, int32_t passed);
+
+/// Frees an image and releases its resources.
+/// @param i Image handle to free
+/// @param passed Parameter passing flags
 void sub__freeimage(int32_t i, int32_t passed);
+
+/// Frees all images (cleanup function).
 void freeallimages();
+
+/// Sets the source image for drawing operations.
+/// @param i Source image handle
 void sub__source(int32_t i);
+
+/// Sets the destination image for drawing operations.
+/// @param i Destination image handle
 void sub__dest(int32_t i);
+
+/// Gets the current source image handle.
+/// @returns Source image handle
 int32_t func__source();
+
+/// Gets the current destination image handle.
+/// @returns Destination image handle
 int32_t func__dest();
+
+/// Gets the current display image handle.
+/// @returns Display image handle
 int32_t func__display();
+
+/// Enables alpha blending for an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
 void sub__blend(int32_t i, int32_t passed);
+
+/// Disables alpha blending for an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
 void sub__dontblend(int32_t i, int32_t passed);
+
+/// Sets alpha channel values for specific colors.
+/// @param a Alpha value (0-255)
+/// @param c Color to set alpha for
+/// @param c2 Optional second color range
+/// @param i Image handle
+/// @param passed Parameter passing flags
 void sub__setalpha(int32_t a, uint32_t c, uint32_t c2, int32_t i, int32_t passed);
+
+/// Gets the width of an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
+/// @returns Image width in pixels
 int32_t func__width(int32_t i, int32_t passed);
+
+/// Gets the height of an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
+/// @returns Image height in pixels
 int32_t func__height(int32_t i, int32_t passed);
+
+/// Gets the pixel size (bits per pixel) of an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
+/// @returns Bits per pixel
 int32_t func__pixelsize(int32_t i, int32_t passed);
+
+/// Checks if alpha blending is enabled for an image.
+/// @param i Image handle
+/// @param passed Parameter passing flags
+/// @returns Non-zero if blending is enabled
 int32_t func__blend(int32_t i, int32_t passed);
 
-// DRAW command
+// ============================================================================
+// DRAW COMMAND
+// ============================================================================
+
+/// Executes DRAW command string (turtle graphics).
+/// @param s DRAW command string
 void sub_draw(qbs *s);
 
-// _PUTIMAGE command
+// ============================================================================
+// IMAGE OPERATIONS
+// ============================================================================
+
+/// Copies a portion of a source image to a destination image.
+/// @param f_dx1, f_dy1 Destination top-left coordinates
+/// @param f_dx2, f_dy2 Destination bottom-right coordinates
+/// @param src Source image handle
+/// @param dst Destination image handle
+/// @param f_sx1, f_sy1 Source top-left coordinates
+/// @param f_sx2, f_sy2 Source bottom-right coordinates
+/// @param passed Parameter passing flags
 void sub__putimage(double f_dx1, double f_dy1, double f_dx2, double f_dy2, int32_t src, int32_t dst,
                    double f_sx1, double f_sy1, double f_sx2, double f_sy2, int32_t passed);
 
-// Graphics GET/PUT commands
+/// Gets pixel data from a rectangular area (QB64 GET command).
+/// @param x1f, y1f Top-left corner coordinates
+/// @param x2f, y2f Bottom-right corner coordinates
+/// @param element Pointer to destination buffer
+/// @param mask Color mask for pixel data
+/// @param passed Parameter passing flags
 void sub_graphics_get(float x1f, float y1f, float x2f, float y2f, void *element, uint32_t mask, int32_t passed);
+
+/// Puts pixel data to a rectangular area (QB64 PUT command).
+/// @param x1f, y1f Top-left corner coordinates
+/// @param element Pointer to source pixel data
+/// @param option PUT operation mode (PSET, PRESET, XOR, OR, AND)
+/// @param mask Color mask for pixel data
+/// @param passed Parameter passing flags
 void sub_graphics_put(float x1f, float y1f, void *element, int32_t option, uint32_t mask, int32_t passed);
+
+// ============================================================================
+// IMPLEMENTATION NOTES
+// ============================================================================
+
+// This module provides comprehensive graphics functionality including:
+// - Drawing primitives (lines, circles, boxes, pixels)
+// - Image creation and management
+// - HSB/RGB color conversion
+// - 3D graphics support (depth buffer, triangle mapping)
+// - Image copying and manipulation (GET/PUT operations)
+// - Alpha blending and transparency control
+// - Turtle graphics (DRAW command)
+//
+// The module uses both software and hardware rendering paths, with hardware
+// rendering utilizing OpenGL for improved performance.
+
+#endif // INCLUDE_LIBQB_GRAPHICS_H

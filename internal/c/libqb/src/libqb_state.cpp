@@ -1,9 +1,4 @@
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE Global State Accessor Layer
 //  Provides controlled access to shared state for modularization
 //----------------------------------------------------------------------------------------------------------------------
@@ -34,6 +29,10 @@ extern int32 *font;
 extern int32 *fontheight;
 extern int32 *fontwidth;
 extern int32 *fontflags;
+
+// LPRINT state globals
+extern int32 lprint;
+extern int32 lprint_image;
 
 // Environment 2D globals
 extern int32 environment_2d__screen_width;
@@ -142,6 +141,46 @@ int32_t libqb_get_font(int32_t font_handle) {
 
 int32_t libqb_get_last_font() {
     return lastfont;
+}
+
+void libqb_set_last_font(int32_t value) {
+    lastfont = value;
+}
+
+int32_t* libqb_get_font_array() {
+    return font;
+}
+
+int32_t* libqb_get_fontwidth_array() {
+    return fontwidth;
+}
+
+int32_t* libqb_get_fontheight_array() {
+    return fontheight;
+}
+
+int32_t* libqb_get_fontflags_array() {
+    return fontflags;
+}
+
+// ============================================================================
+// LPRINT STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_lprint() {
+    return lprint;
+}
+
+void libqb_set_lprint(int32_t value) {
+    lprint = value;
+}
+
+int32_t libqb_get_lprint_image() {
+    return lprint_image;
+}
+
+void libqb_set_lprint_image(int32_t value) {
+    lprint_image = value;
 }
 
 // ============================================================================

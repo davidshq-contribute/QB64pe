@@ -1,9 +1,4 @@
 //----------------------------------------------------------------------------------------------------------------------
-//    ___  ___   __ _  _  _  ___   ___
-//   / _ \| _ ) / /| || || || _ \ / _ \
-//  | (_) | _ \/ _ \__ | || ||  _/|  __/
-//   \__\_\___/\___/|_||_||_||_|   \___|
-//
 //  QB64-PE Global State Accessor Layer
 //  Provides controlled access to shared state for modularization
 //----------------------------------------------------------------------------------------------------------------------
@@ -70,6 +65,22 @@ int32_t libqb_get_font(int32_t font_handle);
 
 // Get highest used font index
 int32_t libqb_get_last_font();
+void libqb_set_last_font(int32_t value);
+
+// Direct array access (for font allocation/modification)
+int32_t* libqb_get_font_array();
+int32_t* libqb_get_fontwidth_array();
+int32_t* libqb_get_fontheight_array();
+int32_t* libqb_get_fontflags_array();
+
+// ============================================================================
+// LPRINT STATE ACCESSORS
+// ============================================================================
+
+int32_t libqb_get_lprint();
+void libqb_set_lprint(int32_t value);
+int32_t libqb_get_lprint_image();
+void libqb_set_lprint_image(int32_t value);
 
 // ============================================================================
 // ENVIRONMENT 2D ACCESSORS

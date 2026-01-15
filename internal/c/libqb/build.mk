@@ -31,6 +31,8 @@ libqb-objs-y += $(PATH_LIBQB)/src/mouse.o
 libqb-objs-y += $(PATH_LIBQB)/src/console.o
 libqb-objs-y += $(PATH_LIBQB)/src/libqb_state.o
 libqb-objs-y += $(PATH_LIBQB)/src/utility.o
+libqb-objs-y += $(PATH_LIBQB)/src/window.o
+libqb-objs-y += $(PATH_LIBQB)/src/text.o
 
 libqb-objs-y += $(PATH_LIBQB)/src/logging/logging.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/qb64pe_symbol.o
