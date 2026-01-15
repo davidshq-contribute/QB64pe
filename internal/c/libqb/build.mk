@@ -27,6 +27,7 @@ libqb-objs-y += $(PATH_LIBQB)/src/color.o
 libqb-objs-y += $(PATH_LIBQB)/src/screen.o
 libqb-objs-y += $(PATH_LIBQB)/src/mem_legacy.o
 libqb-objs-y += $(PATH_LIBQB)/src/keyboard.o
+libqb-objs-y += $(PATH_LIBQB)/src/mouse.o
 
 libqb-objs-y += $(PATH_LIBQB)/src/logging/logging.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/qb64pe_symbol.o

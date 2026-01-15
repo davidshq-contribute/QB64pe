@@ -218,3 +218,24 @@ void sub_paint(float x, float y, qbs *fillstr, uint32_t bordercol, qbs *backgrou
 // Point functions
 uint32_t point(int32_t x, int32_t y);  // Internal helper - reads pixel without clipping
 double func_point(float x, float y, int32_t passed);  // POINT function
+
+// Image management functions
+int32_t func__newimage(int32_t x, int32_t y, int32_t bpp, int32_t passed);
+int32_t func__copyimage(int32_t i, int32_t mode, int32_t passed);
+void sub__freeimage(int32_t i, int32_t passed);
+void freeallimages();
+void sub__source(int32_t i);
+void sub__dest(int32_t i);
+int32_t func__source();
+int32_t func__dest();
+int32_t func__display();
+void sub__blend(int32_t i, int32_t passed);
+void sub__dontblend(int32_t i, int32_t passed);
+void sub__setalpha(int32_t a, uint32_t c, uint32_t c2, int32_t i, int32_t passed);
+int32_t func__width(int32_t i, int32_t passed);
+int32_t func__height(int32_t i, int32_t passed);
+int32_t func__pixelsize(int32_t i, int32_t passed);
+int32_t func__blend(int32_t i, int32_t passed);
+
+// DRAW command
+void sub_draw(qbs *s);
