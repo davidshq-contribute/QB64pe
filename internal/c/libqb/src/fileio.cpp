@@ -3,14 +3,9 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "../../os.h"
+#include "libqb-common.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <inttypes.h>
-
+#include "fileio.h"
 #include "error_handle.h"
 #include "filepath.h"
 #include "gfs.h"
@@ -20,7 +15,13 @@
 #include "qbs.h"
 #include "rounding.h"
 
-#include "fileio.h"
+#include "../../os.h"  // For int32 type definitions
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <inttypes.h>
 
 // External references from libqb.cpp that we need
 extern uint8 *cmem;

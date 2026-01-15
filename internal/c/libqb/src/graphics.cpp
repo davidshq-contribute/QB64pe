@@ -4,18 +4,21 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "graphics.h"
-#include "error_handle.h"
 #include "libqb-common.h"
-#include "qblist.h"
-#include "rounding.h"
-#include "../../os.h"
-#include "qbs.h"
-#include <cstring>
-#include <cstdlib>
-#include <cmath>
+
+#include "graphics.h"
 #include "cmem.h"
-#include "../../common.h"  // for byte_element_struct
+#include "error_handle.h"
+#include "qblist.h"
+#include "qbs.h"
+#include "rounding.h"
+
+#include "../../os.h"      // For int32 type definitions
+#include "../../common.h"  // For byte_element_struct
+
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 #ifdef QB64_WINDOWS
 #include <windows.h>

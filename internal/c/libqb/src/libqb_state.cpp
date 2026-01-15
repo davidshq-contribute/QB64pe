@@ -3,9 +3,12 @@
 //  Provides controlled access to shared state for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "../../os.h"  // For int32, uint32 type definitions
+#include "libqb-common.h"
+
 #include "libqb_state.h"
 #include "graphics.h"  // For img_struct
+
+#include "../../os.h"  // For int32, uint32 type definitions
 
 // ============================================================================
 // EXTERNAL REFERENCES FROM libqb.cpp

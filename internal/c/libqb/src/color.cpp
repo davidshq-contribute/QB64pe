@@ -3,17 +3,18 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "../../os.h"
+#include "libqb-common.h"
 
-#include <cstdlib>
-#include <cstring>
-#include <utility>
-
+#include "color.h"
 #include "error_handle.h"
 #include "graphics.h"
 #include "libqb_state.h"
 
-#include "color.h"
+#include "../../os.h"  // For int32 type definitions
+
+#include <cstdlib>
+#include <cstring>
+#include <utility>
 
 // External references from libqb.cpp
 extern void validatepage(int32 i);

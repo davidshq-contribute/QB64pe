@@ -3,10 +3,13 @@
 //  General utility functions extracted from libqb.cpp
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "utility.h"
+#include "libqb-common.h"
 
+#include "utility.h"
 #include "error_handle.h"
 #include "qbs.h"
+
+#include <stdint.h>
 
 // External function declarations (defined in libqb.cpp)
 extern void qbs_print(qbs *str, int32_t finish_on_new_line);

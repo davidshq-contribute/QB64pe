@@ -3,7 +3,13 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "../../os.h"
+#include "libqb-common.h"
+
+#include "screen.h"
+#include "error_handle.h"
+#include "glut-thread.h"
+
+#include "../../os.h"  // For int32 type definitions
 
 #ifdef QB64_WINDOWS
 #include <windows.h>
@@ -11,16 +17,12 @@
 #include "datetime.h"  // For Sleep() on non-Windows
 #endif
 
-#include "screen.h"
-
 #if defined(QB64_GUI) && defined(QB64_GLUT)
 #ifdef QB64_MACOSX
     #include <GLUT/glut.h>
 #else
     #include <GL/freeglut.h>
 #endif
-#include "error_handle.h"
-#include "glut-thread.h"
 #endif
 
 // External references from libqb.cpp

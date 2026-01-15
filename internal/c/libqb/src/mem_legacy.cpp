@@ -3,11 +3,14 @@
 //  Extracted from libqb.cpp for modularization
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "mem_legacy.h"
+#include "libqb-common.h"
 
+#include "mem_legacy.h"
 #include "error_handle.h"
 
-// Type definitions from os.h
+#include <stdint.h>
+
+// Type compatibility definitions
 #ifndef int32
 #define int32 int32_t
 #endif

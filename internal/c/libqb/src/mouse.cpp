@@ -3,15 +3,17 @@
 //  Mouse input functions extracted from libqb.cpp
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "mouse.h"
+#include "libqb-common.h"
 
+#include "mouse.h"
 #include "error_handle.h"
 #include "glut-thread.h"
 #include "graphics.h"
 #include "libqb_state.h"
 #include "qbs.h"
 #include "rounding.h"
-#include "../../os.h"
+
+#include "../../os.h"  // For int16, int32, uint32 type definitions
 
 #include <cmath>
 
