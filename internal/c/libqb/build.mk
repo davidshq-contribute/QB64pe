@@ -36,6 +36,9 @@ libqb-objs-y += $(PATH_LIBQB)/src/text.o
 libqb-objs-y += $(PATH_LIBQB)/src/port_io.o
 libqb-objs-y += $(PATH_LIBQB)/src/platform.o
 
+libqb-objs-$(DEP_SOCKETS) += $(PATH_LIBQB)/src/networking.o
+libqb-objs-y$(DEP_SOCKETS) += $(PATH_LIBQB)/src/networking-stub.o
+
 libqb-objs-y += $(PATH_LIBQB)/src/logging/logging.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/qb64pe_symbol.o
 libqb-objs-y += $(PATH_LIBQB)/src/logging/stacktrace.o

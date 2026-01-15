@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 19,982 lines (reduced from 31,111 - a 35.8% reduction)
+**Current status:** 19,119 lines (reduced from 31,111 - a 38.5% reduction)
 
 ---
 
@@ -26,8 +26,9 @@ This document tracks the modularization of `internal/c/libqb.cpp`, the core runt
 | **Text & Font** | `libqb/src/text.cpp` | 2,121 | `printchr`, `qbs_print`, `qbg_sub_locate`, `sub_cls`, `func_csrlin`, `func_pos`, `func_tab`, `func_spc`, font management (`_LOADFONT`, `_FONT`, `_FREEFONT`), print modes |
 | **Port I/O** | `libqb/src/port_io.cpp` | 249 | `sub_out`, `func_inp`, `sub_wait` - VGA palette emulation, keyboard scancode, retrace timing |
 | **Platform** | `libqb/src/platform.cpp` | 870 | `sub__screenprint` - keyboard input simulation (Windows SendInput, macOS CGEvent) |
+| **Networking** | `libqb/src/networking.cpp` | 894 | TCP/IP sockets: `func__openclient`, `func__openhost`, `func__openconnection`, `func__connected`, stream operations |
 
-**Build system:** All modules added to `libqb/build.mk`
+**Build system:** All modules added to `libqb/build.mk`. Networking uses conditional compilation (networking-stub.cpp when sockets disabled).
 
 ---
 
@@ -61,21 +62,20 @@ int32_t libqb_get_screen_height();
 
 ## Remaining Code Analysis
 
-The ~20,000 remaining lines break down into these functional areas:
+The ~19,100 remaining lines break down into these functional areas:
 
 | Area | Lines | Location | Self-Contained? |
 |------|-------|----------|-----------------|
 | Global state & data structures | ~1,700 | 61-1750 | N/A (declarations) |
-| Display/render loop | ~1,371 | 16396-18797 | No (core orchestrator) |
-| Key input infrastructure | ~1,200 | 14289-19899 | No (state machine) |
+| Display/render loop | ~1,371 | 16000-18400 | No (core orchestrator) |
+| Key input infrastructure | ~1,200 | 14000-19500 | No (state machine) |
 | Graphics mode management | ~1,050 | 5845-6866 | No (deep integration) |
 | INPUT statement | ~830 | 8513-9342 | No (cross-cutting) |
-| Networking/TCP | ~650 | 12700-13600 | **Yes** |
 | PRINT USING | ~600 | 11450-12600 | Moderate |
 | Control flow/runtime | ~600 | scattered | No |
 | Hardware texture mgmt | ~400 | 3600-4100 | **Yes** |
 | Window/GUI operations | ~300 | scattered | **Yes** |
-| Mouse GLUT callbacks | ~215 | 16946-17192 | Moderate |
+| Mouse GLUT callbacks | ~215 | 16500-16750 | Moderate |
 
 ---
 
@@ -83,13 +83,13 @@ The ~20,000 remaining lines break down into these functional areas:
 
 ### Tier 1: High ROI (Self-contained, minimal dependencies)
 
-| Module | Lines | Effort | Impact | Notes |
-|--------|-------|--------|--------|-------|
-| **Networking** | ~650 | Low | High | TCP/socket functions are isolated. Only needs GFS and error_handle externs. |
+| Module | Lines | Effort | Impact | Status |
+|--------|-------|--------|--------|--------|
+| **Networking** | ~894 | Low | High | ✅ **DONE** - TCP/socket functions extracted with conditional stub. |
 | **Hardware Textures** | ~400 | Low | Medium | `newimg()`, `freeimg()`, `new_hardware_img()`, texture upload functions. |
 | **Window Operations** | ~300 | Low | Medium | Expand existing window.cpp with `sub__screenmove()`, `sub__icon()`, file drop handlers. |
 
-**Recommendation:** Extract networking first - highest line count with lowest complexity.
+**Recommendation:** Extract hardware textures next - good line count with clean boundaries.
 
 ### Tier 2: Medium ROI (Needs accessor layer expansion)
 
@@ -121,10 +121,10 @@ The ~20,000 remaining lines break down into these functional areas:
 
 ### Immediate (High ROI)
 
-1. **Extract Networking Module** (~650 lines)
-   - Functions: `tcp_init`, `tcp_done`, `tcp_host_open`, `tcp_client_open`, `connection_new`, stream operations
-   - Dependencies: GFS module, error_handle (both already have headers)
-   - Estimated effort: 2-3 hours
+1. ✅ **~~Extract Networking Module~~** - COMPLETED
+   - Created `networking.cpp` (894 lines) with TCP/socket functions
+   - Created `networking-stub.cpp` for programs not using sockets
+   - Uses conditional compilation via `DEP_SOCKETS` in build.mk
 
 2. **Expand Window Module** (~300 lines)
    - Add: `sub__screenmove`, `sub__icon`, `sub__filedrop`, `func__filedrop`
@@ -145,9 +145,9 @@ The ~20,000 remaining lines break down into these functional areas:
 
 ### Strategic Considerations
 
-**Diminishing Returns:** We've extracted 35.8% of the code. The remaining ~20K lines are increasingly interdependent. Further extraction yields smaller modules with higher effort.
+**Diminishing Returns:** We've extracted 38.5% of the code. The remaining ~19K lines are increasingly interdependent. Further extraction yields smaller modules with higher effort.
 
-**Practical Ceiling:** Realistically, we can reach ~40-45% reduction (extract networking + window + hardware = ~1,350 more lines). Beyond that requires architectural changes to the accessor layer.
+**Practical Ceiling:** Realistically, we can reach ~42-45% reduction (expand window + hardware = ~700 more lines). Beyond that requires architectural changes to the accessor layer.
 
 **Alternative Focus:** Instead of more extractions, consider:
 - Improving existing module interfaces (reduce extern declarations)
@@ -312,6 +312,9 @@ libqb.cpp includes 33 modularized headers:
 | `libqb/include/port_io.h` | Port I/O function declarations (INP, OUT, WAIT) |
 | `libqb/src/platform.cpp` | Platform module - keyboard input simulation (_SCREENPRINT) |
 | `libqb/include/platform.h` | Platform function declarations |
+| `libqb/src/networking.cpp` | TCP/IP networking - sockets, streams, connections |
+| `libqb/src/networking-stub.cpp` | Stub implementation for programs not using sockets |
+| `libqb/include/networking.h` | Networking function declarations |
 
 ### Build System
 
@@ -326,6 +329,8 @@ libqb-objs-y += $(PATH_LIBQB)/src/module.o
 
 ### January 2026
 
+- **Networking module extracted** - Created networking.cpp (894 lines) with all TCP/IP socket functions: `func__openclient`, `func__openhost`, `func__openconnection`, `func__connected`, `func__connectionaddress`, `tcp_init`, `tcp_done`, stream operations. Added conditional compilation with networking-stub.cpp for programs not using sockets. Uses `DEP_SOCKETS` flag in build.mk.
+- **libqb.cpp reduced to 19,119 lines** (38.5% reduction from original 31,111)
 - **Platform module extracted** - Created new platform.cpp with `sub__screenprint` (870 lines) for keyboard input simulation (Windows SendInput, macOS CGEvent)
 - **Accessor migration completed** - Migrated color.cpp (3 externs), mouse.cpp (2 externs), text.cpp (1 extern) to use `libqb_state.h` accessor functions instead of extern declarations
 - **Keyboard input functions extracted** - Added `func__keyhit`, `func__keydown`, `sub__mapunicode`, `func__mapunicode` to keyboard.cpp (now 177 lines)
@@ -333,4 +338,3 @@ libqb-objs-y += $(PATH_LIBQB)/src/module.o
 - **Dead code removal** - Removed 118 lines of unused MACVK_* global constants (were shadowed by local statics)
 - **Module include fixes** - Added `libqb-common.h` to console.cpp, keyboard.cpp, text.cpp for proper platform macro definitions
 - **Extern declaration audit** - Documented 183 extern declarations across 19 modules (down from 194 after migration)
-- **libqb.cpp reduced to 19,982 lines** (35.8% reduction from original 31,111)
