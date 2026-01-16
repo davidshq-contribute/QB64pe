@@ -17,6 +17,7 @@ InitTestSuite "Parser Module Tests"
 TestStrNth
 TestRemoveTrailingSpaces
 TestIsValidIdentifierChar
+TestCountElements
 
 RunTests
 
@@ -53,6 +54,62 @@ FUNCTION IsValidIdentifierChar%% (c AS LONG)
     IF c >= 48 AND c <= 57 THEN IsValidIdentifierChar%% = -1: EXIT FUNCTION
     IF c = 95 THEN IsValidIdentifierChar%% = -1: EXIT FUNCTION
     IsValidIdentifierChar%% = 0
+END FUNCTION
+
+'Helper functions for countelements (simplified from elements.bas)
+FUNCTION numelements& (a$)
+    DIM p AS LONG, n AS LONG, i AS LONG
+    IF a$ = "" THEN EXIT FUNCTION
+    n = 1
+    p = 1
+    DO
+        i = INSTR(p, a$, sp)
+        IF i = 0 THEN numelements& = n: EXIT FUNCTION
+        n = n + 1
+        p = i + 1
+    LOOP
+END FUNCTION
+
+FUNCTION getelement$ (a$, elenum AS LONG)
+    DIM p AS LONG, n AS LONG, i AS LONG
+    IF a$ = "" THEN EXIT FUNCTION
+    n = 1
+    p = 1
+    DO
+        i = INSTR(p, a$, sp)
+        IF elenum = n THEN
+            IF i THEN
+                getelement$ = MID$(a$, p, i - p)
+            ELSE
+                getelement$ = RIGHT$(a$, LEN(a$) - p + 1)
+            END IF
+            EXIT FUNCTION
+        END IF
+        IF i = 0 THEN EXIT FUNCTION
+        n = n + 1
+        p = i + 1
+    LOOP
+END FUNCTION
+
+'Stub for Give_Error (used by countelements)
+DIM SHARED lastError$
+SUB Give_Error (msg$)
+    lastError$ = msg$
+END SUB
+
+FUNCTION countelements& (a$)
+    DIM n AS LONG, c AS LONG, i AS LONG, b AS LONG
+    DIM e$
+    n = numelements&(a$)
+    c = 1
+    FOR i = 1 TO n
+        e$ = getelement$(a$, i)
+        IF e$ = "(" THEN b = b + 1
+        IF e$ = ")" THEN b = b - 1
+        IF b < 0 THEN Give_Error "Unexpected ) encountered": EXIT FUNCTION
+        IF e$ = "," AND b = 0 THEN c = c + 1
+    NEXT
+    countelements& = c
 END FUNCTION
 
 '=============================================================================
@@ -100,6 +157,35 @@ SUB TestIsValidIdentifierChar
     AssertFalse IsValidIdentifierChar%%(33), "IsValidIdentifierChar: ! (invalid)"
     AssertFalse IsValidIdentifierChar%%(64), "IsValidIdentifierChar: @ (invalid)"
     AssertFalse IsValidIdentifierChar%%(45), "IsValidIdentifierChar: - (invalid)"
+END SUB
+
+SUB TestCountElements
+    'Helper to build element strings with sp separator
+    DIM s$
+
+    'Single element
+    s$ = "a"
+    AssertEqualsLong 1, countelements&(s$), "countelements: single element"
+
+    'Two elements separated by comma
+    s$ = "a" + sp + "," + sp + "b"
+    AssertEqualsLong 2, countelements&(s$), "countelements: two elements"
+
+    'Three elements
+    s$ = "a" + sp + "," + sp + "b" + sp + "," + sp + "c"
+    AssertEqualsLong 3, countelements&(s$), "countelements: three elements"
+
+    'Elements with parentheses (commas inside parens don't count)
+    s$ = "a" + sp + "," + sp + "(" + sp + "b" + sp + "," + sp + "c" + sp + ")"
+    AssertEqualsLong 2, countelements&(s$), "countelements: nested parens"
+
+    'Multiple commas in nested parens
+    s$ = "func" + sp + "(" + sp + "x" + sp + "," + sp + "y" + sp + "," + sp + "z" + sp + ")"
+    AssertEqualsLong 1, countelements&(s$), "countelements: all inside parens"
+
+    'Empty string
+    s$ = ""
+    AssertEqualsLong 1, countelements&(s$), "countelements: empty string"
 END SUB
 
 '$INCLUDE:'../test_harness.bas'

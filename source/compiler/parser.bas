@@ -27,3 +27,36 @@ FUNCTION IsValidIdentifierChar%% (c AS LONG)
     IF c = 95 THEN IsValidIdentifierChar%% = -1: EXIT FUNCTION                '_
     IsValidIdentifierChar%% = 0
 END FUNCTION
+
+'=============================================================================
+' String Utilities (migrated from qb64pe.bas)
+'=============================================================================
+
+FUNCTION str_nth$ (x AS LONG)
+    'Returns ordinal string for a number (1st, 2nd, 3rd, 4th, etc.)
+    IF x = 1 THEN str_nth$ = "1st": EXIT FUNCTION
+    IF x = 2 THEN str_nth$ = "2nd": EXIT FUNCTION
+    IF x = 3 THEN str_nth$ = "3rd": EXIT FUNCTION
+    str_nth$ = _TOSTR$(x) + "th"
+END FUNCTION
+
+'=============================================================================
+' Element Counting (migrated from qb64pe.bas)
+'=============================================================================
+
+FUNCTION countelements& (a$)
+    'Counts the number of comma-separated elements, respecting parentheses nesting
+    'Uses numelements and getelement$ from elements.bas
+    DIM n AS LONG, c AS LONG, i AS LONG, b AS LONG
+    DIM e$
+    n = numelements(a$)
+    c = 1
+    FOR i = 1 TO n
+        e$ = getelement$(a$, i)
+        IF e$ = "(" THEN b = b + 1
+        IF e$ = ")" THEN b = b - 1
+        IF b < 0 THEN Give_Error "Unexpected ) encountered": EXIT FUNCTION
+        IF e$ = "," AND b = 0 THEN c = c + 1
+    NEXT
+    countelements& = c
+END FUNCTION

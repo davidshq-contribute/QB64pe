@@ -211,23 +211,10 @@ REDIM SHARED separgslayout2(OptMax + 1) AS STRING
 'up to the code which uses the 'qberror_test' handler for checking.
 DIM SHARED E
 
-
-
-
-
-
-
-
-
-
 DIM SHARED ResolveStaticFunctions
 REDIM SHARED ResolveStaticFunction_File(1 TO 100) AS STRING
 REDIM SHARED ResolveStaticFunction_Name(1 TO 100) AS STRING
 REDIM SHARED ResolveStaticFunction_Method(1 TO 100) AS LONG
-
-
-
-
 
 DIM SHARED os AS STRING
 os$ = "WIN"
@@ -14520,20 +14507,7 @@ SUB closemain
     firstLineNumberLabelvWatch = 0
 END SUB
 
-FUNCTION countelements (a$)
-    n = numelements(a$)
-    c = 1
-    FOR i = 1 TO n
-        e$ = getelement$(a$, i)
-        IF e$ = "(" THEN b = b + 1
-        IF e$ = ")" THEN b = b - 1
-        IF b < 0 THEN Give_Error "Unexpected ) encountered": EXIT FUNCTION
-        IF e$ = "," AND b = 0 THEN c = c + 1
-    NEXT
-    countelements = c
-END FUNCTION
-
-
+'countelements moved to source/compiler/parser.bas
 
 FUNCTION dim2 (varname$, typ2$, method, elements$)
 
@@ -23832,12 +23806,7 @@ FUNCTION validname (a$)
     validname = 1
 END FUNCTION
 
-FUNCTION str_nth$ (x)
-    IF x = 1 THEN str_nth$ = "1st": EXIT FUNCTION
-    IF x = 2 THEN str_nth$ = "2nd": EXIT FUNCTION
-    IF x = 3 THEN str_nth$ = "3rd": EXIT FUNCTION
-    str_nth$ = _TOSTR$(x) + "th"
-END FUNCTION
+'str_nth$ moved to source/compiler/parser.bas
 
 FUNCTION VRGBS~& (text$, DefaultColor AS _UNSIGNED LONG)
     'Value of RGB String = VRGBS without a ton of typing
