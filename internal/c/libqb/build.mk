@@ -1,6 +1,9 @@
 
 libqb-objs-y += $(PATH_LIBQB)/src/threading.o
 libqb-objs-y += $(PATH_LIBQB)/src/buffer.o
+libqb-objs-y += $(PATH_LIBQB)/src/charset_data.o
+libqb-objs-y += $(PATH_LIBQB)/src/static_data.o
+libqb-objs-y += $(PATH_LIBQB)/src/print_using.o
 libqb-objs-y += $(PATH_LIBQB)/src/bitops.o
 libqb-objs-y += $(PATH_LIBQB)/src/command.o
 libqb-objs-y += $(PATH_LIBQB)/src/environ.o
