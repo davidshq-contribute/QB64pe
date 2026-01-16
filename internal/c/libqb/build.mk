@@ -38,6 +38,7 @@ libqb-objs-y += $(PATH_LIBQB)/src/window.o
 libqb-objs-y += $(PATH_LIBQB)/src/text.o
 libqb-objs-y += $(PATH_LIBQB)/src/port_io.o
 libqb-objs-y += $(PATH_LIBQB)/src/platform.o
+libqb-objs-y += $(PATH_LIBQB)/src/cpu_emu.o
 
 libqb-objs-$(DEP_SOCKETS) += $(PATH_LIBQB)/src/networking.o
 libqb-objs-y$(DEP_SOCKETS) += $(PATH_LIBQB)/src/networking-stub.o
