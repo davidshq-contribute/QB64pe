@@ -79,6 +79,24 @@ TYPE CompilerErrorState
     E AS LONG                 'General error flag
 END TYPE
 
+'Core compiler state tracking
+'Consolidates essential compilation state variables for better organization
+TYPE CompilerState
+    sourcefile AS STRING      'Current source file being compiled
+    linenumber AS LONG        'Current line number in source file
+    prepass AS _BYTE          'True during pre-compilation pass
+    subfuncn AS LONG          'Current SUB/FUNCTION index
+    controllevel AS INTEGER   'Nesting level of control structures (IF/FOR/DO/SELECT)
+END TYPE
+
+'Type system state tracking
+'Manages type definition and resolution state during compilation
+TYPE TypeSystemState
+    lasttype AS LONG          'Last type identifier processed
+    lasttypeelement AS LONG   'Last type element identifier processed
+    definingtype AS LONG      'Currently being defined type identifier
+END TYPE
+
 'Note: State container instances (gPath, gFlags, etc.) are not declared here.
 'The accessor functions in compiler_state.bas wrap existing globals for now.
 'Future migration will instantiate these containers and update the accessors.

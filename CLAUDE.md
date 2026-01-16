@@ -119,6 +119,5 @@ Format: `X.Y.Z` for releases, `X.Y.Z-NN-XXXXXXXX` for CI builds (commits since r
 
 - `docs/build-system.md` - Detailed build process and Makefile parameters
 - `docs/testing.md` - Test framework documentation
-- `docs/libqb-modularization-plan.md` - libqb extraction progress and lessons learned
-- `docs/modernization-roadmap.md` - Next steps for further modularization
+- `docs/modernization-roadmap.md` - Comprehensive modernization roadmap including libqb modularization plan, extraction progress, and lessons learned
 - `docs/auto-including.md` - Auto-include feature for $USELIBRARY

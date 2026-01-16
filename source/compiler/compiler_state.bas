@@ -34,6 +34,16 @@ SUB SetLineNumber (n AS LONG)
     linenumber = n
 END SUB
 
+'Get current line number (alternative name for GetLineNumber)
+FUNCTION GetCurrentLineNumber&
+    GetCurrentLineNumber& = linenumber
+END FUNCTION
+
+'Set current line number (alternative name for SetLineNumber)
+SUB SetCurrentLineNumber (n AS LONG)
+    linenumber = n
+END SUB
+
 FUNCTION IsPrepass%%
     IsPrepass%% = prepass
 END FUNCTION
@@ -55,6 +65,15 @@ FUNCTION GetCurrentScopeName$
         GetCurrentScopeName$ = ""
     ELSE
         GetCurrentScopeName$ = subfunc$
+    END IF
+END FUNCTION
+
+'Get current scope name (alternative name for GetCurrentScopeName)
+FUNCTION GetCurrentScope$
+    IF subfuncn = 0 THEN
+        GetCurrentScope$ = ""
+    ELSE
+        GetCurrentScope$ = subfunc$
     END IF
 END FUNCTION
 

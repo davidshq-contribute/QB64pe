@@ -14,6 +14,7 @@
 #include "qblist.h"
 #include "qbs.h"
 #include "rounding.h"
+#include "simple_utils.h"
 
 #include "../../os.h"  // For int32 type definitions
 
@@ -47,10 +48,6 @@ extern void call_int(int32 intno);
 // byte_element_struct is defined in common.h
 // byte_element helper from libqb.cpp
 extern void *byte_element(uint64 offset, int32 length, byte_element_struct *info);
-
-// Helper functions for building 64-bit values from two 32-bit values
-extern int64 build_int64(uint32 val2, uint32 val1);
-extern uint64 build_uint64(uint32 val2, uint32 val1);
 
 // Globals defined in this module
 int32 generic_get_bytes_read = 0;

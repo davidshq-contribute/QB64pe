@@ -10,6 +10,11 @@ DECLARE FUNCTION str_nth$ (x AS LONG)
 'Element counting (migrated from qb64pe.bas)
 DECLARE FUNCTION countelements& (a$)
 
-'Note: The following functions are still in qb64pe.bas and will be migrated later:
-'DECLARE FUNCTION validname (a$)
-'DECLARE FUNCTION lineformat$ (a$)
+'Unique number generation (migrated from qb64pe.bas)
+DECLARE FUNCTION uniquenumber&
+
+'Name validation (migrated from qb64pe.bas)
+DECLARE FUNCTION validname (a$)
+
+'Line formatting (migrated from qb64pe.bas)
+DECLARE FUNCTION lineformat$ (a$)

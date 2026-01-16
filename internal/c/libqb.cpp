@@ -61,6 +61,10 @@
 #include "text.h"
 #include "platform.h"
 #include "networking.h"
+#include "simple_utils.h"
+#include "file_helpers.h"
+#include "file_lock.h"
+#include "unicode_convert.h"
 
 // These are here because they are used in func__loadfont()
 #include <algorithm>
@@ -78,15 +82,7 @@ int32 consolebutton;  // exported for mouse.cpp
 // This next block used to be in common.cpp; put here until I can find a better
 // place for it (LC, 2018-01-05)
 
-/**
- * Performs a left bit rotation on a 32-bit value.
- * @param word The 32-bit value to rotate
- * @param shift Number of bits to shift left
- * @return The rotated value with bits wrapping around
- */
-uint32 rotateLeft(uint32 word, uint32 shift) {
-    return (word << shift) | (word >> (32 - shift));
-}
+// rotateLeft moved to simple_utils.cpp
 
 #ifdef QB64_UNIX
 #    include <libgen.h> //required for dirname()
@@ -374,89 +370,7 @@ int32 keydown_glyph = 0;
  * @param dest_buf Pointer to destination buffer (must be at least src_size*4+4 bytes)
  * @return Number of bytes written to destination buffer
  */
-int32 convert_unicode(int32 src_fmt, void *src_buf, int32 src_size, int32 dest_fmt, void *dest_buf) {
-    /*
-        important: to ensure enough space is available for the conversion, dest_buf must be at least src_size*4+4 in length
-        returns: the number of bytes written to dest_buf
-        fmt values:
-        1=ASCII(CP437)
-        8=UTF8
-        16=UTF16
-        32=UTF32
-    */
-
-    static int32 dest_size;
-    dest_size = 0;
-
-    // setup source
-    uint8 *src_uint8p = NULL;
-    if (src_fmt == 1) {
-        src_uint8p = (uint8 *)src_buf;
-    }
-    uint16 *src_uint16p = NULL;
-    if (src_fmt == 16) {
-        src_uint16p = (uint16 *)src_buf;
-        src_size = src_size - (src_size & 1); // cull trailing bytes
-    }
-    uint32 *src_uint32p = NULL;
-    if (src_fmt == 32) {
-        src_uint32p = (uint32 *)src_buf;
-        src_size = src_size - (src_size & 3); // cull trailing bytes
-    }
-
-    // setup dest
-    uint16 *dest_uint16p = NULL;
-    if (dest_fmt == 16) {
-        dest_uint16p = (uint16 *)dest_buf;
-    }
-    uint32 *dest_uint32p = NULL;
-    if (dest_fmt == 32) {
-        dest_uint32p = (uint32 *)dest_buf;
-    }
-
-    uint32 x; // scalar
-
-    while (src_size) {
-
-        // convert src to scalar UNICODE value 'x'
-
-        if (src_fmt == 1) { // CP437
-            x = *src_uint8p++;
-            src_size--;
-            x = codepage437_to_unicode16[x];
-        }
-        if (src_fmt == 16) { // UTF16
-            src_size -= 2;
-            x = *src_uint16p++;
-            // note: does not handle surrogate pairs yet
-        }
-        if (src_fmt == 32) { // UTF32
-            src_size -= 4;
-            x = *src_uint32p++;
-        }
-
-        // convert scalar UNICODE value 'x' to dest
-
-        if (dest_fmt == 16) { // UTF16
-            *dest_uint16p++ = x;
-            dest_size += 2;
-            // note: does not handle surrogate pairs yet
-        }
-        if (dest_fmt == 32) { // UTF32
-            *dest_uint32p++ = x;
-            dest_size += 4;
-        }
-
-    } // loop
-
-    // add NULL terminator (does not change the size in bytes returned)
-    if (dest_fmt == 16)
-        *dest_uint16p = 0;
-    if (dest_fmt == 32)
-        *dest_uint32p = 0;
-
-    return dest_size;
-}
+// convert_unicode moved to libqb/src/unicode_convert.cpp
 
 #ifdef QB64_WINDOWS
 void showvalue(__int64);
@@ -497,19 +411,7 @@ void scancodeup(uint8 scancode);
 void keydown(uint32 x);
 void keyup(uint32 x);
 
-/**
- * Converts a Unicode character to its CP437 (code page 437) equivalent.
- * @param x Unicode character to convert
- * @return CP437 character code, or 0 if no equivalent exists
- */
-uint32 unicode_to_cp437(uint32 x) {
-    static int32 i;
-    for (i = 0; i <= 255; i++) {
-        if (x == codepage437_to_unicode16[i])
-            return i;
-    }
-    return 0;
-}
+// unicode_to_cp437 moved to simple_utils.cpp
 
 // Keyboard state tracking buffers and variables
 uint32 *keyheld_buffer = (uint32 *)malloc(1);
@@ -966,21 +868,7 @@ int32 lock_display_required = 0;
 #define cost_delay 0
 uint32 cost = 0;
 
-int64 build_int64(uint32 val2, uint32 val1) {
-    static int64 val;
-    val = val2;
-    val <<= 32;
-    val |= val1;
-    return val;
-}
-
-uint64 build_uint64(uint32 val2, uint32 val1) {
-    static uint64 val;
-    val = val2;
-    val <<= 32;
-    val |= val1;
-    return val;
-}
+// build_int64, build_uint64 moved to simple_utils.cpp
 
 // nb. abbreviations are used in variable names to save typing, here are some of the expansions
 // cmem=conventional memory
@@ -1016,7 +904,7 @@ int32 global_counter = 0;
 extern double last_line;
 void end(void);
 
-void sub__echo(qbs *message);
+// sub__echo moved to file_helpers.cpp
 
 void unlockvWatchHandle() {
     if (vwatch > 0)
@@ -1257,15 +1145,7 @@ uint8 keyon[65536];
 
 qbs *singlespace;
 
-qbs *func_varptr_helper(uint8 type, uint16 offset) {
-    //*creates a 3 byte string using the values given
-    qbs *tqbs;
-    tqbs = qbs_new(3, 1);
-    tqbs->chr[0] = type;
-    tqbs->chr[1] = offset & 255;
-    tqbs->chr[2] = offset >> 8;
-    return tqbs;
-}
+// func_varptr_helper moved to libqb/src/simple_utils.cpp
 
 qbs *qbs_inkey() {
     if (is_error_pending())
@@ -7498,131 +7378,9 @@ void chain_savescreenstate(int32 i) { // adds the screen state to file #i
 
 } // chain_savescreenstate
 
-void sub_lock(int32 i, int64 start, int64 end, int32 passed) {
-    if (is_error_pending())
-        return;
-    if (gfs_fileno_valid(i) != 1) {
-        error(52);
-        return;
-    } // Bad file name or number
-    i = gfs_get_fileno(i); // convert fileno to gfs index
-    static gfs_file_struct *gfs;
-    gfs = gfs_get_file_struct(i);
+// sub_lock moved to file_lock.cpp
 
-    // If the file has been opened for sequential input or output, LOCK and UNLOCK affect the entire file, regardless of the range specified by start& and end&.
-    if (gfs->type > 2)
-        passed = 0;
-
-    if (passed & 1) {
-        start--;
-        if (start < 0) {
-            error(5);
-            return;
-        }
-        if (gfs->type == 1)
-            start *= gfs->record_length;
-    } else {
-        start = -1;
-    }
-
-    if (passed & 2) {
-        end--;
-        if (end < 0) {
-            error(5);
-            return;
-        }
-        if (gfs->type == 1)
-            end = end * gfs->record_length + gfs->record_length - 1;
-    } else {
-        end = start;
-        if (gfs->type == 1)
-            end = start + gfs->record_length - 1;
-        if (!(passed & 1))
-            end = -1;
-    }
-
-    int32 e;
-    e = gfs_lock(i, start, end);
-    if (e) {
-        if (e == -2) {
-            error(258);
-            return;
-        } // invalid handle
-        if (e == -4) {
-            error(5);
-            return;
-        } // illegal function call
-        if (e == -7) {
-            error(70);
-            return;
-        } // permission denied
-        error(75);
-        return; // assume[-9]: path/file access error
-    }
-}
-
-void sub_unlock(int32 i, int64 start, int64 end, int32 passed) {
-    if (is_error_pending())
-        return;
-    if (gfs_fileno_valid(i) != 1) {
-        error(52);
-        return;
-    } // Bad file name or number
-    i = gfs_get_fileno(i); // convert fileno to gfs index
-    static gfs_file_struct *gfs;
-    gfs = gfs_get_file_struct(i);
-
-    // If the file has been opened for sequential input or output, LOCK and UNLOCK affect the entire file, regardless of the range specified by start& and end&.
-    if (gfs->type > 2)
-        passed = 0;
-
-    if (passed & 1) {
-        start--;
-        if (start < 0) {
-            error(5);
-            return;
-        }
-        if (gfs->type == 1)
-            start *= gfs->record_length;
-    } else {
-        start = -1;
-    }
-
-    if (passed & 2) {
-        end--;
-        if (end < 0) {
-            error(5);
-            return;
-        }
-        if (gfs->type == 1)
-            end = end * gfs->record_length + gfs->record_length - 1;
-    } else {
-        end = start;
-        if (gfs->type == 1)
-            end = start + gfs->record_length - 1;
-        if (!(passed & 1))
-            end = -1;
-    }
-
-    int32 e;
-    e = gfs_unlock(i, start, end);
-    if (e) {
-        if (e == -2) {
-            error(258);
-            return;
-        } // invalid handle
-        if (e == -4) {
-            error(5);
-            return;
-        } // illegal function call
-        if (e == -7) {
-            error(70);
-            return;
-        } // permission denied
-        error(75);
-        return; // assume[-9]: path/file access error
-    }
-}
+// sub_unlock moved to file_lock.cpp
 
 #ifdef DEPENDENCY_SCREENIMAGE
 int32 func__screenimage(int32 x1, int32 y1, int32 x2, int32 y2, int32 passed) {
@@ -7914,42 +7672,9 @@ failed:;
 // func__keyhit, func__keydown, sub__mapunicode, func__mapunicode
 // moved to libqb/src/keyboard.cpp
 
-int32 addone(int32 x) {
-    return x + 1;
-} // for testing purposes only
+// addone moved to simple_utils.cpp
 
-qbs *func__os() {
-#ifdef QB64_WINDOWS
-#    define QB64_OS_SYSTEM_STR "[WINDOWS]"
-#elif defined(QB64_LINUX)
-#    define QB64_OS_SYSTEM_STR "[LINUX]"
-#elif defined(QB64_MACOSX)
-#    define QB64_OS_SYSTEM_STR "[MACOSX]"
-#else
-#    define QB64_OS_SYSTEM_STR ""
-#endif
-
-#ifdef QB64_MACOSX
-#    define QB64_OS_SYSTEM_EXTRA_STR "[LINUX]"
-#else
-#    define QB64_OS_SYSTEM_EXTRA_STR ""
-#endif
-
-#ifdef QB64_32
-#    define QB64_OS_BITS_STR "[32BIT]"
-#else
-#    define QB64_OS_BITS_STR "[64BIT]"
-#endif
-
-#ifdef QB64_ARM
-#    define QB64_OS_ARCH_STR "[ARM]"
-#else
-#    define QB64_OS_ARCH_STR ""
-#endif
-
-    // Have the compiler combine all our selections into one string
-    return qbs_new_txt(QB64_OS_SYSTEM_STR QB64_OS_SYSTEM_EXTRA_STR QB64_OS_BITS_STR QB64_OS_ARCH_STR);
-}
+// func__os moved to file_helpers.cpp
 
 // func__screenx, func__screeny moved to screen.cpp
 
@@ -10211,92 +9936,13 @@ void GLUT_MOUSEWHEEL_FUNC(int wheel, int direction, int x, int y) {
 
 #endif
 
-void sub__title(qbs *title) {
-    if (is_error_pending())
-        return;
-    static qbs *cz = NULL;
-    if (!cz) {
-        cz = qbs_new(1, 0);
-        cz->chr[0] = 0;
-    }
-    static qbs *str = NULL;
-    if (!str)
-        str = qbs_new(0, 0);
-    qbs_set(str, qbs_add(title, cz));
+// sub__title moved to file_helpers.cpp
 
-    uint8 *buf, *old_buf;
-    buf = (uint8 *)malloc(str->len);
-    memcpy(buf, str->chr, str->len);
-    old_buf = window_title;
-    window_title = buf;
-    if (old_buf)
-        free(old_buf);
+// sub__echo moved to file_helpers.cpp
 
-    OPTIONAL_GLUT();
+// func__readfile moved to file_helpers.cpp
 
-    libqb_glut_set_window_title((char *)window_title);
-} // title
-
-void sub__echo(qbs *message) {
-    if (is_error_pending())
-        return;
-
-    int32 prevDest = func__dest();
-    sub__dest(func__console());
-
-    makefit(message);
-    qbs_print(message, 0);
-    qbs_print(nothingstring, 1);
-
-    sub__dest(prevDest);
-
-} // echo
-
-qbs *func__readfile(qbs *filespec) {
-    FILE *file;
-    int len; // file handle; file length;
-    qbs *namez;
-    qbs *cont; // 0-term file name; file contents;
-
-    namez = qbs_add(filespec, func_chr(0)); // add terminator
-    filepath_fix_directory(namez);          // fix separators
-    file = fopen((const char *)namez->chr, "rb");
-
-    if (file) {
-        fseek(file, 0, SEEK_END); // end pos
-        len = ftell(file);        //   = file length
-        rewind(file);             // rewind to start
-        cont = qbs_new(len, 1);   // get new string for file contents
-        fread(cont->chr, 1, len, file);
-        if (ferror(file)) {
-            error(QB_ERROR_PATH_FILE_ACCESS_ERROR); // something went wrong
-            cont = qbs_new_txt("");                 // return empty on error
-        }
-        fclose(file);
-        return cont;
-    } else {
-        error(QB_ERROR_FILE_NOT_FOUND); // most common when trying to read
-        return qbs_new_txt("");         // return empty on error
-    }
-}
-
-void sub__writefile(qbs *filespec, qbs *contents) {
-    FILE *file; // file handle;
-    qbs *namez; // 0-term file name;
-
-    namez = qbs_add(filespec, func_chr(0)); // add terminator
-    filepath_fix_directory(namez);          // fix separators
-    file = fopen((const char *)namez->chr, "wb");
-
-    if (file) {
-        fwrite(contents->chr, 1, contents->len, file);
-        if (ferror(file))
-            error(QB_ERROR_PATH_FILE_ACCESS_ERROR); // something went wrong
-        fclose(file);
-    } else {
-        error(QB_ERROR_PATH_NOT_FOUND); // most common when making a new file
-    }
-}
+// sub__writefile moved to file_helpers.cpp
 
 // sub__filedrop, func__filedrop, sub__finishdrop, func__totaldroppedfiles, func__droppedfile moved to window.cpp
 

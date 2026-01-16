@@ -149,3 +149,14 @@ FUNCTION ReadWriteLongSettingValue& (section AS STRING, setting AS STRING, defau
     END IF
 END FUNCTION
 
+'
+' Removes C++ style casts from an expression string
+' Looks for pattern "  )" and removes everything up to and including it
+'
+FUNCTION removecast$ (a$)
+    removecast$ = a$
+    IF INSTR(a$, "  )") THEN
+        removecast$ = RIGHT$(a$, LEN(a$) - INSTR(a$, "  )") - 2)
+    END IF
+END FUNCTION
+
