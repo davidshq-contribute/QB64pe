@@ -11,6 +11,7 @@
 // ============================================================================
 
 #include <stdint.h>
+#include <stddef.h>
 
 // ============================================================================
 // PUBLIC API DECLARATIONS
@@ -43,6 +44,14 @@ void sub__scrolllock(int32_t options);
 /// Controls the Num Lock key state.
 /// @param options Control option: 1=ON, 2=OFF, 3=TOGGLE
 void sub__numlock(int32_t options);
+
+// Scancode Lookup Table
+// Maps virtual key codes to scancodes for different modifier states
+
+/// Scancode lookup table for keyboard translation
+/// Layout: [OFFSET, SCANCODE, ASCII, SHIFT, CTRL, ALT, NUM, CAPS, SHIFT+CAPS, SHIFT+NUM] per key
+extern const int32_t scancode_lookup[];
+extern const size_t scancode_lookup_size;
 
 // Keyboard Input Functions
 

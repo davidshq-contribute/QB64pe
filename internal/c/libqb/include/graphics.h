@@ -65,26 +65,52 @@ struct img_struct {
 // ============================================================================
 // SOFTWARE IMAGE MANAGEMENT FUNCTIONS
 // ============================================================================
+// CORE IMAGE MANAGEMENT FUNCTIONS
+// ============================================================================
 
-// Restore default palette for screen mode
+/// Restores default palette for screen mode
+/// Resets image palette to default colors for the specified screen mode
+/// @param im Image structure to restore palette for
 void restorepalette(img_struct *im);
 
-// Set a pixel with alpha blending support
+/// Sets a pixel with alpha blending support
+/// Draws pixel with proper alpha channel handling
+/// @param x X coordinate
+/// @param y Y coordinate
+/// @param col Color value (including alpha)
 void pset(int32_t x, int32_t y, uint32_t col);
 
-// Allocate a new image index (returns index, 0 on failure)
+/// Allocates a new image index
+/// Creates a new image slot and returns its index
+/// @return Image index, or 0 on failure
 uint32_t newimg();
 
-// Free an image by index (returns 1 on success, 0 on failure)
+/// Frees an image by index
+/// Releases image resources and makes index available for reuse
+/// @param i Image index to free
+/// @return 1 on success, 0 on failure
 int32_t freeimg(uint32_t i);
 
-// Revert image to default state for its screen mode
+/// Reverts image to default state for its screen mode
+/// Resets image properties to match its screen mode defaults
+/// @param i Image index to revert
 void imgrevert(int32_t i);
 
-// Create image frame from existing buffer
+/// Creates image frame from existing buffer
+/// Wraps existing memory buffer as an image
+/// @param o Pointer to existing buffer
+/// @param x Image width
+/// @param y Image height
+/// @param bpp Bits per pixel
+/// @return Image index, or -1 on error
 int32_t imgframe(uint8_t *o, int32_t x, int32_t y, int32_t bpp);
 
-// Create new image with allocated memory
+/// Creates new image with allocated memory
+/// Allocates new image with specified dimensions and format
+/// @param x Image width
+/// @param y Image height
+/// @param bpp Bits per pixel
+/// @return Image index, or -1 on error
 int32_t imgnew(int32_t x, int32_t y, int32_t bpp);
 
 // ============================================================================
@@ -400,35 +426,43 @@ int32_t func__copyimage(int32_t i, int32_t mode, int32_t passed);
 /// @param passed Parameter passing flags
 void sub__freeimage(int32_t i, int32_t passed);
 
-/// Frees all images (cleanup function).
+/// Frees all images and releases resources
+/// Cleanup function that releases all allocated images
 void freeallimages();
 
-/// Sets the source image for drawing operations.
+/// Sets the source image for drawing operations
+/// Specifies which image to use as source for copy operations
 /// @param i Source image handle
 void sub__source(int32_t i);
 
-/// Sets the destination image for drawing operations.
+/// Sets the destination image for drawing operations
+/// Specifies which image to draw onto
 /// @param i Destination image handle
 void sub__dest(int32_t i);
 
-/// Gets the current source image handle.
-/// @returns Source image handle
+/// Gets the current source image handle
+/// Returns the currently selected source image
+/// @return Source image handle
 int32_t func__source();
 
-/// Gets the current destination image handle.
-/// @returns Destination image handle
+/// Gets the current destination image handle
+/// Returns the currently selected destination image
+/// @return Destination image handle
 int32_t func__dest();
 
-/// Gets the current display image handle.
-/// @returns Display image handle
+/// Gets the current display image handle
+/// Returns the image currently being displayed
+/// @return Display image handle
 int32_t func__display();
 
-/// Enables alpha blending for an image.
+/// Enables alpha blending for an image
+/// Activates transparency effects for the specified image
 /// @param i Image handle
 /// @param passed Parameter passing flags
 void sub__blend(int32_t i, int32_t passed);
 
-/// Disables alpha blending for an image.
+/// Disables alpha blending for an image
+/// Deactivates transparency effects for the specified image
 /// @param i Image handle
 /// @param passed Parameter passing flags
 void sub__dontblend(int32_t i, int32_t passed);

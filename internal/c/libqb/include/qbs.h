@@ -1,58 +1,184 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE String Management Module
+//  QB64 string (QBS) creation, manipulation, and conversion utilities
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
+
 #ifndef INCLUDE_LIBQB_QBS_H
 #define INCLUDE_LIBQB_QBS_H
 
 #include <stdint.h>
 
-// QB64 string descriptor structure
+// ============================================================================
+// DATA STRUCTURES
+// ============================================================================
+
+/// QB64 string field descriptor for file-based strings
+/// Contains metadata for strings linked to file positions
 struct qbs_field {
-    int32_t fileno;
-    int64_t fileid;
-    int64_t size;
-    int64_t offset;
+    int32_t fileno;     ///< File number where string is located
+    int64_t fileid;     ///< File identifier
+    int64_t size;        ///< Size of string data
+    int64_t offset;      ///< Offset within file
 };
 
+/// QB64 string descriptor structure
+/// Main structure for all QB64 string operations
 struct qbs {
-    uint8_t *chr; // a 32 bit pointer to the string's data
-    int32_t len;  // must be signed for comparisons against signed int32s
-
-    uint8_t in_cmem; // set to 1 if in the conventional memory DBLOCK
-    uint16_t *cmem_descriptor;
-    uint16_t cmem_descriptor_offset;
-
-    uint32_t listi; // the index in the list of strings that references it
-
-    uint8_t tmp;       // set to 1 if the string can be deleted immediately after being processed
-    uint32_t tmplisti; // the index in the list of strings that references it
-
-    uint8_t fixed;    // fixed length string
-    uint8_t readonly; // set to 1 if string is read only
-
-    qbs_field *field;
+    uint8_t *chr;         ///< Pointer to string data (32-bit pointer)
+    int32_t len;          ///< String length (must be signed for comparisons)
+    
+    uint8_t in_cmem;      ///< Flag: 1 if in conventional memory DBLOCK
+    uint16_t *cmem_descriptor; ///< Memory descriptor pointer
+    uint16_t cmem_descriptor_offset; ///< Memory descriptor offset
+    
+    uint32_t listi;       ///< Index in string reference list
+    
+    uint8_t tmp;          ///< Flag: 1 if string can be deleted immediately
+    uint32_t tmplisti;    ///< Index in temporary string reference list
+    
+    uint8_t fixed;        ///< Flag: 1 if fixed-length string
+    uint8_t readonly;      ///< Flag: 1 if string is read-only
+    
+    qbs_field *field;     ///< Pointer to field descriptor (for file strings)
 };
 
-qbs *qbs_new(int32_t, uint8_t);
-qbs *qbs_new_txt(const char *);
-qbs *qbs_new_cmem(int32_t size, uint8_t tmp);
-qbs *qbs_new_txt_len(const char *txt, int32_t len);
-qbs *qbs_new_fixed(uint8_t *offset, uint32_t size, uint8_t tmp);
-qbs *qbs_add(qbs *, qbs *);
-qbs *qbs_set(qbs *, qbs *);
+// ============================================================================
+// STRING CREATION FUNCTIONS
+// ============================================================================
 
+/// Creates a new QB64 string with specified length
+/// Allocates a new string with uninitialized data
+/// @param length Length of string to create
+/// @param tmp Temporary flag (1=temporary, 0=permanent)
+/// @return Pointer to new string structure
+qbs *qbs_new(int32_t length, uint8_t tmp);
+
+/// Creates a new QB64 string from C string
+/// Copies a null-terminated C string into a QB64 string
+/// @param txt Pointer to null-terminated C string
+/// @return Pointer to new string structure
+qbs *qbs_new_txt(const char *txt);
+
+/// Creates a new QB64 string in conventional memory
+/// Allocates string in conventional memory block
+/// @param size Size of string to allocate
+/// @param tmp Temporary flag (1=temporary, 0=permanent)
+/// @return Pointer to new string structure
+qbs *qbs_new_cmem(int32_t size, uint8_t tmp);
+
+/// Creates a new QB64 string from C string with length
+/// Copies specified number of characters from C string
+/// @param txt Pointer to C string data
+/// @param len Number of characters to copy
+/// @return Pointer to new string structure
+qbs *qbs_new_txt_len(const char *txt, int32_t len);
+
+/// Creates a new QB64 string from fixed memory buffer
+/// Wraps existing memory buffer as a QB64 string
+/// @param offset Pointer to existing memory buffer
+/// @param size Size of memory buffer
+/// @param tmp Temporary flag (1=temporary, 0=permanent)
+/// @return Pointer to new string structure
+qbs *qbs_new_fixed(uint8_t *offset, uint32_t size, uint8_t tmp);
+
+// ============================================================================
+// STRING MANIPULATION FUNCTIONS
+// ============================================================================
+
+/// Concatenates two QB64 strings
+/// Creates a new string by appending second string to first
+/// @param str1 First string to concatenate
+/// @param str2 Second string to concatenate
+/// @return Pointer to new concatenated string structure
+qbs *qbs_add(qbs *str1, qbs *str2);
+
+/// Sets contents of one QB64 string to another
+/// Copies data from second string to first
+/// @param str1 Destination string
+/// @param str2 Source string
+/// @return Pointer to modified destination string structure
+qbs *qbs_set(qbs *str1, qbs *str2);
+
+/// Frees a QB64 string structure
+/// Releases memory allocated for string
+/// @param str Pointer to string structure to free
 void qbs_free(qbs *str);
 
+/// Converts QB64 string to numeric value (template)
+/// Extracts numeric value from QB64 string
+/// @param s Pointer to QB64 string
+/// @return Numeric value of specified type
 template <typename T> T qbs_val(qbs *s);
 
-// legacy STR$ function prototypes
+// ============================================================================
+// LEGACY STR$ FUNCTIONS
+// ============================================================================
+
+/// Converts 64-bit integer to string
+/// Creates string representation of 64-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(int64_t value);
+
+/// Converts 32-bit integer to string
+/// Creates string representation of 32-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(int32_t value);
+
+/// Converts 16-bit integer to string
+/// Creates string representation of 16-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(int16_t value);
+
+/// Converts 8-bit integer to string
+/// Creates string representation of 8-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(int8_t value);
+
+/// Converts unsigned 64-bit integer to string
+/// Creates string representation of unsigned 64-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(uint64_t value);
+
+/// Converts unsigned 32-bit integer to string
+/// Creates string representation of unsigned 32-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(uint32_t value);
+
+/// Converts unsigned 16-bit integer to string
+/// Creates string representation of unsigned 16-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(uint16_t value);
+
+/// Converts unsigned 8-bit integer to string
+/// Creates string representation of unsigned 8-bit integer
+/// @param value Integer value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(uint8_t value);
+
+/// Converts floating-point number to string
+/// Creates string representation of floating-point number
+/// @param value Floating-point value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(float value);
+
+/// Converts double-precision floating-point number to string
+/// Creates string representation of double-precision floating-point number
+/// @param value Double-precision floating-point value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(double value);
+
+/// Converts long double-precision floating-point number to string
+/// Creates string representation of long double-precision floating-point number
+/// @param value Long double-precision floating-point value to convert
+/// @return Pointer to new string structure
 qbs *qbs_str(long double value);
 
 // modern _TOSTR$ function prototypes

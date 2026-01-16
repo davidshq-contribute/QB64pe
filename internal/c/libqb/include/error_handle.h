@@ -1,38 +1,117 @@
+//----------------------------------------------------------------------------------------------------------------------
+//  QB64-PE Error Handling Module
+//  Provides comprehensive error management, reporting, and recovery utilities
+//  Extracted from libqb.cpp for modularization
+//----------------------------------------------------------------------------------------------------------------------
+
 #ifndef INCLUDE_LIBQB_ERROR_HANDLE_H
 #define INCLUDE_LIBQB_ERROR_HANDLE_H
 
 #include "qbs.h"
 #include <stdint.h>
 
+// ============================================================================
+// CORE ERROR MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/// Triggers an error with specified error number
+/// Initiates error handling process with error code and line information
+/// @param error_number Error code from QB_ERROR_* constants
 void error(int32_t error_number);
+
+/// Attempts to fix or recover from current error condition
+/// Implements error recovery logic based on current error state
 void fix_error();
 
+// ============================================================================
+// ERROR STATE VARIABLES
+// ============================================================================
+
 // FIXME: Should be removed in the future, use `is_error_pending()`.
-//
 // Some spots edit this directly to clear/restore an error, those sites should
-// be examined for the best solution.
+// be examined for best solution.
+
+/// Flag indicating new error has occurred
 extern uint32_t new_error;
+
+/// Current error code number
 extern uint32_t error_err;
+
+/// Flag indicating error has occurred and needs handling
 extern uint32_t error_occurred;
+
+/// Line number where error occurred for GOTO handling
 extern uint32_t error_goto_line;
+
+/// History of error handlers that have been invoked
 extern qbs *error_handler_history;
+
+/// Flag indicating error handling is currently active
 extern uint32_t error_handling;
+
+/// Flag indicating error retry operation is in progress
 extern uint32_t error_retry;
 
+// ============================================================================
+// ERROR STATE QUERY FUNCTIONS
+// ============================================================================
+
+/// Checks if there is currently a pending error
+/// Provides safe interface to check error state without direct variable access
+/// @return True if error is pending, false otherwise
 static inline bool is_error_pending() {
     return new_error != 0;
 }
 
+/// Clears all pending error conditions
+/// Resets error state variables to normal state
 void clear_error();
 
+/// Gets the error line number (ERL equivalent)
+/// Returns the line number where the last error occurred
+/// @return Error line number as double precision value
 double get_error_erl();
+
+/// Gets the current error code (ERR equivalent)
+/// Returns the error code of the last error
+/// @return Error code number
 uint32_t get_error_err();
 
+// ============================================================================
+// ERROR INFORMATION FUNCTIONS
+// ============================================================================
+
+/// Gets the line number of the current error
+/// Returns the line number where the current error occurred
+/// @return Error line number
 int32_t func__errorline();
+
+/// Gets the line number of the include file error
+/// Returns the line number within an include file where error occurred
+/// @return Include file error line number
 int32_t func__inclerrorline();
+
+/// Gets the filename of the include file with error
+/// Returns the name of the include file where error occurred
+/// @return QB64 string containing include filename
 qbs *func__inclerrorfile();
+
+/// Gets the error message for specified error code
+/// Returns human-readable error message for given error number
+/// @param errorcode Error code to get message for
+/// @param passed Parameter passing flags (for QB64 compatibility)
+/// @return QB64 string containing error message
 qbs *func__errormessage(int32_t errorcode, int32_t passed);
 
+// ============================================================================
+// ERROR STATE MANAGEMENT
+// ============================================================================
+
+/// Sets error location information
+/// Updates error tracking with current line and file information
+/// @param errorline Main program line number
+/// @param incerrorline Include file line number
+/// @param incfilename Include file name
 void error_set_line(uint32_t errorline, uint32_t incerrorline, const char *incfilename);
 
 #define QB_ERROR_NEXT_WITHOUT_FOR 1
