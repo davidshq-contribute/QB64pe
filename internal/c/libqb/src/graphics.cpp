@@ -28,7 +28,6 @@
 #endif
 
 // External functions from libqb.cpp
-void flush_old_hardware_commands();
 void validatepage(int32_t pageNumber);
 void sub__font(int32_t f, int32_t i, int32_t passed);
 void init_blend();
@@ -60,8 +59,10 @@ extern environment_2d__window_rect_struct *environment_2d__screen_to_window_rect
 // Global variables from libqb.cpp
 extern list *hardware_graphics_command_handles;
 extern int64_t display_frame_order_next;
-extern int32_t last_hardware_command_added;
 extern int32_t first_hardware_command;
+extern int32_t last_hardware_command_added;
+extern int32_t last_hardware_command_rendered;
+extern int32_t next_hardware_command_to_remove;
 extern int32_t nextimg;
 extern int32_t *page;
 extern img_struct *img;
@@ -776,6 +777,77 @@ double func__bri32(uint32_t argb) {
     // --- build result ---
     return hsb.b * 100.0;
 }
+
+// ============================================================================
+// HARDWARE GRAPHICS COMMAND MANAGEMENT
+// ============================================================================
+
+/**
+ * Flushes old hardware graphics commands that have been rendered.
+ *
+ * Removes completed hardware graphics commands from the command queue.
+ * Also handles FREEIMAGE_REQUEST commands by converting them to FREEIMAGE
+ * commands for deferred image cleanup.
+ */
+void flush_old_hardware_commands() {
+    static int32_t old_command;
+    static int32_t command_to_remove;
+    static hardware_graphics_command_struct *last_rendered_hgc;
+    static hardware_graphics_command_struct *old_hgc;
+    static hardware_graphics_command_struct *next_hgc;
+
+    if (next_hardware_command_to_remove && last_hardware_command_rendered) {
+
+        last_rendered_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, last_hardware_command_rendered);
+
+        old_command = next_hardware_command_to_remove;
+        old_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_command);
+
+    remove_next_hgc:
+
+        if (old_hgc->next_command == 0)
+            goto cant_remove;
+        next_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_hgc->next_command);
+        if (next_hgc->order >= last_rendered_hgc->order)
+            goto cant_remove;
+
+        command_to_remove = old_command;
+
+        if (old_hgc->command == HARDWARE_GRAPHICS_COMMAND__FREEIMAGE_REQUEST) {
+            static hardware_img_struct *himg;
+            himg = (hardware_img_struct *)list_get(hardware_img_handles, old_hgc->src_img);
+            // add command to free image
+            // create new command handle & structure
+            int32_t hgch = list_add(hardware_graphics_command_handles);
+            hardware_graphics_command_struct *hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, hgch);
+            hgc->remove = 0;
+            // set command values
+            hgc->command = HARDWARE_GRAPHICS_COMMAND__FREEIMAGE;
+            hgc->src_img = old_hgc->src_img;
+            // queue the command
+            hgc->next_command = 0;
+            hgc->order = display_frame_order_next;
+            if (last_hardware_command_added) {
+                hardware_graphics_command_struct *hgc2 =
+                    (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, last_hardware_command_added);
+                hgc2->next_command = hgch;
+            }
+            last_hardware_command_added = hgch;
+            if (first_hardware_command == 0)
+                first_hardware_command = hgch;
+        }
+
+        old_command = old_hgc->next_command;
+        next_hardware_command_to_remove = old_command;
+        old_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_command);
+        list_remove(hardware_graphics_command_handles, command_to_remove);
+
+        goto remove_next_hgc;
+
+    cant_remove:;
+
+    } // next_hardware_command_to_remove&&last_hardware_command_rendered
+} // flush_old_hardware_commands
 
 /**
  * Controls depth buffer settings for 3D rendering.

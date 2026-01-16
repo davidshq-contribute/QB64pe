@@ -889,68 +889,7 @@ uint32 *display_surface_offset = 0;
 // Software image management functions moved to graphics.cpp:
 // restorepalette(), pset(), newimg(), freeimg(), imgrevert(), imgframe(), imgnew()
 
-void flush_old_hardware_commands() {
-    static int32 old_command;
-    static int32 command_to_remove;
-    static hardware_graphics_command_struct *last_rendered_hgc;
-    static hardware_graphics_command_struct *old_hgc;
-    static hardware_graphics_command_struct *next_hgc;
-
-    if (next_hardware_command_to_remove && last_hardware_command_rendered) {
-
-        last_rendered_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, last_hardware_command_rendered);
-
-        old_command = next_hardware_command_to_remove;
-        old_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_command);
-
-    remove_next_hgc:
-
-        if (old_hgc->next_command == 0)
-            goto cant_remove;
-        next_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_hgc->next_command);
-        if (next_hgc->order >= last_rendered_hgc->order)
-            goto cant_remove;
-
-        command_to_remove = old_command;
-
-        if (old_hgc->command == HARDWARE_GRAPHICS_COMMAND__FREEIMAGE_REQUEST) {
-            static hardware_img_struct *himg;
-            himg = (hardware_img_struct *)list_get(hardware_img_handles, old_hgc->src_img);
-            // alert("HARDWARE_GRAPHICS_COMMAND__FREEIMAGE_REQUEST");
-            // alert(old_hgc->src_img);
-            // add command to free image
-            // create new command handle & structure
-            int32 hgch = list_add(hardware_graphics_command_handles);
-            hardware_graphics_command_struct *hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, hgch);
-            hgc->remove = 0;
-            // set command values
-            hgc->command = HARDWARE_GRAPHICS_COMMAND__FREEIMAGE;
-            hgc->src_img = old_hgc->src_img;
-            // queue the command
-            hgc->next_command = 0;
-            hgc->order = display_frame_order_next;
-            if (last_hardware_command_added) {
-                hardware_graphics_command_struct *hgc2 =
-                    (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, last_hardware_command_added);
-                hgc2->next_command = hgch;
-            }
-            last_hardware_command_added = hgch;
-            if (first_hardware_command == 0)
-                first_hardware_command = hgch;
-        }
-
-        old_command = old_hgc->next_command;
-        next_hardware_command_to_remove = old_command;
-        old_hgc = (hardware_graphics_command_struct *)list_get(hardware_graphics_command_handles, old_command);
-        list_remove(hardware_graphics_command_handles, command_to_remove);
-
-        goto remove_next_hgc;
-
-    cant_remove:;
-
-    } // next_hardware_command_to_remove&&last_hardware_command_rendered
-} // flush_old_hardware_commands
-
+// flush_old_hardware_commands moved to graphics.cpp
 // sub__putimage moved to graphics.cpp
 
 // selectfont moved to text.cpp

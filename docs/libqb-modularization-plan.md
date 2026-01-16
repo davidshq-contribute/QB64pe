@@ -4,7 +4,7 @@
 
 This document tracks the modularization of `internal/c/libqb.cpp`, the core runtime library for QB64 Phoenix Edition.
 
-**Current status:** 14,354 lines (reduced from 31,111 - a 53.9% reduction)
+**Current status:** 14,274 lines (reduced from 31,111 - a 54.1% reduction)
 
 ---
 
@@ -65,7 +65,7 @@ int32_t libqb_get_screen_height();
 
 ## Remaining Code Analysis
 
-The ~14,400 remaining lines break down into these functional areas:
+The ~14,300 remaining lines break down into these functional areas:
 
 | Area | Lines | Location | Self-Contained? |
 |------|-------|----------|-----------------|
@@ -87,9 +87,9 @@ The ~14,400 remaining lines break down into these functional areas:
 
 | Module | Lines | Effort | Impact | Status |
 |--------|-------|--------|--------|--------|
-| **Hardware Textures** | ~766 | Medium | Medium | `newimg()`, `freeimg()`, `new_hardware_img()`, texture upload functions, hardware_img_put/tri2d/tri3d. |
+| **Hardware Textures** | ~766 | Medium | Medium | ✅ **COMPLETED** - All hardware texture functions (`newimg`, `freeimg`, `new_hardware_img`, `free_hardware_img`, `hardware_img_put`, `hardware_img_tri2d`, `hardware_img_tri3d`, `flush_old_hardware_commands`) already extracted to `graphics.cpp`. |
 
-**Recommendation:** Extract hardware textures next - good line count, but complex OpenGL code requiring careful testing.
+**Note:** Hardware textures extraction was completed in earlier work. The display loop (which uses these functions) remains in libqb.cpp as it's core system code.
 
 ### Tier 2: Medium ROI (Needs accessor layer expansion)
 
@@ -135,11 +135,11 @@ The ~14,400 remaining lines break down into these functional areas:
 
 ### Strategic Considerations
 
-**Significant Progress:** We've extracted 53.9% of the code (16,757 lines). The remaining ~14.4K lines are increasingly interdependent core systems.
+**Significant Progress:** We've extracted 54.1% of the code (16,837 lines). The remaining ~14.3K lines are increasingly interdependent core systems.
 
-**Recent Extractions:** Successfully extracted PRINT USING (~926 lines), character set data (~1,609 lines), and static data (~288 lines) - demonstrating that data-heavy modules and self-contained formatting logic can still be extracted.
+**Recent Extractions:** Successfully extracted PRINT USING (~926 lines), character set data (~1,609 lines), static data (~288 lines), and consolidated hardware command management in graphics.cpp.
 
-**Practical Ceiling:** Realistically, we can reach ~56-58% reduction (hardware textures = ~766 more lines). Beyond that requires architectural changes to the accessor layer.
+**Practical Ceiling:** We've reached the practical ceiling for straightforward extractions. The remaining code consists of tightly coupled systems (display loop, input handling, graphics mode management) that would require significant architectural changes to extract.
 
 **Alternative Focus:** Instead of more extractions, consider:
 - Improving existing module interfaces (reduce extern declarations)
