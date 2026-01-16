@@ -36,6 +36,14 @@ extern const uint8_t image_qbicon32[];
 extern const uint16_t deadchar_lookup[];
 
 // ============================================================================
+// CODE PAGE 437 TO UNICODE LOOKUP TABLE
+// ============================================================================
+
+/// Code page 437 to UTF-16 lookup table (256 entries)
+/// Maps DOS/IBM PC character codes to their Unicode equivalents
+extern uint16_t codepage437_to_unicode16[];
+
+// ============================================================================
 // QB64 PALETTE DATA
 // ============================================================================
 

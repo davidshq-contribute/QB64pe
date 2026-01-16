@@ -112,8 +112,8 @@ extern mouse_message_queue_struct mouse_message_queue;
 extern int32 mouse_hiddden;  // Note: typo in original code (3 d's)
 extern int mouse_cursor_style;
 
-// Codepage mapping array
-extern uint16 codepage437_to_unicode16[256];
+// Codepage mapping array (defined in static_data.cpp)
+extern uint16 codepage437_to_unicode16[];
 
 // ============================================================================
 // IMAGE SYSTEM ACCESSORS

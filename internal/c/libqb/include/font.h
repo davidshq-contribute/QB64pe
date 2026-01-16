@@ -19,7 +19,7 @@
 
 struct qbs;
 
-/// @brief CP437 to UTF-16 LUT
+/// @brief CP437 to UTF-16 LUT (defined in static_data.cpp)
 extern uint16_t codepage437_to_unicode16[];
 
 uint8_t *FontLoadFileToMemory(const char *file_path_name, int32_t *out_bytes);
