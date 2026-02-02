@@ -56,6 +56,10 @@ Additionally, if you do not wish to use the integrated IDE and to only compile y
 
 Replacing `-c` with `-x` will compile without opening a separate compiler window.
 
+# Documentation
+
+Developer and reference documentation (architecture, build system, testing, internals) is indexed in [docs/README.md](docs/README.md). Start there for compiler/runtime design, Makefile and CI, and test suites.
+
 # Additional Information
 
 More about QB64-PE at our wiki: <https://qb64phoenix.com/qb64wiki>

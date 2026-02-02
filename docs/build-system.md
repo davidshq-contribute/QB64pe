@@ -17,7 +17,7 @@ This describes the process that goes on to compile a QB64 program into an execut
 CI Process
 ----------
 
-This describes how QB64-PE itself is built by the CI process to produce a release of QB64-PE. The actual build scripts that do all of this are located in `.ci/`.`
+This describes how QB64-PE itself is built by the CI process to produce a release of QB64-PE. The actual build scripts that do all of this are located in `.ci/`.
 
 1. Before CI ever begins, `./internal/source/` contains the generated C++ source of a previous version of `qb64pe.bas`.
 2. `.ci/calculate_version.sh` is run to determine what version this CI build should be considered. That information is written to `./internal/version.txt`, if it is a release version `./internal/version.txt` is removed.
@@ -28,10 +28,10 @@ This describes how QB64-PE itself is built by the CI process to produce a releas
     1. We run `./qb64pe_bootstrap -x ./source/qb64pe.bas` to compile QB64-PE. This compiles QB64-PE the same way as a regular QB64 program as detailed in 'Build Process'
 5. `./internal/source` is cleared out and, excluding a few files, the contents of `./internal/temp` are copied into `./internal/source` as the new generated C++ source of QB64-PE.
 6. `tests/run_tests.sh` is run to test the compiled version of QB64-PE. A failure of these tests fails the build at this stage.
-7. `.ci/make-dist.sh` is run to produce the distribution of QB64-PE, which is stored as a build artifact and potentially a release artifact..
+7. `.ci/make-dist.sh` is run to produce the distribution of QB64-PE, which is stored as a build artifact and potentially a release artifact.
     1. The contents of the distribution depends on the OS it is being created for.
         1. The Windows distribution contains a precompiled copy of QB64-PE as `qb64pe.exe` and can be used immediately.
-        2. The Linux and OSX distributions do not contain a precompiled copy of QB64-PE. Those version come with a "setup" script that has to be run which builds QB64-PE based on the contents of `./internal/source`.
+        2. The Linux and OSX distributions do not contain a precompiled copy of QB64-PE. Those versions come with a "setup" script that has to be run which builds QB64-PE based on the contents of `./internal/source`.
 8. `tests/run_dist_tests.sh` is run to verify the distribution of QB64-PE works correctly.
 9. If this is a CI build of `main` and `./internal/source` has changed due to the newly compiled version, then `git` is used to commit and push the updated version of `./internal/source` to the GitHub repo.
 
@@ -66,7 +66,11 @@ Repository Layout
 - `tests/` - Contains the tests run on QB64-PE during CI to verify changes.
   - `compile_tests/`
     - Testcases related to specific dependencies that QB64 can pull in. These tests are largely intended to test that QB64-PE and the Makefile correctly pulls in the proper dependencies.
-  - `c`
+  - `format_tests/`
+    - Formatter output tests (use `*.flagmap` to map flags to expected output).
+  - `converter_tests/`
+    - Add-prefix and related converter tests.
+  - `c/`
     - The source for the C++-based tests.
   - `qbasic_testcases/`
     - A variety of collected QB64 sample programs
@@ -75,15 +79,19 @@ Repository Layout
   - `compile_tests.sh`
     - Runs the `compile_tests` test cases.
   - `qbasic_tests.sh`
-    - Compiled all the testcases in `qbasic_testcases` and verifies they compile successfully.
+    - Compiles all the testcases in `qbasic_testcases` and verifies they compile successfully.
+  - `format_tests.sh`
+    - Runs the formatter tests.
+  - `add_prefix_test.sh`
+    - Runs the add-prefix test.
   - `dist_tests.sh`
     - Verifies the output of `make-dist.sh` is a functioning distribution of QB64-PE
   - `run_dist_tests.sh`
     - Runs the distribution test collections.
   - `run_tests.sh`
-    - Runs all individual test collections.
+    - Runs compile_tests, qbasic_tests, format_tests, and add_prefix_test (does **not** run C++ tests).
   - `run_c_tests.sh`
-    - Runs all the C++ test cases.
+    - Runs all the C++ test cases (run separately in CI; requires `make build-tests` first).
 - `setup_lnx.sh`
   - Used as part of the Linux release to install dependencies and compile QB64-PE.
 - `setup_osx.command`
@@ -105,8 +113,8 @@ These flags control some basic settings for how the `Makefile` can compile the p
 | `OS` | None | `win`, `lnx`, or `osx` | Yes | Indicates to the Makefile which OS it is being used to compile for. Controls what utilities the Makefile assumes is available and where they are located, and also platform dependent compiler settings. |
 | `BUILD_QB64` | None | `y` | No | If set then the Makefile will build the QB64-PE source located in `./internal/source`. If `EXE` is not specified, that is set to `qb64pe`. Dependency settings for QB64-PE are set automatically. |
 | `EXE` | None | Executable name | Yes, if not using `BUILD_QB64` | Specifies the name of the executable to build. If on Windows, it should include `.exe` on the end. Spaces in the filename should be escaped with `\` |
-| `TEMP_ID` | None | blank, or an integer | No | Controls the name of `qbx*.cpp` and `./internal/temp*` that are used for compilation. This is mainly relevant for multiple instances of the IDE, where the second instance compiles to `./internal/temp2` and tells the Makefile which to use. Further instances will use higher numbers. |
-| `CXXFLAGS_EXTRA` | None | Collection of C++ compiler flags | No | These flags are provided to the compiler when building the C++ files. This includes the generate source files, but also files like `libqb.cpp`. |
+| `TEMP_ID` | None | blank, or an integer | No | Controls the name of `qbx*.cpp` and `./internal/temp*` that are used for compilation. When blank, the Makefile uses `PATH_INTERNAL_TEMP := $(PATH_INTERNAL)/temp` (i.e. `./internal/temp` or `internal\temp`). When set (e.g. `TEMP_ID=2`), the path becomes `./internal/temp2`. This is mainly relevant for multiple instances of the IDE, where the second instance compiles to `./internal/temp2` and tells the Makefile which to use. Further instances will use higher numbers. |
+| `CXXFLAGS_EXTRA` | None | Collection of C++ compiler flags | No | These flags are provided to the compiler when building the C++ files. This includes the generated source files, but also files like `libqb.cpp`. |
 | `CXXLIBS_EXTRA` | None | Collection of linker flags | No | These flags are provided to the compiler (`g++` or `clang++`) when linking the final executable. Typically includes the `-l` library flags |
 | `CFLAGS_EXTRA` | None | Collection of C compiler flags | No | These flags are provided to the compiler when building C files |
 | `STRIP_SYMBOLS` | None | `n` | No | Symbols are stripped by default, if this is `n` then symbols will not be stripped from the executable |

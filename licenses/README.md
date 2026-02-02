@@ -66,7 +66,7 @@ These libraries are pulled in if `_LOADFONT()` functionality is used.
 
 | Library | License | License file | Location |
 | :------ | :-----: | :----------- | :------- |
-| FreeTYPE | FLT | license_freetype_ftl.txt | internal/c/parts/video/font/tff/ |
+| FreeType | FTL | license_freetype_ftl.txt | internal/c/parts/video/font/freetype/ |
 
 ## Compression Support
 
