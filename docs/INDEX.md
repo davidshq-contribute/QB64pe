@@ -6,8 +6,8 @@ Master index to QB64 Phoenix Edition documentation.
 
 | Document | Description |
 |----------|-------------|
-| [README.md](README.md) | Project overview and quick start |
-| [CLAUDE.md](CLAUDE.md) | Build commands and project summary |
+| [README.md](../README.md) | Project overview and quick start |
+| [CLAUDE.md](../CLAUDE.md) | Build commands and project summary |
 | [MIGRATION.md](MIGRATION.md) | Guide for QBasic/QB45 users |
 | [QUICK-REFERENCE.md](QUICK-REFERENCE.md) | One-page cheat sheet |
 | [GLOSSARY.md](GLOSSARY.md) | Terminology definitions |
@@ -20,8 +20,11 @@ Master index to QB64 Phoenix Edition documentation.
 | [ARCHITECTURE-BASIC.md](ARCHITECTURE-BASIC.md) | QB64 compiler and IDE internals |
 | [ARCHITECTURE-C.md](ARCHITECTURE-C.md) | C++ runtime library internals |
 | [COMPILER-PIPELINE.md](COMPILER-PIPELINE.md) | Compilation phases and code generation |
-| [BUILD-SYSTEM.md](BUILD-SYSTEM.md) | Makefile and dependency system |
+| [build-system.md](build-system.md) | Makefile, dependency system, CI, and release process |
+| [SETUP-LNX.md](SETUP-LNX.md) | Step-by-step: what happens when you run `./setup_lnx.sh` on Linux |
+| [LINUX-DISPLAY-TROUBLESHOOTING.md](LINUX-DISPLAY-TROUBLESHOOTING.md) | Linux: icon but no window (Wayland, XWayland, VMs) |
 | [GLOBALS.md](GLOBALS.md) | Global variables reference |
+| [MULTI_PERSPECTIVE_CODEBASE_REVIEW.md](MULTI_PERSPECTIVE_CODEBASE_REVIEW.md) | Six-perspective codebase review (low-hanging fruit and strategic directions) |
 
 ## Language Features
 
@@ -43,7 +46,8 @@ Master index to QB64 Phoenix Edition documentation.
 ### Expressions
 | Document | Description |
 |----------|-------------|
-| [EXPRESSION-EVALUATION.md](EXPRESSION-EVALUATION.md) | Operator precedence, parsing |
+| [EXPRESSION-EVALUATION.md](EXPRESSION-EVALUATION.md) | Expression parsing, evaluate$, fixoperationorder$ |
+| [OPERATOR-PRECEDENCE.md](OPERATOR-PRECEDENCE.md) | Operator precedence and associativity (single reference) |
 | [CONST-EVAL.md](CONST-EVAL.md) | Compile-time constant evaluation |
 | [BINARY-OPS.md](BINARY-OPS.md) | Bitwise operations |
 | [MATH-FUNCTIONS.md](MATH-FUNCTIONS.md) | Mathematical functions |
@@ -59,6 +63,7 @@ Master index to QB64 Phoenix Edition documentation.
 | Document | Description |
 |----------|-------------|
 | [BUILTIN-FUNCTIONS.md](BUILTIN-FUNCTIONS.md) | Function registration system |
+| [ADDING-A-BUILTIN.md](ADDING-A-BUILTIN.md) | Step-by-step: add a new built-in function or sub |
 | [DATETIME.md](DATETIME.md) | Date, time, and timing functions |
 | [ENVIRONMENT.md](ENVIRONMENT.md) | Environment variables, paths |
 
@@ -134,12 +139,11 @@ Master index to QB64 Phoenix Edition documentation.
 
 | Document | Description |
 |----------|-------------|
-| [docs/README.md](docs/README.md) | Developer documentation index |
-| [docs/auto-including.md](docs/auto-including.md) | Auto-include system details |
-| [docs/build-system.md](docs/build-system.md) | Build system internals |
-| [docs/testing.md](docs/testing.md) | Test suite documentation |
-| [docs/support-files.md](docs/support-files.md) | Support file reference |
-| [docs/error-handling.md](docs/error-handling.md) | Error handling internals |
+| [README.md](README.md) | Developer documentation index |
+| [auto-including.md](auto-including.md) | Auto-include system details |
+| [testing.md](testing.md) | Test suite documentation |
+| [support-files.md](support-files.md) | Support file reference |
+| [error-handling.md](error-handling.md) | Error handling internals |
 
 ## By Topic
 
@@ -152,7 +156,7 @@ Master index to QB64 Phoenix Edition documentation.
 - [ARCHITECTURE.md](ARCHITECTURE.md) for system overview
 - [COMPILER-PIPELINE.md](COMPILER-PIPELINE.md) for code generation
 - [COMMON-PITFALLS.md](COMMON-PITFALLS.md) for known issues
-- [docs/testing.md](docs/testing.md) for test suite
+- [testing.md](testing.md) for test suite
 
 ### For Runtime Developers
 - [ARCHITECTURE-C.md](ARCHITECTURE-C.md) for C++ internals

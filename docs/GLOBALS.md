@@ -271,7 +271,7 @@ These use the RCStateVar TYPE (wanted, actual, locked, forced) and trigger recom
 - **ExecuteRCStateVar(stVar)** – Called right after the `recompile:` label. If not locked, sets `actual = wanted` and, if non-zero, locks. If `forced <> 0`, sets `actual = forced`.
 - **GetRCStateVar(stVar)** – Returns `actual` (the value in effect for the current pass).
 
-**When recompile is triggered:** Any call to `SetRCStateVar` that makes `wanted <> actual` while `locked = 0` sets `recompile = 1`. The main loop checks `IF recompile GOTO do_recompile` at safe points; `do_recompile` closes buffers, sets `iderecompile = 1` in IDE mode, then `GOTO recompile`. At `recompile`, the flag is cleared and `ExecuteRCStateVar` is run for each RCStateVar, so the new pass runs with the updated feature state (e.g. $COLOR, $DEBUG, $USELIBRARY, $CONSOLE, $ASSERTS). See docs/error-handling.md for the full recompile flow.
+**When recompile is triggered:** Any call to `SetRCStateVar` that makes `wanted <> actual` while `locked = 0` sets `recompile = 1`. The main loop checks `IF recompile GOTO do_recompile` at safe points; `do_recompile` closes buffers, sets `iderecompile = 1` in IDE mode, then `GOTO recompile`. At `recompile`, the flag is cleared and `ExecuteRCStateVar` is run for each RCStateVar, so the new pass runs with the updated feature state (e.g. $COLOR, $DEBUG, $USELIBRARY, $CONSOLE, $ASSERTS). See [error-handling.md](error-handling.md) for the full recompile flow.
 
 ## Command-Line Options
 

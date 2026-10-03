@@ -1,0 +1,26 @@
+---
+description: Conventions for QB64/BASIC compiler and IDE source
+globs: source/**/*.bas
+alwaysApply: false
+---
+
+# QB64 Source (source/)
+
+Compiler and IDE are in QB64 BASIC. Follow existing patterns.
+
+## Structure
+
+- **Prepass** (prepass=1): metacommands, dependencies, auto-includes.
+- **Main pass** (prepass=0): tokenize, parse, symbol table, C++ codegen.
+- Auto-include positions: AtTop (firstLine), AfterMain (mainEndLine), AtBottom (lastLine); states 0=inactive, 1=triggered, 2=in progress, 3=done.
+
+## Conventions
+
+- Prefer `$INCLUDE` and support-file patterns used elsewhere in `source/`.
+- When adding or changing compiler/IDE behavior, update or add docs in `docs/` (see docs rule).
+- For new built-ins or runtime behavior, check `docs/ADDING-A-BUILTIN.md` and `source/subs_functions/`.
+
+## Key files
+
+- `source/qb64pe.bas` — main compiler (~24K lines); prepass ~L1615–2873, main pass ~L2967–11604, finalization ~L11614–12025.
+- `source/ide/` — IDE; `source/subs_functions/` — built-in implementations; `source/utilities/` — const_eval, hash, type system.

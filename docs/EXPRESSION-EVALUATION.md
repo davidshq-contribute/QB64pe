@@ -182,7 +182,7 @@ Applies operator precedence by adding `{}` brackets.
 
 ## Operator Precedence Levels
 
-The `isoperator()` function returns precedence (0 = not operator):
+The `isoperator()` function returns precedence (0 = not operator). **Full table and associativity:** see [OPERATOR-PRECEDENCE.md](OPERATOR-PRECEDENCE.md) (single reference for precedence and associativity, including edge cases like AND vs =).
 
 | Level | Operators |
 |-------|-----------|
@@ -196,11 +196,12 @@ The `isoperator()` function returns precedence (0 = not operator):
 | 8 | `_NEGATE` |
 | 9 | `NOT` |
 | 10 | `=`, `<>`, `>`, `<`, `>=`, `<=` |
-| 11-12 | `+`, `-` |
-| 13-14 | `MOD`, `\` |
-| 15-16 | `*`, `/` |
-| 17 | CHR$(241) (unary negation) |
-| 18 | `^` |
+| 11 | `+`, `-` (binary) |
+| 12 | `MOD` |
+| 13 | `\` |
+| 14 | `*`, `/` |
+| 15 | CHR$(241) (unary negation) |
+| 16 | `^` |
 
 Higher level = higher precedence (evaluated first).
 

@@ -1,0 +1,26 @@
+---
+description: Conventions for C/C++ runtime and libqb (internal/c)
+globs: internal/c/**/*.c,internal/c/**/*.h
+alwaysApply: false
+---
+
+# Internal C/C++ (internal/c)
+
+Runtime and third-party code. Generated C++ goes to `internal/temp/`; do not hand-edit generated files.
+
+## Layout
+
+- `internal/c/libqb/` — C++ runtime library (libqb).
+- `internal/c/parts/` — third-party (audio, graphics, networking, etc.).
+- `internal/source/` — pre-generated C++ of QB64pe (bootstrap); updated by CI when compiling `source/qb64pe.bas`.
+- `internal/temp/` — C++ produced during a compile; overwritten each run.
+
+## Conventions
+
+- Match existing naming and error-handling style in libqb.
+- New runtime features may require both QB64 codegen changes in `source/` and C++ in `internal/c/libqb/`; document in `docs/` (e.g. ARCHITECTURE-C.md).
+- Dependencies: use Makefile `DEP_*` flags (e.g. `DEP_GL`, `DEP_AUDIO_MINIAUDIO`, `DEP_SOCKETS`).
+
+## Tests
+
+C++ unit tests: `tests/run_c_tests.sh` (requires `make build-tests`). Run separately from QB64 compile tests.

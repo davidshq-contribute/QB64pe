@@ -1,0 +1,28 @@
+---
+description: Core QB64pe project context — build, test, architecture
+alwaysApply: true
+---
+
+# QB64pe Project
+
+QB64 Phoenix Edition is a self-hosted BASIC compiler: QB64 source → C++ → native executable. Compiler is in QB64 (bootstrapped).
+
+## Build
+
+- **Setup**: `./setup_lnx.sh` (Linux), `./setup_osx.command` (macOS), `./setup_win.cmd` (Windows)
+- **Compile a program**: `./qb64pe -x yourfile.bas` or `./qb64pe -c yourfile.bas -o output.exe`
+- **Build QB64pe itself**: `./qb64pe -x ./source/qb64pe.bas`
+- **Make** (usually invoked by QB64pe): `make OS=lnx EXE=program BUILD_QB64=y`; use `DEP_*` for deps (e.g. `DEP_GL`, `DEP_AUDIO_MINIAUDIO`)
+
+## Test
+
+- `tests/run_tests.sh` — QB64 + format + add-prefix
+- `tests/compile_tests.sh` — compiler/language tests
+- `tests/compile_tests/`: `*.bas` + `*.output` (expected stdout) or `*.err` (expected error); optional `*.flags`, `*.compile-from-base`
+
+## Layout
+
+- `source/qb64pe.bas` — main compiler; `source/ide/` — IDE; `source/subs_functions/` — built-ins; `source/utilities/` — compiler utils
+- `internal/c/libqb/` — C++ runtime; `internal/c/parts/` — third-party; `internal/source/` — pre-generated C++ (bootstrap); `internal/temp/` — generated C++
+
+Prefer CLAUDE.md for full detail.

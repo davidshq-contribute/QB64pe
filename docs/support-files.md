@@ -35,7 +35,7 @@ Only one of `$COLOR:0` or `$COLOR:32` may be used in a program.
 
 ## vwatch/
 
-Used when `$DEBUG` is set. See [DEBUG-VWATCH.md](../DEBUG-VWATCH.md) for full details.
+Used when `$DEBUG` is set. See [DEBUG-VWATCH.md](DEBUG-VWATCH.md) for full details.
 
 | File | Include position | Purpose |
 |------|------------------|---------|

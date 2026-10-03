@@ -1,0 +1,28 @@
+---
+description: How to add and run QB64 and C++ tests
+globs: tests/**/*
+alwaysApply: false
+---
+
+# Tests (tests/)
+
+## QB64 / compile tests
+
+- **Run**: `tests/run_tests.sh`, `tests/compile_tests.sh`, `tests/format_tests.sh`, `tests/add_prefix_test.sh`, `tests/qbasic_tests.sh`.
+- **Layout** (`tests/compile_tests/`):
+  - `*.bas` — test source.
+  - `*.output` — expected stdout (success).
+  - `*.err` — expected compiler error message (error test).
+  - `*.flags` — optional CLI args.
+  - `*.compile-from-base` — compile from repo root instead of test dir.
+
+When adding a compile test: add the `.bas` file and either `.output` or `.err`; use `.flags` or `.compile-from-base` only if needed.
+
+## C++ tests
+
+- **Run**: `tests/run_c_tests.sh` (after `make build-tests`).
+- Run separately from QB64 tests; see CLAUDE.md for CI usage.
+
+## Distribution
+
+- `tests/run_dist_tests.sh` — distribution validation.

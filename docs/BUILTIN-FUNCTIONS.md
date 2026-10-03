@@ -2,6 +2,8 @@
 
 Documentation of the QB64pe built-in function implementation system.
 
+**Quick start:** For a short step-by-step checklist (files, `reginternal` snippet, C++ signature), see [ADDING-A-BUILTIN.md](ADDING-A-BUILTIN.md).
+
 ## Overview
 
 Built-in functions are registered at compiler startup and mapped to C/C++ implementations. The system supports function overloading, type checking, and feature dependencies.

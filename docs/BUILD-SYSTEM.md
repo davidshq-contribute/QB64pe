@@ -1,6 +1,49 @@
 Build System
 ============
 
+This document describes how QB64-PE compiles a QB64 program into an executable and how QB64-PE itself is built (including CI and release). For a quick reference of build commands and platform selection, see the sections below.
+
+Build flow (compiling a QB64 program)
+-------------------------------------
+
+```
+QB64 Source (.bas)
+    ↓
+QB64-PE (transpiler)
+    ↓
+Generated C++ (internal/temp)
+    ↓
+qbx.cpp (includes generated files)
+    ↓
+make + C++ compiler
+    ↓
+Native Executable
+```
+
+**Platform selection** (Makefile `OS`):
+
+| Platform | Compiler    | Shell |
+|----------|-------------|-------|
+| Linux    | System GCC  | bash  |
+| Windows  | MinGW       | cmd   |
+| macOS    | Xcode Clang | bash  |
+
+**Quick build commands:**
+
+```bash
+# Linux
+make OS=lnx
+
+# Windows
+mingw32-make OS=win
+
+# macOS
+make OS=osx
+
+# Build QB64-PE itself (bootstrap)
+make OS=lnx BUILD_QB64=y EXE=qb64pe_bootstrap
+```
+
 Build Process
 -------------
 
@@ -140,6 +183,17 @@ These flags controls whether certain dependencies are compiled in or not. All of
 | `DEP_CONSOLE_ONLY` | Same as `DEP_CONSOLE`, but also removes GLUT and graphics support. |
 | `DEP_AUDIO_MINIAUDIO` | Pulls in sound support using miniaudio for playing sounds via `PLAY`, `_SNDPLAY`, and various other functions that makes sounds. |
 | `DEP_HTTP` | Enables http support via libcurl. Should only be used if `DEP_SOCKETS` is on. |
+
+Key Makefile-related files
+--------------------------
+
+| File | Purpose |
+|------|---------|
+| `Makefile` | Main build entry point |
+| `internal/c/parts/*/build.mk` | Per-dependency build logic (each part has its own `build.mk`) |
+| `setup_lnx.sh` | Linux: install deps and build QB64-PE |
+| `setup_osx.command` | macOS: build QB64-PE |
+| `setup_win.cmd` | Windows: build QB64-PE from a clone (release ships precompiled) |
 
 Versioning
 ----------

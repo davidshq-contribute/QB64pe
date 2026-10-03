@@ -1,0 +1,26 @@
+---
+description: Keep docs in sync with code; docs layout and style
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Documentation (docs/)
+
+When adding or updating code, create or update the corresponding documentation.
+
+## Scope
+
+- New or changed compiler/IDE behavior → update or add a doc under `docs/` (e.g. COMPILER-PIPELINE.md, PREPROCESSOR.md).
+- New built-ins or runtime → see `docs/ADDING-A-BUILTIN.md` and relevant topic docs (e.g. BUILTIN-FUNCTIONS.md, ARCHITECTURE-C.md).
+- High-level index: `docs/INDEX.md`, `docs/README.md`.
+
+## Style
+
+- Use clear headings and short paragraphs.
+- Prefer concrete examples and code snippets.
+- Keep filenames UPPERCASE with hyphens (e.g. `COMPILER-PIPELINE.md`).
+- For pipeline/architecture, a single diagram plus bullet summary is often enough; see COMPILER-PIPELINE.md.
+
+## Cross-links
+
+Link between related docs (e.g. from INDEX or README to specific topic files) rather than duplicating long sections.

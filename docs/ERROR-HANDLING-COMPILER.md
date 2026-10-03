@@ -1,6 +1,6 @@
 # Compiler Error Handling Flow
 
-How QB64-PE reports compilation errors, when recompilation is triggered, and how the IDE receives error messages. For runtime error codes, see [ERROR-CODES.md](../ERROR-CODES.md).
+How QB64-PE reports compilation errors, when recompilation is triggered, and how the IDE receives error messages. For runtime error codes, see [ERROR-CODES.md](ERROR-CODES.md).
 
 ## Overview
 
@@ -52,7 +52,7 @@ When `idemode` is set and execution reaches **ideerror**:
    `sendc$ = CHR$(8) + idemessage$ + MKL$(ideerrorline)`.
 3. Control goes to `sendcommand`, which sends `sendc$` to the IDE. The IDE displays the message and line number.
 
-See [ARCHITECTURE.md](../ARCHITECTURE.md) for the full IDE command list (e.g. 8 = error).
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full IDE command list (e.g. 8 = error).
 
 ## qberror* variables (runtime / C++ compile errors)
 
@@ -76,7 +76,7 @@ The global flag **`recompile`** (integer) is set to 1 when the compiler must run
 
 Typical triggers for `recompile = 1`:
 
-- **RCStateVar change** – e.g. `$COLOR:0` / `$COLOR:32`, `$DEBUG`, `$USELIBRARY`, `$CONSOLE`, `$ASSERTS`. See [GLOBALS.md](../GLOBALS.md) “RCStateVar and recompilation”.
+- **RCStateVar change** – e.g. `$COLOR:0` / `$COLOR:32`, `$DEBUG`, `$USELIBRARY`, `$CONSOLE`, `$ASSERTS`. See [GLOBALS.md](GLOBALS.md) “RCStateVar and recompilation”.
 - **Metacommands** that alter auto-include or feature state (the same ones that use `SetRCStateVar` or otherwise request another pass).
 
 At certain points in the main loop the compiler checks `IF recompile GOTO do_recompile`. In **do_recompile**:

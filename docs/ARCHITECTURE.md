@@ -8,13 +8,15 @@ QB64pe is a **self-hosted transpiler** that converts QB64 BASIC source code to C
 
 ## Compilation Pipeline
 
+**Compiler entry and phase flow (IDE/CLI → Prepass → Main pass → Finalization → temp files → Make):** see the single diagram in [COMPILER-PIPELINE.md — Compiler entry and phase flow](COMPILER-PIPELINE.md#compiler-entry-and-phase-flow).
+
 ```
 QB64 Source (.bas)
        │
        ▼
 ┌──────────────────┐
 │   qb64pe.bas     │  ← QB64 compiler (written in QB64)
-│   (Transpiler)   │
+│   (Transpiler)   │     Prepass → Main pass → Finalization
 └──────────────────┘
        │
        ▼
